@@ -1,0 +1,46 @@
+[tool.poe.tasks]
+# run with eg `uv run poe fmt`
+fmt = "ruff format"
+lint = "ruff check --fix"
+check = "basedpyright"
+test.cmd = "uv run src/pudl/main.py"
+test.envfile = ".env"
+# run all the above
+all = [ {ref="fmt"}, {ref="lint"}, {ref="check"}, {ref="test"} ]
+
+"ci:fmt" = "ruff format --check"  # fail if not formatted
+"ci:lint" = "ruff check"
+
+[project]
+name = "pudl"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Chris Arderne", email = "chris@rdrn.me" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "psycopg[binary]>=3.2.11",
+]
+
+[dependency-groups]
+dev = [
+    "basedpyright>=1.31.7",
+    "poethepoet>=0.37.0",
+    "ruff>=0.14.1",
+    "ty>=0.0.1a23",
+]
+
+[build-system]
+requires = ["uv_build>=0.8.24,<0.9.0"]
+build-backend = "uv_build"
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
+strict = ["**/*.py"]
+pythonVersion = "3.14"
+reportExplicitAny = false
+reportUnusedCallResult = false
+reportAny = false
