@@ -3,7 +3,7 @@ import os
 from typing import final
 
 from pudl.db import Database
-from pudl.table import Selection, TextColumn, Table, Text
+from pudl.table import SelectAll, Selection, TextColumn, Table, Text
 
 
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -17,6 +17,11 @@ class User(Table):
     email: TextColumn = Text("user_email", default="text", not_null=True)
 
 
+@dataclass
+class UserSel(Selection):
+    id: str = User.id.sel()
+
+
 def main():
     user = User(id="a", email="john@foo.com")
 
@@ -24,10 +29,6 @@ def main():
     db = Database(DATABASE_URL).connect().migrate(User)
 
     db.insert(User).values(user).execute()
-
-    @dataclass
-    class UserSel(Selection):
-        id: str = User.id.sel()
 
     results = (
         db.select(UserSel)
@@ -37,7 +38,15 @@ def main():
         .limit(10)
         .execute()
     )
+    print(results)
 
+    # fmt: off
+    results = (
+        db.select(SelectAll)
+        .fromm(User)
+        .execute()
+    )
+    # fmt: on
     print(results)
 
 

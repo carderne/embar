@@ -32,6 +32,12 @@ results = (
     .limit(10)
     .execute()
 )
+print(results)
 
+results = (
+    db.select(SelectAll)
+    .fromm(User)
+    .execute()
+)
 print(results)
 ```

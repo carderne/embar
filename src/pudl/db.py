@@ -23,8 +23,8 @@ class Database:
         if self._conn:
             self._conn.close()
 
-    def select[S: Selection](self, s: type[S]) -> From[S]:
-        return From[S](_conn=self._conn, sel=s)
+    def select[S: Selection](self, sel: type[S]) -> From[S]:
+        return From[S](_conn=self._conn, sel=sel)
 
     def insert[T: Table](self, table: type[T]) -> InsertQuery[T]:
         return InsertQuery[T](table=table, _conn=self._conn)

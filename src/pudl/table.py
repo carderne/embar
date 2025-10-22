@@ -1,7 +1,8 @@
-from dataclasses import dataclass
+from __future__ import annotations
+
+from dataclasses import MISSING, dataclass
 from typing import (
     Any,
-    Callable,
     ClassVar,
     TypeVar,
     final,
@@ -114,6 +115,20 @@ class Table:
                 columns.append(f'"{attr.info.name}"')
         return columns
 
+    @classmethod
+    def generate_selection_dataclass(cls) -> type[Selection]:
+        from dataclasses import make_dataclass, field
+
+        fields: list[tuple[str, type, Any]] = []
+        for attr_name in dir(cls):
+            attr = getattr(cls, attr_name)
+            if isinstance(attr, TextColumn):
+                fields.append(
+                    (attr_name, str, field(default_factory=lambda a=attr: a.sel()))
+                )
+
+        return make_dataclass(f"{cls.__name__}", fields, bases=(Selection,))
+
     def values(self) -> list[Any]:
         result: list[Any] = []
         for attr_name in self.__class__.__dict__:
@@ -127,13 +142,23 @@ class Table:
 AnyTable = TypeVar("AnyTable", bound=Table)
 
 
-def table_config[T: Table](name: str) -> Callable[[type[T]], type[T]]:
-    def decorator(cls: type[T]) -> type[T]:
-        cls._name = name  # pyright:ignore[reportPrivateUsage]
-        return cls
-
-    return decorator
-
-
 @dataclass
-class Selection: ...
+class Selection:
+    @classmethod
+    def to_sql_columns(cls) -> str:
+        from dataclasses import fields
+
+        parts: list[str] = []
+        for field in fields(cls):
+            source: Any = (
+                field.default_factory()
+                if field.default_factory is not MISSING
+                else field.default
+            )
+            target = field.name
+            parts.append(f'{source} AS "{target}"')
+
+        return ", ".join(parts)
+
+
+class SelectAll(Selection): ...
