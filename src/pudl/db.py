@@ -5,8 +5,8 @@ from typing import (
 from psycopg import Connection
 import psycopg
 
-from pudl.table import Table
-from pudl.query import InsertQuery, SelectQuery
+from pudl.table import Selection, Table
+from pudl.query import From, InsertQuery
 
 
 @final
@@ -23,8 +23,8 @@ class Database:
         if self._conn:
             self._conn.close()
 
-    def select[T: Table](self, table: type[T]) -> SelectQuery[T]:
-        return SelectQuery[T](table=table, _conn=self._conn)
+    def select[S: Selection](self, s: type[S]) -> From[S]:
+        return From[S](_conn=self._conn, sel=s)
 
     def insert[T: Table](self, table: type[T]) -> InsertQuery[T]:
         return InsertQuery[T](table=table, _conn=self._conn)

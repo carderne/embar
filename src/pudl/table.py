@@ -11,17 +11,17 @@ from typing import (
 
 @dataclass
 class ColumnInfo:
+    table_name: str
     name: str
     col_type: str
     primary: bool
     not_null: bool
     default: str | None
-    py_type: type
 
     def ddl(self: "ColumnInfo") -> str:
         primary = "PRIMARY KEY" if self.primary else ""
         nullable = "NOT NULL" if self.not_null else ""
-        text = f"{self.name} {self.col_type} {primary} {nullable}"
+        text = f'"{self.name}" {self.col_type} {primary} {nullable}'
         return text
 
 
@@ -55,13 +55,21 @@ class TextColumn:
         self.not_null = not_null
         self.name = name
 
-    def __set_name__(self, owner: object, attr_name: str):
+    def __set_name__(self, owner: "Table", attr_name: str):
         self.name = (
             self._explicit_name if self._explicit_name is not None else attr_name
         )
         self.info = ColumnInfo(
-            self.name, "text", self.primary, self.not_null, self.default, py_type=str
+            name=self.name,
+            col_type="text",
+            primary=self.primary,
+            not_null=self.not_null,
+            default=self.default,
+            table_name=owner._name,  # pyright:ignore[reportPrivateUsage]
         )
+
+    def sel(self) -> str:
+        return f'"{self.info.table_name}"."{self.info.name}"'
 
 
 def Text(
@@ -75,7 +83,15 @@ def Text(
 
 @dataclass
 class Table:
-    _name: ClassVar[str]
+    _name: ClassVar[str] = ""
+
+    def __init_subclass__(cls, **kwargs: Any):
+        super().__init_subclass__(**kwargs)
+        if not hasattr(cls, "_name") or cls._name == Table._name:
+            # Convert ClassName -> class_name
+            cls._name = "".join(
+                "_" + c.lower() if c.isupper() else c for c in cls.__name__
+            ).lstrip("_")
 
     @classmethod
     def ddl(cls) -> str:
@@ -86,7 +102,7 @@ class Table:
             if isinstance(attr, TextColumn):
                 columns.append(attr.info.ddl())
         columns_str = ",".join(columns)
-        return f"""CREATE TABLE IF NOT EXISTS {cls._name} ({columns_str});"""
+        return f"""CREATE TABLE IF NOT EXISTS "{cls._name}" ({columns_str});"""
 
     @classmethod
     def column_names(cls) -> list[str]:
@@ -95,7 +111,7 @@ class Table:
             if attr_name.startswith("_"):
                 continue
             if isinstance(attr, TextColumn):
-                columns.append(attr.info.name)
+                columns.append(f'"{attr.info.name}"')
         return columns
 
     def values(self) -> list[Any]:
@@ -117,3 +133,7 @@ def table_config[T: Table](name: str) -> Callable[[type[T]], type[T]]:
         return cls
 
     return decorator
+
+
+@dataclass
+class Selection: ...

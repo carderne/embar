@@ -1,16 +1,18 @@
 from dataclasses import dataclass
 import os
+from typing import final
 
 from pudl.db import Database
-from pudl.table import TextColumn, table_config, Table, Text
+from pudl.table import Selection, TextColumn, Table, Text
 
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 
-@table_config("users")
 @dataclass
+@final
 class User(Table):
+    _name = "user"
     id: TextColumn = Text()
     email: TextColumn = Text("user_email", default="text", not_null=True)
 
@@ -23,8 +25,13 @@ def main():
 
     db.insert(User).values(user).execute()
 
+    @dataclass
+    class UserSel(Selection):
+        id: str = User.id.sel()
+
     results = (
-        db.select(User)
+        db.select(UserSel)
+        .fromm(User)
         .where(User.id.info, "=", "a")
         .where(User.email.info, "LIKE", "john%")
         .limit(10)
