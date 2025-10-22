@@ -26,7 +26,7 @@ def main():
     user = User(id="a", email="john@foo.com")
 
     assert DATABASE_URL is not None, "DATABASE_URL not set"
-    db = Database(DATABASE_URL).connect().migrate(User)
+    db = Database(DATABASE_URL).connect().migrate([User])
 
     db.insert(User).values(user).execute()
 

@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from typing import (
     Self,
     final,
@@ -29,7 +30,8 @@ class Database:
     def insert[T: Table](self, table: type[T]) -> InsertQuery[T]:
         return InsertQuery[T](table=table, _conn=self._conn)
 
-    def migrate(self, table: type[Table]) -> Self:
-        self._conn.execute(table.ddl())  # pyright:ignore[reportArgumentType]
+    def migrate(self, tables: Sequence[type[Table]]) -> Self:
+        for table in tables:
+            self._conn.execute(table.ddl())  # pyright:ignore[reportArgumentType]
         self._conn.commit()
         return self

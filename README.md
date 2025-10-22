@@ -16,7 +16,7 @@ class User(Table):
 
 user = User(id="a", email="john@foo.com")
 
-db = Database(DATABASE_URL).connect().migrate(User)
+db = Database(DATABASE_URL).connect().migrate([User])
 
 db.insert(User).values(user).execute()
 
