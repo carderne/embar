@@ -88,6 +88,7 @@ class TextColumn:
         if self._ref is not None:
             self.info.ref = self._ref()
 
+    @property
     def sel(self) -> str:
         return self.info.fqn
 
@@ -122,6 +123,10 @@ class Table:
         return cls._name
 
     @classmethod
+    def fqn(cls) -> str:
+        return f'"{cls._name}"'
+
+    @classmethod
     def ddl(cls) -> str:
         columns: list[str] = []
         for attr_name, attr in cls.__dict__.items():
@@ -130,7 +135,7 @@ class Table:
             if isinstance(attr, TextColumn):
                 columns.append(attr.info.ddl())
         columns_str = ",".join(columns)
-        return f"""CREATE TABLE IF NOT EXISTS "{cls._name}" ({columns_str});"""
+        return f"""CREATE TABLE IF NOT EXISTS {cls.fqn()} ({columns_str});"""
 
     @classmethod
     def column_names(cls) -> list[str]:
@@ -149,7 +154,7 @@ class Table:
             attr = getattr(cls, attr_name)
             if isinstance(attr, TextColumn):
                 fields.append(
-                    (attr_name, str, field(default_factory=lambda a=attr: a.sel()))
+                    (attr_name, str, field(default_factory=lambda a=attr: a.sel))
                 )
 
         return make_dataclass(f"{cls.__name__}", fields, bases=(Selection,))
@@ -184,4 +189,7 @@ class Selection:
         return ", ".join(parts)
 
 
+# TODO not sure it's possible to make this work
+# (from a typing perspective)
+# with joins...
 class SelectAll(Selection): ...

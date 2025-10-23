@@ -5,8 +5,8 @@ import os
 from typing import final
 
 from pudl.db import Database
-from pudl.table import SelectAll, Selection, TextColumn, Table, Text
-from pudl.where import And, Eq, Like
+from pudl.table import Selection, TextColumn, Table, Text
+from pudl.where import Eq, Like, Or
 
 
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -30,14 +30,19 @@ class Message(Table):
 
 @dataclass
 class UserSel(Selection):
-    id: str = User.id.sel()
+    id: str = User.id.sel
+
+
+@dataclass
+class MessageSel(Selection):
+    user_name: str = User.email.sel
+    message: str = Message.content.sel
 
 
 def main():
-    id = "".join(random.choices(string.ascii_lowercase, k=5))
-    user = User(id=id, email="john@foo.com")
-
-    message = Message(id=id, user_id=id, content="Hello!")
+    user_id = "".join(random.choices(string.ascii_lowercase, k=5))
+    user = User(id=user_id, email="john@foo.com")
+    message = Message(id="m1", user_id=user.id, content="Hello!")
 
     assert DATABASE_URL is not None, "DATABASE_URL not set"
     db = Database(DATABASE_URL).connect().migrate([User, Message])
@@ -46,28 +51,29 @@ def main():
     db.insert(Message).values(message).execute()
 
     # fmt: off
-    results = (
+    users = (
         db.select(UserSel)
         .fromm(User)
-        .where(And(
+        .where(Or(
             Eq(User.id.info, "a"),
             Like(User.email.info, "john%")
         ))
-        .limit(10)
-        .execute()
-    )
-    # fmt: on
-    print(results)
-
-    # fmt: off
-    results = (
-        db.select(SelectAll)
-        .fromm(Message)
         .limit(2)
         .execute()
     )
     # fmt: on
-    print(results)
+    print(users)
+
+    # fmt: off
+    messages = (
+        db.select(MessageSel)
+        .fromm(Message)
+        .left_join(User, Eq(User.id.info, Message.user_id.info))
+        .limit(2)
+        .execute()
+    )
+    # fmt: on
+    print(messages)
 
 
 if __name__ == "__main__":

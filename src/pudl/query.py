@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from collections.abc import Sequence
 from typing import (
     Any,
@@ -11,6 +11,7 @@ from typing import (
 from dacite import from_dict
 from psycopg import Connection
 
+from pudl.join import JoinClause, LeftJoin
 from pudl.where import WhereClause
 from pudl.table import SelectAll, Selection, Table
 
@@ -32,7 +33,7 @@ class InsertQuery[T: Table]:
         column_names = self.table.column_names()
         columns = ", ".join(column_names)
         placeholders = ", ".join(["%s"] * len(column_names))
-        sql = f'INSERT INTO "{self.table._name}" ({columns}) VALUES ({placeholders})'  # pyright:ignore[reportPrivateUsage]
+        sql = f"INSERT INTO {self.table.fqn()} ({columns}) VALUES ({placeholders})"
         return sql, self.item.values()
 
     def execute(self):
@@ -61,8 +62,13 @@ class SelectQuery[S: Selection, T: Table]:
     table: type[T]
     sel: type[S]
 
+    _joins: list[JoinClause] = field(default_factory=list)
     _where_clause: WhereClause | None = None
     _limit_value: int | None = None
+
+    def left_join(self, table: type[Table], on: WhereClause) -> Self:
+        self._joins.append(LeftJoin(table, on))
+        return self
 
     def where(self, where_clause: WhereClause) -> Self:
         self._where_clause = where_clause
@@ -106,7 +112,7 @@ class SelectQuery[S: Selection, T: Table]:
         data_class = self._get_dataclass()
         selection = data_class.to_sql_columns()
 
-        sql = f'SELECT {selection} FROM "{self.table._name}"'  # pyright:ignore[reportPrivateUsage]
+        sql = f"SELECT {selection} FROM {self.table.fqn()}"
 
         count = -1
 
@@ -116,10 +122,16 @@ class SelectQuery[S: Selection, T: Table]:
             return count
 
         params: dict[str, Any] = {}
+
+        for join in self._joins:
+            join_data = join.get(get_count)
+            sql += join_data.sql
+            params = {**params, **join_data.params}
+
         if self._where_clause:
             where_data = self._where_clause.get(get_count)
             sql += f" WHERE {where_data.sql} "
-            params = where_data.params
+            params = {**params, **where_data.params}
 
         if self._limit_value:
             sql += f" LIMIT {self._limit_value}"
