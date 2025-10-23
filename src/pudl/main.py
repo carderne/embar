@@ -6,6 +6,7 @@ from typing import final
 
 from pudl.db import Database
 from pudl.table import SelectAll, Selection, TextColumn, Table, Text
+from pudl.where import And, Eq, Like
 
 
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -44,15 +45,19 @@ def main():
     db.insert(User).values(user).execute()
     db.insert(Message).values(message).execute()
 
+    # fmt: off
     results = (
         db.select(UserSel)
         .fromm(User)
-        .where(User.id.info, "=", "a")
-        .where(User.email.info, "LIKE", "john%")
+        .where(And(
+            Eq(User.id.info, "a"),
+            Like(User.email.info, "john%")
+        ))
         .limit(10)
-        # .execute()
+        .execute()
     )
-    # print(results)
+    # fmt: on
+    print(results)
 
     # fmt: off
     results = (

@@ -26,6 +26,10 @@ class ColumnInfo:
     def table_name(self) -> str:
         return self._table_name()
 
+    @property
+    def fqn(self) -> str:
+        return f'"{self._table_name()}"."{self.name}"'
+
     def ddl(self: "ColumnInfo") -> str:
         primary = "PRIMARY KEY" if self.primary else ""
         nullable = "NOT NULL" if self.not_null else ""
@@ -75,7 +79,7 @@ class TextColumn:
         )
         self.info = ColumnInfo(
             name=self.name,
-            col_type="text",
+            col_type="TEXT",
             primary=self.primary,
             not_null=self.not_null,
             default=self.default,
@@ -85,7 +89,7 @@ class TextColumn:
             self.info.ref = self._ref()
 
     def sel(self) -> str:
-        return f'"{self.info.table_name}"."{self.info.name}"'
+        return self.info.fqn
 
     def fk(self, ref: Callable[[], ColumnInfo]) -> Self:
         self._ref = ref

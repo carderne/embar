@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from collections.abc import Sequence
 from typing import (
     Any,
-    Literal,
     Self,
     overload,
 )
@@ -12,7 +11,8 @@ from typing import (
 from dacite import from_dict
 from psycopg import Connection
 
-from pudl.table import ColumnInfo, SelectAll, Selection, Table
+from pudl.where import WhereClause
+from pudl.table import SelectAll, Selection, Table
 
 
 Undefined: Any = ...
@@ -61,15 +61,11 @@ class SelectQuery[S: Selection, T: Table]:
     table: type[T]
     sel: type[S]
 
-    _where_clauses: list[str] = field(default_factory=list)
-    _where_params: list[Any] = field(default_factory=list)
+    _where_clause: WhereClause | None = None
     _limit_value: int | None = None
 
-    def where(
-        self, column: ColumnInfo, op: Literal["=", "LIKE", "ILIKE"], value: Any
-    ) -> Self:
-        self._where_clauses.append(f'"{column.table_name}"."{column.name}" {op} %s')
-        self._where_params.append(value)
+    def where(self, where_clause: WhereClause) -> Self:
+        self._where_clause = where_clause
         return self
 
     def limit(self, n: int) -> Self:
@@ -106,19 +102,29 @@ class SelectQuery[S: Selection, T: Table]:
         )
         return data_class
 
-    def _build_sql(self) -> tuple[str, list[Any]]:
+    def _build_sql(self) -> tuple[str, dict[str, Any]]:
         data_class = self._get_dataclass()
         selection = data_class.to_sql_columns()
 
         sql = f'SELECT {selection} FROM "{self.table._name}"'  # pyright:ignore[reportPrivateUsage]
 
-        if self._where_clauses:
-            sql += " WHERE " + " AND ".join(self._where_clauses)
+        count = -1
+
+        def get_count() -> int:
+            nonlocal count
+            count += 1
+            return count
+
+        params: dict[str, Any] = {}
+        if self._where_clause:
+            where_data = self._where_clause.get(get_count)
+            sql += f" WHERE {where_data.sql} "
+            params = where_data.params
 
         if self._limit_value:
             sql += f" LIMIT {self._limit_value}"
 
-        return sql, self._where_params
+        return sql, params
 
 
 @dataclass
