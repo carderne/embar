@@ -84,7 +84,6 @@ class SelectQuery[S: Selection, T: Table]:
 
     def execute(self) -> Sequence[Selection | T]:
         sql, params = self._build_sql()
-
         data_class = self._get_dataclass()
 
         with self._conn.cursor() as cur:

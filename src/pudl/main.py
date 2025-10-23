@@ -1,3 +1,5 @@
+import random
+import string
 from dataclasses import dataclass
 import os
 from typing import final
@@ -13,8 +15,16 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 @final
 class User(Table):
     _name = "user"
-    id: TextColumn = Text()
+    id: TextColumn = Text(primary=True)
     email: TextColumn = Text("user_email", default="text", not_null=True)
+
+
+@dataclass
+@final
+class Message(Table):
+    id: TextColumn = Text()
+    user_id: TextColumn = Text().fk(lambda: User.id.info)
+    content: TextColumn = Text()
 
 
 @dataclass
@@ -23,12 +33,16 @@ class UserSel(Selection):
 
 
 def main():
-    user = User(id="a", email="john@foo.com")
+    id = "".join(random.choices(string.ascii_lowercase, k=5))
+    user = User(id=id, email="john@foo.com")
+
+    message = Message(id=id, user_id=id, content="Hello!")
 
     assert DATABASE_URL is not None, "DATABASE_URL not set"
-    db = Database(DATABASE_URL).connect().migrate([User])
+    db = Database(DATABASE_URL).connect().migrate([User, Message])
 
     db.insert(User).values(user).execute()
+    db.insert(Message).values(message).execute()
 
     results = (
         db.select(UserSel)
@@ -36,14 +50,15 @@ def main():
         .where(User.id.info, "=", "a")
         .where(User.email.info, "LIKE", "john%")
         .limit(10)
-        .execute()
+        # .execute()
     )
-    print(results)
+    # print(results)
 
     # fmt: off
     results = (
         db.select(SelectAll)
-        .fromm(User)
+        .fromm(Message)
+        .limit(2)
         .execute()
     )
     # fmt: on

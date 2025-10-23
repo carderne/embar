@@ -1,9 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import MISSING, dataclass
+from dataclasses import MISSING, dataclass, fields, make_dataclass, field
 from typing import (
     Any,
+    Callable,
     ClassVar,
+    Self,
     TypeVar,
     final,
     overload,
@@ -12,22 +14,33 @@ from typing import (
 
 @dataclass
 class ColumnInfo:
-    table_name: str
+    _table_name: Callable[[], str]
     name: str
     col_type: str
     primary: bool
     not_null: bool
     default: str | None
+    ref: ColumnInfo | None = None
+
+    @property
+    def table_name(self) -> str:
+        return self._table_name()
 
     def ddl(self: "ColumnInfo") -> str:
         primary = "PRIMARY KEY" if self.primary else ""
         nullable = "NOT NULL" if self.not_null else ""
-        text = f'"{self.name}" {self.col_type} {primary} {nullable}'
+        reference = (
+            f'REFERENCES "{self.ref.table_name}"("{self.ref.name}")'
+            if self.ref is not None
+            else ""
+        )
+        text = f'"{self.name}" {self.col_type} {primary} {nullable} {reference}'
         return text
 
 
 @final
 class TextColumn:
+    _ref: Callable[[], ColumnInfo] | None = None
     info: ColumnInfo  # pyright:ignore[reportUninitializedInstanceVariable]
 
     @overload
@@ -56,7 +69,7 @@ class TextColumn:
         self.not_null = not_null
         self.name = name
 
-    def __set_name__(self, owner: "Table", attr_name: str):
+    def __set_name__(self, owner: Table, attr_name: str):
         self.name = (
             self._explicit_name if self._explicit_name is not None else attr_name
         )
@@ -66,11 +79,17 @@ class TextColumn:
             primary=self.primary,
             not_null=self.not_null,
             default=self.default,
-            table_name=owner._name,  # pyright:ignore[reportPrivateUsage]
+            _table_name=owner.get_name,
         )
+        if self._ref is not None:
+            self.info.ref = self._ref()
 
     def sel(self) -> str:
         return f'"{self.info.table_name}"."{self.info.name}"'
+
+    def fk(self, ref: Callable[[], ColumnInfo]) -> Self:
+        self._ref = ref
+        return self
 
 
 def Text(
@@ -87,12 +106,16 @@ class Table:
     _name: ClassVar[str] = ""
 
     def __init_subclass__(cls, **kwargs: Any):
-        super().__init_subclass__(**kwargs)
         if not hasattr(cls, "_name") or cls._name == Table._name:
             # Convert ClassName -> class_name
             cls._name = "".join(
                 "_" + c.lower() if c.isupper() else c for c in cls.__name__
             ).lstrip("_")
+        super().__init_subclass__(**kwargs)
+
+    @classmethod
+    def get_name(cls) -> str:
+        return cls._name
 
     @classmethod
     def ddl(cls) -> str:
@@ -117,8 +140,6 @@ class Table:
 
     @classmethod
     def generate_selection_dataclass(cls) -> type[Selection]:
-        from dataclasses import make_dataclass, field
-
         fields: list[tuple[str, type, Any]] = []
         for attr_name in dir(cls):
             attr = getattr(cls, attr_name)
@@ -146,16 +167,14 @@ AnyTable = TypeVar("AnyTable", bound=Table)
 class Selection:
     @classmethod
     def to_sql_columns(cls) -> str:
-        from dataclasses import fields
-
         parts: list[str] = []
-        for field in fields(cls):
+        for cls_field in fields(cls):
             source: Any = (
-                field.default_factory()
-                if field.default_factory is not MISSING
-                else field.default
+                cls_field.default_factory()
+                if cls_field.default_factory is not MISSING
+                else cls_field.default
             )
-            target = field.name
+            target = cls_field.name
             parts.append(f'{source} AS "{target}"')
 
         return ", ".join(parts)
