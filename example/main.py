@@ -1,10 +1,11 @@
+import asyncio
 import random
 import string
 from dataclasses import dataclass
 import os
 from typing import final
 
-from pudl.db import Database
+from pudl.db import AsyncDb
 from pudl.table import Selection, TextColumn, Table, Text
 from pudl.where import Eq, Like, Or
 
@@ -39,19 +40,20 @@ class MessageSel(Selection):
     message: str = Message.content.sel
 
 
-def main():
+async def main():
     user_id = "".join(random.choices(string.ascii_lowercase, k=5))
     user = User(id=user_id, email="john@foo.com")
     message = Message(id="m1", user_id=user.id, content="Hello!")
 
     assert DATABASE_URL is not None, "DATABASE_URL not set"
-    db = Database(DATABASE_URL).connect().migrate([User, Message])
+    db = await AsyncDb(DATABASE_URL).connect()
+    await db.migrate([User, Message])
 
-    db.insert(User).values(user).execute()
-    db.insert(Message).values(message).execute()
+    await db.insert(User).values(user).aexecute()
+    await db.insert(Message).values(message).aexecute()
 
     # fmt: off
-    users = (
+    users = await (
         db.select(UserSel)
         .fromm(User)
         .where(Or(
@@ -59,22 +61,22 @@ def main():
             Like(User.email.info, "john%")
         ))
         .limit(2)
-        .execute()
+        .aexecute()
     )
     # fmt: on
     print(users)
 
     # fmt: off
-    messages = (
+    messages = await (
         db.select(MessageSel)
         .fromm(Message)
         .left_join(User, Eq(User.id.info, Message.user_id.info))
         .limit(2)
-        .execute()
+        .aexecute()
     )
     # fmt: on
     print(messages)
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

@@ -3,8 +3,10 @@
 fmt = "ruff format"
 lint = "ruff check --fix"
 check = "basedpyright"
-test.cmd = "uv run src/pudl/main.py"
+
+test.cmd = "uv run example/main.py"
 test.envfile = ".env"
+
 # run all the above
 all = [ {ref="fmt"}, {ref="lint"}, {ref="check"}, {ref="test"} ]
 
