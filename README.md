@@ -3,36 +3,48 @@
 A Drizzly ORM for Python
 
 ## Example
+Set up your schemas and selection models:
 ```python
-from pudl.db import Database
+# schema.py
 from pudl.table import Selection, TextColumn, Table, Text
-from pudl.where import Eq, Like, Or
 
-# Table schemas
 class User(Table):
     _name = "user"
     id: TextColumn = Text(primary=True)
     email: TextColumn = Text("user_email", default="text", not_null=True)
 
-
 class Message(Table):
     id: TextColumn = Text()
-    user_id: TextColumn = Text().fk(lambda: User.id.info)
+    user_id: TextColumn = Text().fk(lambda: User.id)
     content: TextColumn = Text()
 
-# DB connection
-db = Database(DATABASE_URL).connect().migrate([User, Message])
+class UserSel(Selection):
+    id: str = User.id()
 
-# Insert some data
-user = User(id="a", email="john@foo.com")
+class MessageSel(Selection):
+    user_name: str = User.email()
+    message: str = Message.content()
+```
+
+And query your database:
+```python
+# main.py
+from pudl.db import Db
+from pudl.where import Eq, Like, Or
+
+from . import schema
+from .schema import User, Message, UserSel, MessageSel
+
+user_id = "a"
+user = User(id=user_id, email="john@foo.com")
 message = Message(id="m1", user_id=user.id, content="Hello!")
+
+db = Db(DATABASE_URL).connect()
+db.migrates(schema)
 
 db.insert(User).values(user).execute()
 db.insert(Message).values(message).execute()
 
-# Select users with condition
-class UserSel(Selection):
-    id: str = User.id.sel
 users = (
     db.select(UserSel)
     .fromm(User)
@@ -45,10 +57,6 @@ users = (
 )
 print(users)
 
-# Select messages with a join
-class MessageSel(Selection):
-    user_name: str = User.email.sel
-    message: str = Message.content.sel
 messages = (
     db.select(MessageSel)
     .fromm(Message)

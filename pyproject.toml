@@ -4,7 +4,7 @@ fmt = "ruff format"
 lint = "ruff check --fix"
 check = "basedpyright"
 
-test.cmd = "uv run example/main.py"
+test.cmd = "uv run python -m example.main"
 test.envfile = ".env"
 
 # run all the above

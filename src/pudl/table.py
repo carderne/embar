@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from abc import ABC
 from dataclasses import MISSING, dataclass, fields, make_dataclass, field
 from typing import (
     Any,
@@ -42,10 +43,14 @@ class ColumnInfo:
         return text
 
 
+class TableColumn(ABC):
+    info: ColumnInfo
+
+
 @final
-class TextColumn:
-    _ref: Callable[[], ColumnInfo] | None = None
-    info: ColumnInfo  # pyright:ignore[reportUninitializedInstanceVariable]
+class TextColumn(TableColumn):
+    _ref: Callable[[], TableColumn] | None = None
+    info: ColumnInfo
 
     @overload
     def __get__(self, obj: None, owner: type) -> "TextColumn": ...
@@ -86,13 +91,12 @@ class TextColumn:
             _table_name=owner.get_name,
         )
         if self._ref is not None:
-            self.info.ref = self._ref()
+            self.info.ref = self._ref().info
 
-    @property
-    def sel(self) -> str:
+    def __call__(self) -> str:
         return self.info.fqn
 
-    def fk(self, ref: Callable[[], ColumnInfo]) -> Self:
+    def fk(self, ref: Callable[[], TableColumn]) -> Self:
         self._ref = ref
         return self
 
@@ -154,7 +158,7 @@ class Table:
             attr = getattr(cls, attr_name)
             if isinstance(attr, TextColumn):
                 fields.append(
-                    (attr_name, str, field(default_factory=lambda a=attr: a.sel))
+                    (attr_name, str, field(default_factory=lambda a=attr: a.info.fqn))
                 )
 
         return make_dataclass(f"{cls.__name__}", fields, bases=(Selection,))

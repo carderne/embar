@@ -1,43 +1,16 @@
 import asyncio
 import random
 import string
-from dataclasses import dataclass
 import os
-from typing import final
 
 from pudl.db import AsyncDb
-from pudl.table import Selection, TextColumn, Table, Text
 from pudl.where import Eq, Like, Or
+
+from . import schema
+from .schema import User, Message, UserSel, MessageSel
 
 
 DATABASE_URL = os.getenv("DATABASE_URL")
-
-
-@dataclass
-@final
-class User(Table):
-    _name = "user"
-    id: TextColumn = Text(primary=True)
-    email: TextColumn = Text("user_email", default="text", not_null=True)
-
-
-@dataclass
-@final
-class Message(Table):
-    id: TextColumn = Text()
-    user_id: TextColumn = Text().fk(lambda: User.id.info)
-    content: TextColumn = Text()
-
-
-@dataclass
-class UserSel(Selection):
-    id: str = User.id.sel
-
-
-@dataclass
-class MessageSel(Selection):
-    user_name: str = User.email.sel
-    message: str = Message.content.sel
 
 
 async def main():
@@ -47,7 +20,7 @@ async def main():
 
     assert DATABASE_URL is not None, "DATABASE_URL not set"
     db = await AsyncDb(DATABASE_URL).connect()
-    await db.migrate([User, Message])
+    await db.migrates(schema)
 
     await db.insert(User).values(user).aexecute()
     await db.insert(Message).values(message).aexecute()

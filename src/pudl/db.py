@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+import types
 from typing import (
     Any,
     Self,
@@ -40,6 +41,16 @@ class Db(AbstractDb):
         self._conn.commit()
         return self
 
+    def migrates(self, schema: types.ModuleType) -> Self:
+        tables: list[type[Table]] = []
+        for name in dir(schema):
+            obj = getattr(schema, name)
+            # Check if it's a class and inherits from Table
+            if isinstance(obj, type) and issubclass(obj, Table) and obj is not Table:
+                tables.append(obj)
+        self.migrate(tables)
+        return self
+
     def execute(self, query: str, params: dict[str, Any]) -> None:
         self._conn.execute(query, params)  # pyright:ignore[reportArgumentType]
 
@@ -68,6 +79,16 @@ class AsyncDb(AbstractDb):
         for table in tables:
             await self._conn.execute(table.ddl())  # pyright:ignore[reportArgumentType]
         await self._conn.commit()
+        return self
+
+    async def migrates(self, schema: types.ModuleType) -> Self:
+        tables: list[type[Table]] = []
+        for name in dir(schema):
+            obj = getattr(schema, name)
+            # Check if it's a class and inherits from Table
+            if isinstance(obj, type) and issubclass(obj, Table) and obj is not Table:
+                tables.append(obj)
+        await self.migrate(tables)
         return self
 
     async def execute(self, query: str, params: dict[str, Any]) -> None:
