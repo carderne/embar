@@ -1,113 +1,10 @@
 from __future__ import annotations
 
-from abc import ABC
-from dataclasses import MISSING, dataclass, fields, make_dataclass, field
-from typing import (
-    Any,
-    Callable,
-    ClassVar,
-    Self,
-    TypeVar,
-    final,
-    overload,
-)
+from dataclasses import dataclass, make_dataclass, field
+from typing import Any, ClassVar
 
-
-@dataclass
-class ColumnInfo:
-    _table_name: Callable[[], str]
-    name: str
-    col_type: str
-    primary: bool
-    not_null: bool
-    default: str | None
-    ref: ColumnInfo | None = None
-
-    @property
-    def table_name(self) -> str:
-        return self._table_name()
-
-    @property
-    def fqn(self) -> str:
-        return f'"{self._table_name()}"."{self.name}"'
-
-    def ddl(self: "ColumnInfo") -> str:
-        primary = "PRIMARY KEY" if self.primary else ""
-        nullable = "NOT NULL" if self.not_null else ""
-        reference = (
-            f'REFERENCES "{self.ref.table_name}"("{self.ref.name}")'
-            if self.ref is not None
-            else ""
-        )
-        text = f'"{self.name}" {self.col_type} {primary} {nullable} {reference}'
-        return text
-
-
-class TableColumn(ABC):
-    info: ColumnInfo
-
-
-@final
-class TextColumn(TableColumn):
-    _ref: Callable[[], TableColumn] | None = None
-    info: ColumnInfo
-
-    @overload
-    def __get__(self, obj: None, owner: type) -> "TextColumn": ...
-    @overload
-    def __get__(self, obj: object, owner: type) -> str: ...
-
-    def __get__(self, obj: object | None, owner: type) -> "TextColumn | str":
-        if obj is None:
-            return self  # Class access returns descriptor
-        return getattr(obj, f"_{self.name}", "")  # Instance access returns str
-
-    def __set__(self, obj: object, value: str) -> None:
-        setattr(obj, f"_{self.name}", value)
-
-    def __init__(
-        self,
-        name: str | None,
-        default: str | None = None,
-        primary: bool = False,
-        not_null: bool = False,
-    ):
-        self._explicit_name = name
-        self.default = default
-        self.primary = primary
-        self.not_null = not_null
-        self.name = name
-
-    def __set_name__(self, owner: Table, attr_name: str):
-        self.name = (
-            self._explicit_name if self._explicit_name is not None else attr_name
-        )
-        self.info = ColumnInfo(
-            name=self.name,
-            col_type="TEXT",
-            primary=self.primary,
-            not_null=self.not_null,
-            default=self.default,
-            _table_name=owner.get_name,
-        )
-        if self._ref is not None:
-            self.info.ref = self._ref().info
-
-    def __call__(self) -> str:
-        return self.info.fqn
-
-    def fk(self, ref: Callable[[], TableColumn]) -> Self:
-        self._ref = ref
-        return self
-
-
-def Text(
-    name: str | None = None,
-    default: str | None = None,
-    primary: bool = False,
-    not_null: bool = False,
-) -> TextColumn:
-    return TextColumn(name, default, primary, not_null)
+from pudl.column_base import ColumnBase
+from pudl.selection import Selection
 
 
 @dataclass
@@ -136,7 +33,7 @@ class Table:
         for attr_name, attr in cls.__dict__.items():
             if attr_name.startswith("_"):
                 continue
-            if isinstance(attr, TextColumn):
+            if isinstance(attr, ColumnBase):
                 columns.append(attr.info.ddl())
         columns_str = ",".join(columns)
         return f"""CREATE TABLE IF NOT EXISTS {cls.fqn()} ({columns_str});"""
@@ -147,7 +44,7 @@ class Table:
         for attr_name, attr in cls.__dict__.items():
             if attr_name.startswith("_"):
                 continue
-            if isinstance(attr, TextColumn):
+            if isinstance(attr, ColumnBase):
                 columns.append(f'"{attr.info.name}"')
         return columns
 
@@ -156,7 +53,7 @@ class Table:
         fields: list[tuple[str, type, Any]] = []
         for attr_name in dir(cls):
             attr = getattr(cls, attr_name)
-            if isinstance(attr, TextColumn):
+            if isinstance(attr, ColumnBase):
                 fields.append(
                     (attr_name, str, field(default_factory=lambda a=attr: a.info.fqn))
                 )
@@ -168,32 +65,6 @@ class Table:
         for attr_name in self.__class__.__dict__:
             if attr_name.startswith("_"):
                 continue
-            if isinstance(getattr(self.__class__, attr_name), TextColumn):
+            if isinstance(getattr(self.__class__, attr_name), ColumnBase):
                 result.append(getattr(self, attr_name))
         return result
-
-
-AnyTable = TypeVar("AnyTable", bound=Table)
-
-
-@dataclass
-class Selection:
-    @classmethod
-    def to_sql_columns(cls) -> str:
-        parts: list[str] = []
-        for cls_field in fields(cls):
-            source: Any = (
-                cls_field.default_factory()
-                if cls_field.default_factory is not MISSING
-                else cls_field.default
-            )
-            target = cls_field.name
-            parts.append(f'{source} AS "{target}"')
-
-        return ", ".join(parts)
-
-
-# TODO not sure it's possible to make this work
-# (from a typing perspective)
-# with joins...
-class SelectAll(Selection): ...

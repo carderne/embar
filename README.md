@@ -6,38 +6,43 @@ A Drizzly ORM for Python
 Set up your schemas and selection models:
 ```python
 # schema.py
-from pudl.table import Selection, TextColumn, Table, Text
+from pudl.column import Integer, Text
+from pudl.selection import Selection
+from pudl.table import Table
 
+@dataclass
 class User(Table):
     _name = "user"
-    id: TextColumn = Text(primary=True)
-    email: TextColumn = Text("user_email", default="text", not_null=True)
+    id: Integer = Integer(primary=True)
+    email: Text = Text("user_email", default="text", not_null=True)
 
+@dataclass
 class Message(Table):
-    id: TextColumn = Text()
-    user_id: TextColumn = Text().fk(lambda: User.id)
-    content: TextColumn = Text()
+    id: Integer = Integer()
+    user_id: Integer = Integer().fk(lambda: User.id)
+    content: Text = Text()
 
+@dataclass
 class UserSel(Selection):
-    id: str = User.id()
+    id: Annotated[int, User.id]
 
+@dataclass
 class MessageSel(Selection):
-    user_name: str = User.email()
-    message: str = Message.content()
+    user_name: Annotated[str, User.email]
+    message: Annotated[str, Message.content]
 ```
 
 And query your database:
 ```python
 # main.py
 from pudl.db import Db
-from pudl.where import Eq, Like, Or
+from pudl.where import Eq, JEq, Like, Or
 
 from . import schema
 from .schema import User, Message, UserSel, MessageSel
 
-user_id = "a"
-user = User(id=user_id, email="john@foo.com")
-message = Message(id="m1", user_id=user.id, content="Hello!")
+user = User(id=100, email="john@foo.com")
+message = Message(id=1, user_id=user.id, content="Hello!")
 
 db = Db(DATABASE_URL).connect()
 db.migrates(schema)
@@ -49,8 +54,8 @@ users = (
     db.select(UserSel)
     .fromm(User)
     .where(Or(
-        Eq(User.id.info, "a"),
-        Like(User.email.info, "john%")
+        Eq(User.id, 1),
+        Like(User.email, "john%")
     ))
     .limit(2)
     .execute()
@@ -60,7 +65,7 @@ print(users)
 messages = (
     db.select(MessageSel)
     .fromm(Message)
-    .left_join(User, Eq(User.id.info, Message.user_id.info))
+    .left_join(User, JEq(User.id, Message.user_id))
     .limit(2)
     .execute()
 )

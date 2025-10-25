@@ -1,31 +1,33 @@
 from dataclasses import dataclass
-from typing import final
+from typing import Annotated, final
 
-from pudl.table import Selection, TextColumn, Table, Text
+from pudl.column import Integer, Text
+from pudl.selection import Selection
+from pudl.table import Table
 
 
 @dataclass
 @final
 class User(Table):
     _name = "user"
-    id: TextColumn = Text(primary=True)
-    email: TextColumn = Text("user_email", default="text", not_null=True)
+    id: Integer = Integer(primary=True)
+    email: Text = Text("user_email", default="text", not_null=True)
 
 
 @dataclass
 @final
 class Message(Table):
-    id: TextColumn = Text()
-    user_id: TextColumn = Text().fk(lambda: User.id)
-    content: TextColumn = Text()
+    id: Integer = Integer()
+    user_id: Integer = Integer().fk(lambda: User.id)
+    content: Text = Text()
 
 
 @dataclass
 class UserSel(Selection):
-    id: str = User.id()
+    id: Annotated[int, User.id]
 
 
 @dataclass
 class MessageSel(Selection):
-    user_name: str = User.email()
-    message: str = Message.content()
+    user_name: Annotated[str, User.email]
+    message: Annotated[str, Message.content]

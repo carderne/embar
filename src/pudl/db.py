@@ -8,7 +8,9 @@ from typing import (
 from psycopg import AsyncConnection, Connection
 import psycopg
 
-from pudl.table import Selection, Table
+from pudl._util import topological_sort_tables
+from pudl.selection import Selection
+from pudl.table import Table
 from pudl.query import Async, From, InsertQuery, Sync
 
 
@@ -77,7 +79,8 @@ class AsyncDb(AbstractDb):
 
     async def migrate(self, tables: Sequence[type[Table]]) -> Self:
         for table in tables:
-            await self._conn.execute(table.ddl())  # pyright:ignore[reportArgumentType]
+            ddl = table.ddl()
+            await self._conn.execute(ddl)  # pyright:ignore[reportArgumentType]
         await self._conn.commit()
         return self
 
@@ -88,6 +91,7 @@ class AsyncDb(AbstractDb):
             # Check if it's a class and inherits from Table
             if isinstance(obj, type) and issubclass(obj, Table) and obj is not Table:
                 tables.append(obj)
+        tables = topological_sort_tables(tables)
         await self.migrate(tables)
         return self
 

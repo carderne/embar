@@ -4,16 +4,16 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Callable, override
 
-from pudl.table import ColumnInfo
+from pudl.column import Column, PyType
+from pudl.column_base import ColumnBase, ColumnInfo
 
 GetCount = Callable[[], int]
-Param = ColumnInfo | str | int | float | bool
 
 
 @dataclass
 class WhereData:
     sql: str
-    params: dict[str, Param]
+    params: dict[str, PyType]
 
 
 class WhereClause(ABC):
@@ -21,10 +21,26 @@ class WhereClause(ABC):
     def get(self, get_count: GetCount) -> WhereData: ...
 
 
-@dataclass
-class Eq(WhereClause):
+class JEq[T: ColumnBase](WhereClause):
+    left: ColumnInfo
+    right: ColumnInfo
+
+    def __init__(self, left: T, right: T):
+        self.left = left.info
+        self.right = right.info
+
+    @override
+    def get(self, get_count: GetCount) -> WhereData:
+        return WhereData(sql=f"{self.left.fqn} = {self.right.fqn}", params={})
+
+
+class Eq[T: PyType](WhereClause):
     column: ColumnInfo
-    value: Param
+    value: PyType
+
+    def __init__(self, column: Column[T], value: T):
+        self.column = column.info
+        self.value = value
 
     @override
     def get(self, get_count: GetCount) -> WhereData:
@@ -40,9 +56,13 @@ class Eq(WhereClause):
 
 
 @dataclass
-class Like(WhereClause):
+class Like[T: PyType](WhereClause):
     column: ColumnInfo
-    value: Param
+    value: PyType
+
+    def __init__(self, column: Column[T], value: T):
+        self.column = column.info
+        self.value = value
 
     @override
     def get(self, get_count: GetCount) -> WhereData:

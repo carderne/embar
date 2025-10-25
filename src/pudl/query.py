@@ -15,7 +15,8 @@ from psycopg import AsyncConnection, Connection
 
 from pudl.join import JoinClause, LeftJoin
 from pudl.where import WhereClause
-from pudl.table import SelectAll, Selection, Table
+from pudl.selection import SelectAll, Selection
+from pudl.table import Table
 
 
 Undefined: Any = ...
@@ -149,7 +150,6 @@ class SelectQuery[S: Selection, T: Table, Mode]:
 
         sql, params = self._build_sql()
         data_class = self._get_dataclass()
-
         async with self._conn.cursor() as acur:
             await acur.execute(sql, params)  # pyright:ignore[reportArgumentType]
 

@@ -1,10 +1,8 @@
-import asyncio
 import random
-import string
 import os
 
-from pudl.db import AsyncDb
-from pudl.where import Eq, Like, Or
+from pudl.db import Db
+from pudl.where import Eq, JEq, Like, Or
 
 from . import schema
 from .schema import User, Message, UserSel, MessageSel
@@ -13,43 +11,43 @@ from .schema import User, Message, UserSel, MessageSel
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 
-async def main():
-    user_id = "".join(random.choices(string.ascii_lowercase, k=5))
+def main():
+    user_id = random.randint(0, 100)
     user = User(id=user_id, email="john@foo.com")
-    message = Message(id="m1", user_id=user.id, content="Hello!")
+    message = Message(id=1, user_id=user.id, content="Hello!")
 
     assert DATABASE_URL is not None, "DATABASE_URL not set"
-    db = await AsyncDb(DATABASE_URL).connect()
-    await db.migrates(schema)
+    db = Db(DATABASE_URL).connect()
+    db.migrates(schema)
 
-    await db.insert(User).values(user).aexecute()
-    await db.insert(Message).values(message).aexecute()
+    db.insert(User).values(user).execute()
+    db.insert(Message).values(message).execute()
 
     # fmt: off
-    users = await (
+    users = (
         db.select(UserSel)
         .fromm(User)
         .where(Or(
-            Eq(User.id.info, "a"),
-            Like(User.email.info, "john%")
+            Eq(User.id, 1),
+            Like(User.email, "john%")
         ))
         .limit(2)
-        .aexecute()
+        .execute()
     )
     # fmt: on
     print(users)
 
     # fmt: off
-    messages = await (
+    messages = (
         db.select(MessageSel)
         .fromm(Message)
-        .left_join(User, Eq(User.id.info, Message.user_id.info))
+        .left_join(User, JEq(User.id, Message.user_id))
         .limit(2)
-        .aexecute()
+        .execute()
     )
     # fmt: on
     print(messages)
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
