@@ -1,10 +1,14 @@
 from dataclasses import dataclass
 from datetime import datetime
-import random
 import os
+import sqlite3
 from typing import Annotated
 
-from pudl.db import Db
+import psycopg
+
+from pudl.db.base import DbType
+from pudl.db.pg import Db as PgDb
+from pudl.db.sqlite import Db as SqliteDb
 from pudl.selection import Selection
 from pudl.sql import sql
 from pudl.where import Eq, JEq, Like, Or
@@ -26,22 +30,26 @@ class UserSel(Selection):
 class UserFullMessages(Selection):
     email: Annotated[str, User.email]
     messages: Annotated[list[Message], Message.many()]
-    date: Annotated[datetime, sql(t"now()")]
+    date: Annotated[datetime, sql(t"CURRENT_TIMESTAMP")]
 
 
 @dataclass
 class MessageSel(Selection):
-    user_name: Annotated[str, User.email]
+    user: Annotated[User, User]
     message: Annotated[str, Message.content]
 
 
-def main():
-    user_id = random.randint(0, 100)
-    user = User(id=user_id, email="john@foo.com")
+assert DATABASE_URL is not None, "DATABASE_URL not set"
+pg_client = psycopg.connect(DATABASE_URL)
+sqlite_client = sqlite3.connect(":memory:")
+
+
+def main(db_type: DbType):
+    user = User(id=1, email="john@foo.com")
     message = Message(id=1, user_id=user.id, content="Hello!")
 
-    assert DATABASE_URL is not None, "DATABASE_URL not set"
-    db = Db(DATABASE_URL).connect()
+    db = PgDb(pg_client) if db_type == "postgres" else SqliteDb(sqlite_client)
+    db = PgDb(pg_client)
     db.migrates(schema)
 
     db.insert(User).value(user).execute()
@@ -88,4 +96,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    main("postgres")

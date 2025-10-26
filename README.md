@@ -30,7 +30,7 @@ class Message(Table):
 Then create a database client, apply migrations and insert some data:
 ```python
 # main.py
-from pudl.db import Db
+from pudl.db.pg import Db
 
 from . import schema
 from .schema import User, Message

@@ -6,15 +6,14 @@ from typing import (
     Any,
     NoReturn,
     Self,
-    TypeVar,
     cast,
     overload,
 )
 
 from dacite import from_dict
-from psycopg import AsyncConnection, Connection
 
 from pudl.column_base import ColumnBase
+from pudl.db.base import AllDbBase, AsyncDbBase, DbBase
 from pudl.group_by import GroupBy
 from pudl.join import JoinClause, LeftJoin
 from pudl.types import Undefined
@@ -28,19 +27,9 @@ from pudl.selection import (
 from pudl.table import Table
 
 
-class Sync: ...
-
-
-class Async: ...
-
-
-Mode = TypeVar("Mode", Sync, Async)
-
-
 @dataclass
-class InsertQuery[T: Table, Mode]:
-    _mode: type[Mode]
-    _conn: Connection | AsyncConnection
+class InsertQuery[T: Table, Db: AllDbBase]:
+    _db: Db
     table: type[T]
     items: list[T] = Undefined
 
@@ -52,47 +41,44 @@ class InsertQuery[T: Table, Mode]:
         self.items = list(items)
         return self
 
-    def _build_sql(self) -> tuple[str, list[list[T]]]:
+    def _build_sql(self) -> tuple[str, list[dict[str, Any]]]:
         column_names = self.table.column_names()
-        columns = ", ".join(column_names)
-        placeholders = ", ".join(["%s"] * len(column_names))
-        sql = f"INSERT INTO {self.table.fqn()} ({columns}) VALUES ({placeholders})"
-        values = [it.values() for it in self.items]
+        column_names_quoted = [f'"{c}"' for c in column_names]
+        columns = ", ".join(column_names_quoted)
+        placeholders = [f"%({name})s" for name in column_names]
+        placeholder_str = ", ".join(placeholders)
+        sql = f"INSERT INTO {self.table.fqn()} ({columns}) VALUES ({placeholder_str})"
+        values = [it.dict() for it in self.items]
         return sql, values
 
     @overload
-    def execute(self: InsertQuery[T, Sync]) -> None: ...
+    def execute(self: InsertQuery[T, DbBase]) -> None: ...
 
     @overload
-    def execute(self: InsertQuery[T, Async]) -> NoReturn: ...
+    def execute(self: InsertQuery[T, AsyncDbBase]) -> NoReturn: ...
 
     def execute(self):
-        if not isinstance(self._conn, Connection):
+        if not isinstance(self._db, DbBase):
             raise Exception("You need to use 'await ...aexecute()' here!")
         sql, params = self._build_sql()
-        with self._conn.cursor() as cur:
-            cur.executemany(sql, params)  # pyright:ignore[reportArgumentType]
-            self._conn.commit()
+        self._db.executemany(sql, params)
 
     @overload
-    async def aexecute(self: InsertQuery[T, Sync]) -> NoReturn: ...
+    async def aexecute(self: InsertQuery[T, DbBase]) -> NoReturn: ...
 
     @overload
-    async def aexecute(self: InsertQuery[T, Async]) -> None: ...
+    async def aexecute(self: InsertQuery[T, AsyncDbBase]) -> None: ...
 
     async def aexecute(self):
-        if not isinstance(self._conn, AsyncConnection):
+        if not isinstance(self._db, AsyncDbBase):
             raise Exception("You need to use '...execute()' here (not 'aexecute()')")
         sql, params = self._build_sql()
-        async with self._conn.cursor() as cur:
-            await cur.executemany(sql, params)  # pyright:ignore[reportArgumentType]
-            await self._conn.commit()
+        await self._db.aexecutemany(sql, params)
 
 
 @dataclass
-class SelectQuery[S: Selection, T: Table, Mode]:
-    _mode: type[Mode]
-    _conn: Connection | AsyncConnection
+class SelectQuery[S: Selection, T: Table, Db: AllDbBase]:
+    _db: Db
     table: type[T]
     sel: type[S]
 
@@ -118,66 +104,49 @@ class SelectQuery[S: Selection, T: Table, Mode]:
         return self
 
     @overload
-    def execute(self: SelectQuery[SelectAll, T, Sync]) -> list[T]: ...
+    def execute(self: SelectQuery[SelectAll, T, DbBase]) -> list[T]: ...
 
     @overload
-    def execute(self: SelectQuery[S, T, Sync]) -> list[S]: ...
+    def execute(self: SelectQuery[S, T, DbBase]) -> list[S]: ...
 
     @overload
-    def execute(self: SelectQuery[SelectAll, T, Async]) -> NoReturn: ...
+    def execute(self: SelectQuery[SelectAll, T, AsyncDbBase]) -> NoReturn: ...
 
     @overload
-    def execute(self: SelectQuery[S, T, Async]) -> NoReturn: ...
+    def execute(self: SelectQuery[S, T, AsyncDbBase]) -> NoReturn: ...
 
     def execute(self) -> Sequence[Selection | T]:
-        if not isinstance(self._conn, Connection):
+        if not isinstance(self._db, DbBase):
             raise Exception("You need to use 'await ...aexecute()' here!")
 
         sql, params = self._build_sql()
         data_class = self._get_dataclass()
 
-        with self._conn.cursor() as cur:
-            cur.execute(sql, params)  # pyright:ignore[reportArgumentType]
-
-            if cur.description is None:
-                return []
-            columns: list[str] = [desc[0] for desc in cur.description]
-            results: Sequence[Selection | T] = []
-            for row in cur.fetchall():
-                data = dict(zip(columns, row))
-                parsed = from_dict(data_class, data)
-                results.append(parsed)
-            return results
+        data = self._db.fetch(sql, params)
+        results = [from_dict(data_class, d) for d in data]
+        return results
 
     @overload
-    async def aexecute(self: SelectQuery[SelectAll, T, Sync]) -> NoReturn: ...
+    async def aexecute(self: SelectQuery[SelectAll, T, DbBase]) -> NoReturn: ...
 
     @overload
-    async def aexecute(self: SelectQuery[S, T, Sync]) -> NoReturn: ...
+    async def aexecute(self: SelectQuery[S, T, DbBase]) -> NoReturn: ...
 
     @overload
-    async def aexecute(self: SelectQuery[SelectAll, T, Async]) -> list[T]: ...
+    async def aexecute(self: SelectQuery[SelectAll, T, AsyncDbBase]) -> list[T]: ...
 
     @overload
-    async def aexecute(self: SelectQuery[S, T, Async]) -> list[S]: ...
+    async def aexecute(self: SelectQuery[S, T, AsyncDbBase]) -> list[S]: ...
 
     async def aexecute(self) -> Sequence[Selection | T]:
-        if not isinstance(self._conn, AsyncConnection):
+        if not isinstance(self._db, AsyncDbBase):
             raise Exception("You need to use '...execute()' here (not 'aexecute()')")
 
         sql, params = self._build_sql()
         data_class = self._get_dataclass()
-        async with self._conn.cursor() as acur:
-            await acur.execute(sql, params)  # pyright:ignore[reportArgumentType]
-
-            if acur.description is None:
-                return []
-            columns: list[str] = [desc[0] for desc in acur.description]
-            results: Sequence[Selection | T] = []
-            for row in await acur.fetchall():
-                data = dict(zip(columns, row))
-                results.append(from_dict(data_class, data))
-            return results
+        data = await self._db.afetch(sql, params)
+        results = [from_dict(data_class, d) for d in data]
+        return results
 
     def _get_dataclass(self) -> type[Selection] | type[S]:
         data_class = generate_selection_dataclass(self.table) if self.sel is SelectAll else self.sel
@@ -197,7 +166,7 @@ class SelectQuery[S: Selection, T: Table, Mode]:
 
     def _build_sql(self) -> tuple[str, dict[str, Any]]:
         data_class = self._get_dataclass()
-        selection = data_class.to_sql_columns()
+        selection = data_class.to_sql_columns(self._db.db_type)
 
         sql = f"SELECT {selection} FROM {self.table.fqn()}"
 
@@ -231,10 +200,9 @@ class SelectQuery[S: Selection, T: Table, Mode]:
 
 
 @dataclass
-class From[S: Selection, Mode]:
-    _mode: type[Mode]
-    _conn: Connection | AsyncConnection
+class From[S: Selection, Db: AllDbBase]:
+    _db: Db
     sel: type[S]
 
-    def fromm[T: Table](self, table: type[T]) -> SelectQuery[S, T, Mode]:
-        return SelectQuery[S, T, Mode](sel=self.sel, table=table, _conn=self._conn, _mode=self._mode)
+    def fromm[T: Table](self, table: type[T]) -> SelectQuery[S, T, Db]:
+        return SelectQuery[S, T, Db](sel=self.sel, table=table, _db=self._db)

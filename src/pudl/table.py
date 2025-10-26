@@ -41,21 +41,14 @@ class Table(TableBase):
         columns_str = ",".join(columns)
         return f"""CREATE TABLE IF NOT EXISTS {cls.fqn()} ({columns_str});"""
 
-    @classmethod
-    def column_names(cls) -> list[str]:
-        columns: list[str] = []
-        for attr_name, attr in cls.__dict__.items():
+    def dict(self) -> dict[str, Any]:
+        """
+        Result is keyed to DB column names, _not_ field names.
+        """
+        result: dict[str, Any] = {}
+        for attr_name, attr in self.__class__.__dict__.items():
             if attr_name.startswith("_"):
                 continue
             if isinstance(attr, ColumnBase):
-                columns.append(f'"{attr.info.name}"')
-        return columns
-
-    def values(self) -> list[Any]:
-        result: list[Any] = []
-        for attr_name in self.__class__.__dict__:
-            if attr_name.startswith("_"):
-                continue
-            if isinstance(getattr(self.__class__, attr_name), ColumnBase):
-                result.append(getattr(self, attr_name))
+                result[attr.info.name] = getattr(self, attr_name)
         return result

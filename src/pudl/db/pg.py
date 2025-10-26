@@ -1,0 +1,136 @@
+from collections.abc import Sequence
+import types
+from typing import (
+    Any,
+    Self,
+    final,
+    override,
+)
+from psycopg import AsyncConnection, Connection
+
+from pudl._util import topological_sort_tables
+from pudl.db.base import AsyncDbBase, DbBase
+from pudl.selection import Selection
+from pudl.table import Table
+from pudl.query import From, InsertQuery
+
+
+@final
+class Db(DbBase):
+    db_type = "postgres"
+    _conn: Connection
+
+    def __init__(self, connection: Connection):
+        self._conn = connection
+
+    def close(self):
+        if self._conn:
+            self._conn.close()
+
+    def select[S: Selection](self, sel: type[S]) -> From[S, DbBase]:
+        return From[S, DbBase](_db=self, sel=sel)
+
+    def insert[T: Table](self, table: type[T]) -> InsertQuery[T, DbBase]:
+        return InsertQuery[T, DbBase](table=table, _db=self)
+
+    def migrate(self, tables: Sequence[type[Table]]) -> Self:
+        for table in tables:
+            self._conn.execute(table.ddl())  # pyright:ignore[reportArgumentType]
+        self._conn.commit()
+        return self
+
+    def migrates(self, schema: types.ModuleType) -> Self:
+        tables: list[type[Table]] = []
+        for name in dir(schema):
+            obj = getattr(schema, name)
+            # Check if it's a class and inherits from Table
+            if isinstance(obj, type) and issubclass(obj, Table) and obj is not Table:
+                tables.append(obj)
+        tables = topological_sort_tables(tables)
+        self.migrate(tables)
+        return self
+
+    @override
+    def execute(self, query: str, params: dict[str, Any]) -> None:
+        self._conn.execute(query, params)  # pyright:ignore[reportArgumentType]
+
+    @override
+    def executemany(self, query: str, params: Sequence[dict[str, Any]]):
+        with self._conn.cursor() as cur:
+            cur.executemany(query, params)  # pyright:ignore[reportArgumentType]
+            self._conn.commit()
+
+    @override
+    def fetch(self, query: str, params: dict[str, Any]) -> list[dict[str, Any]]:
+        with self._conn.cursor() as cur:
+            cur.execute(query, params)  # pyright:ignore[reportArgumentType]
+
+            if cur.description is None:
+                return []
+            columns: list[str] = [desc[0] for desc in cur.description]
+            results: list[dict[str, Any]] = []
+            for row in cur.fetchall():
+                data = dict(zip(columns, row))
+                results.append(data)
+            return results
+
+
+@final
+class AsyncDb(AsyncDbBase):
+    db_type = "postgres"
+    _conn: AsyncConnection
+
+    def __init__(self, connection: AsyncConnection):
+        self._conn = connection
+
+    async def close(self):
+        if self._conn:
+            await self._conn.close()
+
+    def select[S: Selection](self, sel: type[S]) -> From[S, Self]:
+        return From[S, Self](_db=self, sel=sel)
+
+    def insert[T: Table](self, table: type[T]) -> InsertQuery[T, Self]:
+        return InsertQuery[T, Self](table=table, _db=self)
+
+    async def migrate(self, tables: Sequence[type[Table]]) -> Self:
+        for table in tables:
+            ddl = table.ddl()
+            await self._conn.execute(ddl)  # pyright:ignore[reportArgumentType]
+        await self._conn.commit()
+        return self
+
+    async def migrates(self, schema: types.ModuleType) -> Self:
+        tables: list[type[Table]] = []
+        for name in dir(schema):
+            obj = getattr(schema, name)
+            # Check if it's a class and inherits from Table
+            if isinstance(obj, type) and issubclass(obj, Table) and obj is not Table:
+                tables.append(obj)
+        tables = topological_sort_tables(tables)
+        await self.migrate(tables)
+        return self
+
+    @override
+    async def aexecute(self, query: str, params: dict[str, Any]) -> None:
+        await self._conn.execute(query, params)  # pyright:ignore[reportArgumentType]
+
+    @override
+    async def aexecutemany(self, query: str, params: Sequence[dict[str, Any]]):
+        async with self._conn.cursor() as cur:
+            await cur.executemany(query, params)  # pyright:ignore[reportArgumentType]
+            await self._conn.commit()
+
+    @override
+    async def afetch(self, query: str, params: dict[str, Any]) -> list[dict[str, Any]]:
+        async with self._conn.cursor() as cur:
+            await cur.execute(query, params)  # pyright:ignore[reportArgumentType]
+
+            if cur.description is None:
+                return []
+            columns: list[str] = [desc[0] for desc in cur.description]
+            results: list[dict[str, Any]] = []
+            for row in await cur.fetchall():
+                data = dict(zip(columns, row))
+                results.append(data)
+            return results

@@ -4,6 +4,7 @@ from dataclasses import Field, dataclass, field, fields, make_dataclass
 from typing import Annotated, Any, Literal, cast, get_args, get_origin, get_type_hints
 
 from pudl.column_base import ManyColumn, ColumnBase
+from pudl.db.base import DbType
 from pudl.sql import SQLQuery
 from pudl.table_base import ManyTable, TableBase
 
@@ -11,11 +12,11 @@ from pudl.table_base import ManyTable, TableBase
 @dataclass
 class Selection:
     @classmethod
-    def to_sql_columns(cls) -> str:
+    def to_sql_columns(cls, db_type: DbType) -> str:
         parts: list[str] = []
         hints = get_type_hints(cls, include_extras=True)
         for cls_field in fields(cls):
-            source = _get_annotation(hints, cls_field)
+            source = _get_annotation(hints, cls_field, db_type)
             target = cls_field.name
             parts.append(f'{source} AS "{target}"')
 
@@ -28,7 +29,7 @@ class Selection:
 class SelectAll(Selection): ...
 
 
-def _get_annotation(hints: dict[str, Any], field: Field[Any]) -> str:
+def _get_annotation(hints: dict[str, Any], field: Field[Any], db_type: DbType) -> str:
     field_type = hints[field.name]
     if get_origin(field_type) is Annotated:
         annotations = get_args(field.type)
@@ -41,13 +42,38 @@ def _get_annotation(hints: dict[str, Any], field: Field[Any]) -> str:
                 # pyright doesn't figure out the ManyColumn is always [ColumnBase]?
                 many_col = cast(ManyColumn[ColumnBase], annotation)
                 fqn = many_col.of.info.fqn
-                query = f"array_agg({fqn})"
-                return query
+                match db_type:
+                    case "postgres":
+                        query = f"array_agg({fqn})"
+                        return query
+                    case "sqlite":
+                        query = f"json_group_array({fqn})"
+                        return query
+            if isinstance(annotation, type) and issubclass(annotation, TableBase):
+                table = annotation
+                table_fqn = table.fqn()
+                columns = table.column_names()
+                column_pairs = ", ".join([f"'{c}', {table_fqn}.\"{c}\"" for c in columns])
+                match db_type:
+                    case "postgres":
+                        query = f"json_build_object({column_pairs})"
+                        return query
+                    case "sqlite":
+                        query = f"json_object({column_pairs})"
+                        return query
             if isinstance(annotation, ManyTable):
                 many_table = cast(ManyTable[type[TableBase]], annotation)
-                fqn = many_table.of.fqn()
-                query = f"json_agg(row_to_json({fqn}.*))"
-                return query
+                table = many_table.of
+                table_fqn = many_table.of.fqn()
+                columns = table.column_names()
+                column_pairs = ", ".join([f"'{c}', {table_fqn}.\"{c}\"" for c in columns])
+                match db_type:
+                    case "postgres":
+                        query = f"json_agg(json_build_object({column_pairs}))"
+                        return query
+                    case "sqlite":
+                        query = f"json_group_array(json_object({column_pairs}))"
+                        return query
             if isinstance(annotation, SQLQuery):
                 query = annotation.execute()
                 return query
