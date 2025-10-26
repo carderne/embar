@@ -1,14 +1,35 @@
+from dataclasses import dataclass
 import random
 import os
+from typing import Annotated
 
 from pudl.db import Db
+from pudl.selection import Selection
 from pudl.where import Eq, JEq, Like, Or
 
 from . import schema
-from .schema import User, Message, UserSel, MessageSel
+from .schema import User, Message
 
 
 DATABASE_URL = os.getenv("DATABASE_URL")
+
+
+@dataclass
+class UserSel(Selection):
+    id: Annotated[int, User.id]
+    messages: Annotated[list[str], Message.content.many()]
+
+
+@dataclass
+class UserFullMessages(Selection):
+    email: Annotated[str, User.email]
+    messages: Annotated[list[Message], Message.many()]
+
+
+@dataclass
+class MessageSel(Selection):
+    user_name: Annotated[str, User.email]
+    message: Annotated[str, Message.content]
 
 
 def main():
@@ -38,6 +59,18 @@ def main():
     )
     # fmt: on
     print(users)
+
+    # fmt: off
+    users2 = (
+        db.select(UserFullMessages)
+        .fromm(User)
+        .left_join(Message, JEq(User.id, Message.user_id))
+        .group_by(User.id)
+        .limit(2)
+        .execute()
+    )
+    # fmt: on
+    print(users2)
 
     # fmt: off
     messages = (

@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable
 
+from pudl.types import Undefined
+
 
 @dataclass
 class ColumnInfo:
@@ -36,8 +38,9 @@ class ColumnInfo:
 
 class ColumnBase:
     info: ColumnInfo  # pyright:ignore[reportUninitializedInstanceVariable]
+    _pytype: type = Undefined
 
 
 @dataclass
 class ManyColumn[T: ColumnBase]:
-    col: T
+    of: T

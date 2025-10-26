@@ -3,53 +3,55 @@
 A Drizzly ORM for Python
 
 ## Example
-Set up your schemas and selection models:
+Set up your database schema:
 ```python
 # schema.py
+from dataclasses import dataclass
+from typing import final
+
 from pudl.column import Integer, Text
-from pudl.selection import Selection
 from pudl.table import Table
 
 @dataclass
+@final
 class User(Table):
     _name = "user"
     id: Integer = Integer(primary=True)
     email: Text = Text("user_email", default="text", not_null=True)
 
 @dataclass
+@final
 class Message(Table):
     id: Integer = Integer()
     user_id: Integer = Integer().fk(lambda: User.id)
     content: Text = Text()
-
-@dataclass
-class UserSel(Selection):
-    id: Annotated[int, User.id]
-    messages: Annotated[list[str], Message.content.many]
-
-@dataclass
-class MessageSel(Selection):
-    user_name: Annotated[str, User.email]
-    message: Annotated[str, Message.content]
 ```
 
-And query your database:
+Then create a database client, apply migrations and insert some data:
 ```python
 # main.py
 from pudl.db import Db
-from pudl.where import Eq, JEq, Like, Or
 
 from . import schema
-from .schema import User, Message, UserSel, MessageSel
-
-user = User(id=100, email="john@foo.com")
-message = Message(id=1, user_id=user.id, content="Hello!")
+from .schema import User, Message
 
 db = Db(DATABASE_URL).connect()
 db.migrates(schema)
+user_id = random.randint(0, 100)
+user = User(id=user_id, email="john@foo.com")
+message = Message(id=1, user_id=user.id, content="Hello!")
 
-db.insert(User).values(user).execute()
-db.insert(Message).values(message).execute()
+db.insert(User).value(user).execute()
+db.insert(Message).value(message).execute()
+```
+
+Now you're ready to query some data!
+```python
+@dataclass
+class UserSel(Selection):
+    id: Annotated[int, User.id]
+    messages: Annotated[list[str], Message.content.many()]
+
 
 users = (
     db.select(UserSel)
@@ -60,17 +62,29 @@ users = (
         Like(User.email, "john%")
     ))
     .group_by(User.id)
-    .limit(2)
     .execute()
 )
-# [UserSel(id=100, messages=['Hello!'])]
+# [ UserSel(id=0, messages=['Hello!']) ]
+```
 
-messages = (
-    db.select(MessageSel)
-    .fromm(Message)
-    .left_join(User, JEq(User.id, Message.user_id))
+And what about a fully nested object:
+```python
+@dataclass
+class UserHydrated(Selection):
+    email: Annotated[str, User.email]
+    messages: Annotated[list[Message], Message.many()]
+
+
+users = (
+    db.select(UserFullMessages)
+    .fromm(User)
+    .left_join(Message, JEq(User.id, Message.user_id))
+    .group_by(User.id)
     .limit(2)
     .execute()
 )
-# [MessageSel(user_name='john@foo.com', message='Hello!')]
+# [UserFullMessages(
+#      email='john@foo.com',
+#      messages=[Message(content='Hello!', id=1, user_id=0)]
+# )]
 ```

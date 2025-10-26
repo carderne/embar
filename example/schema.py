@@ -1,8 +1,7 @@
 from dataclasses import dataclass
-from typing import Annotated, final
+from typing import final
 
 from pudl.column import Integer, Text
-from pudl.selection import Selection
 from pudl.table import Table
 
 
@@ -20,15 +19,3 @@ class Message(Table):
     id: Integer = Integer()
     user_id: Integer = Integer().fk(lambda: User.id)
     content: Text = Text()
-
-
-@dataclass
-class UserSel(Selection):
-    id: Annotated[int, User.id]
-    messages: Annotated[list[str], Message.content.many]
-
-
-@dataclass
-class MessageSel(Selection):
-    user_name: Annotated[str, User.email]
-    message: Annotated[str, Message.content]

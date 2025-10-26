@@ -33,6 +33,7 @@ dev = [
     "poethepoet>=0.37.0",
     "ruff>=0.14.1",
     "ty>=0.0.1a23",
+    "vulture>=2.14",
 ]
 
 [build-system]

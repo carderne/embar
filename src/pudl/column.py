@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Callable, Self, overload
 
 
-from pudl.column_base import ColumnInfo, ColumnBase, ManyColumn
+from pudl.column_base import ManyColumn, ColumnInfo, ColumnBase
 from pudl.table import Table
 
 PyType = str | int | float | bool | datetime
@@ -59,30 +59,35 @@ class Column[T: PyType](ColumnBase):
         self._ref = ref
         return self
 
-    @property
     def many(self) -> ManyColumn[Self]:
         return ManyColumn[Self](self)
 
 
 class Text(Column[str]):
     _sql_type: str = "TEXT"
+    _pytype: type = str
 
 
 class Integer(Column[int]):
     _sql_type: str = "INTEGER"
+    _pytype: type = int
 
 
 class Serial(Column[int]):
     _sql_type: str = "SERIAL"
+    _pytype: type = int
 
 
 class Float(Column[float]):
     _sql_type: str = "FLOAT"
+    _pytype: type = float
 
 
 class Boolean(Column[bool]):
     _sql_type: str = "BOOLEAN"
+    _pytype: type = bool
 
 
 class Timestamp(Column[datetime]):
     _sql_type: str = "TIMESTAMP"
+    _pytype: type = str

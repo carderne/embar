@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields, make_dataclass
 from collections.abc import Sequence
 from typing import (
     Any,
     NoReturn,
     Self,
     TypeVar,
+    cast,
     overload,
 )
 
@@ -16,12 +17,15 @@ from psycopg import AsyncConnection, Connection
 from pudl.column_base import ColumnBase
 from pudl.group_by import GroupBy
 from pudl.join import JoinClause, LeftJoin
+from pudl.types import Undefined
 from pudl.where import WhereClause
-from pudl.selection import SelectAll, Selection
+from pudl.selection import (
+    SelectAll,
+    Selection,
+    convert_annotation,
+    generate_selection_dataclass,
+)
 from pudl.table import Table
-
-
-Undefined: Any = ...
 
 
 class Sync: ...
@@ -141,7 +145,8 @@ class SelectQuery[S: Selection, T: Table, Mode]:
             results: Sequence[Selection | T] = []
             for row in cur.fetchall():
                 data = dict(zip(columns, row))
-                results.append(from_dict(data_class, data))
+                parsed = from_dict(data_class, data)
+                results.append(parsed)
             return results
 
     @overload
@@ -176,11 +181,23 @@ class SelectQuery[S: Selection, T: Table, Mode]:
 
     def _get_dataclass(self) -> type[Selection] | type[S]:
         data_class = (
-            self.table.generate_selection_dataclass()
+            generate_selection_dataclass(self.table)
             if self.sel is SelectAll
             else self.sel
         )
-        return data_class
+
+        new_fields: list[tuple[str, type, Any]] = []
+        for cls_field in fields(data_class):
+            new_type = convert_annotation(cls_field)  # returns just the type
+            if new_type:
+                new_fields.append((cls_field.name, new_type, cls_field))
+            else:
+                field_type = cast(type, cls_field.type)
+                new_fields.append((cls_field.name, field_type, cls_field))
+
+        NewClass = make_dataclass(data_class.__name__, new_fields, bases=(Selection,))
+
+        return NewClass
 
     def _build_sql(self) -> tuple[str, dict[str, Any]]:
         data_class = self._get_dataclass()

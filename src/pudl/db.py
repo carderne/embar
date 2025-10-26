@@ -50,6 +50,7 @@ class Db(AbstractDb):
             # Check if it's a class and inherits from Table
             if isinstance(obj, type) and issubclass(obj, Table) and obj is not Table:
                 tables.append(obj)
+        tables = topological_sort_tables(tables)
         self.migrate(tables)
         return self
 
