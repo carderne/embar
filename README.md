@@ -25,6 +25,7 @@ class Message(Table):
 @dataclass
 class UserSel(Selection):
     id: Annotated[int, User.id]
+    messages: Annotated[list[str], Message.content.many]
 
 @dataclass
 class MessageSel(Selection):
@@ -53,14 +54,16 @@ db.insert(Message).values(message).execute()
 users = (
     db.select(UserSel)
     .fromm(User)
+    .left_join(Message, JEq(User.id, Message.user_id))
     .where(Or(
         Eq(User.id, 1),
         Like(User.email, "john%")
     ))
+    .group_by(User.id)
     .limit(2)
     .execute()
 )
-print(users)
+# [UserSel(id=100, messages=['Hello!'])]
 
 messages = (
     db.select(MessageSel)
@@ -69,5 +72,5 @@ messages = (
     .limit(2)
     .execute()
 )
-print(messages)
+# [MessageSel(user_name='john@foo.com', message='Hello!')]
 ```

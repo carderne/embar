@@ -36,3 +36,8 @@ class ColumnInfo:
 
 class ColumnBase:
     info: ColumnInfo  # pyright:ignore[reportUninitializedInstanceVariable]
+
+
+@dataclass
+class ManyColumn[T: ColumnBase]:
+    col: T

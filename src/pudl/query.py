@@ -13,6 +13,8 @@ from typing import (
 from dacite import from_dict
 from psycopg import AsyncConnection, Connection
 
+from pudl.column_base import ColumnBase
+from pudl.group_by import GroupBy
 from pudl.join import JoinClause, LeftJoin
 from pudl.where import WhereClause
 from pudl.selection import SelectAll, Selection
@@ -36,18 +38,23 @@ class InsertQuery[T: Table, Mode]:
     _mode: type[Mode]
     _conn: Connection | AsyncConnection
     table: type[T]
-    item: T = Undefined
+    items: list[T] = Undefined
 
-    def values(self, item: T) -> Self:
-        self.item = item
+    def value(self, item: T) -> Self:
+        self.items = [item]
         return self
 
-    def _build_sql(self) -> tuple[str, list[T]]:
+    def values(self, items: Sequence[T]) -> Self:
+        self.items = list(items)
+        return self
+
+    def _build_sql(self) -> tuple[str, list[list[T]]]:
         column_names = self.table.column_names()
         columns = ", ".join(column_names)
         placeholders = ", ".join(["%s"] * len(column_names))
         sql = f"INSERT INTO {self.table.fqn()} ({columns}) VALUES ({placeholders})"
-        return sql, self.item.values()
+        values = [it.values() for it in self.items]
+        return sql, values
 
     @overload
     def execute(self: InsertQuery[T, Sync]) -> None: ...
@@ -60,7 +67,7 @@ class InsertQuery[T: Table, Mode]:
             raise Exception("You need to use 'await ...aexecute()' here!")
         sql, params = self._build_sql()
         with self._conn.cursor() as cur:
-            cur.execute(sql, params)  # pyright:ignore[reportArgumentType]
+            cur.executemany(sql, params)  # pyright:ignore[reportArgumentType]
             self._conn.commit()
 
     @overload
@@ -74,7 +81,7 @@ class InsertQuery[T: Table, Mode]:
             raise Exception("You need to use '...execute()' here (not 'aexecute()')")
         sql, params = self._build_sql()
         async with self._conn.cursor() as cur:
-            await cur.execute(sql, params)  # pyright:ignore[reportArgumentType]
+            await cur.executemany(sql, params)  # pyright:ignore[reportArgumentType]
             await self._conn.commit()
 
 
@@ -87,6 +94,7 @@ class SelectQuery[S: Selection, T: Table, Mode]:
 
     _joins: list[JoinClause] = field(default_factory=list)
     _where_clause: WhereClause | None = None
+    _group_clause: GroupBy | None = None
     _limit_value: int | None = None
 
     def left_join(self, table: type[Table], on: WhereClause) -> Self:
@@ -95,6 +103,10 @@ class SelectQuery[S: Selection, T: Table, Mode]:
 
     def where(self, where_clause: WhereClause) -> Self:
         self._where_clause = where_clause
+        return self
+
+    def group_by(self, col: ColumnBase) -> Self:
+        self._group_clause = GroupBy(col)
         return self
 
     def limit(self, n: int) -> Self:
@@ -190,12 +202,16 @@ class SelectQuery[S: Selection, T: Table, Mode]:
             sql += join_data.sql
             params = {**params, **join_data.params}
 
-        if self._where_clause:
+        if self._where_clause is not None:
             where_data = self._where_clause.get(get_count)
             sql += f" WHERE {where_data.sql} "
             params = {**params, **where_data.params}
 
-        if self._limit_value:
+        if self._group_clause is not None:
+            group_by_col = self._group_clause.col.info.fqn
+            sql += f" GROUP BY {group_by_col} "
+
+        if self._limit_value is not None:
             sql += f" LIMIT {self._limit_value}"
 
         return sql, params

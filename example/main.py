@@ -20,17 +20,19 @@ def main():
     db = Db(DATABASE_URL).connect()
     db.migrates(schema)
 
-    db.insert(User).values(user).execute()
-    db.insert(Message).values(message).execute()
+    db.insert(User).value(user).execute()
+    db.insert(Message).value(message).execute()
 
     # fmt: off
     users = (
         db.select(UserSel)
         .fromm(User)
+        .left_join(Message, JEq(User.id, Message.user_id))
         .where(Or(
             Eq(User.id, 1),
             Like(User.email, "john%")
         ))
+        .group_by(User.id)
         .limit(2)
         .execute()
     )

@@ -25,6 +25,7 @@ class Message(Table):
 @dataclass
 class UserSel(Selection):
     id: Annotated[int, User.id]
+    messages: Annotated[list[str], Message.content.many]
 
 
 @dataclass

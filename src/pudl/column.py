@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Callable, Self, overload
 
 
-from pudl.column_base import ColumnInfo, ColumnBase
+from pudl.column_base import ColumnInfo, ColumnBase, ManyColumn
 from pudl.table import Table
 
 PyType = str | int | float | bool | datetime
@@ -58,6 +58,10 @@ class Column[T: PyType](ColumnBase):
     def fk(self, ref: Callable[[], Column[T]]) -> Self:
         self._ref = ref
         return self
+
+    @property
+    def many(self) -> ManyColumn[Self]:
+        return ManyColumn[Self](self)
 
 
 class Text(Column[str]):

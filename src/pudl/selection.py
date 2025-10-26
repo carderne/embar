@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import Field, dataclass, fields
-from typing import Annotated, Any, get_args, get_origin
+from typing import Annotated, Any, cast, get_args, get_origin
 
-from pudl.column_base import ColumnBase
+from pudl.column_base import ColumnBase, ManyColumn
 
 
 @dataclass
@@ -34,4 +34,11 @@ def _get_annotation(field: Field[Any]) -> str:
             if isinstance(annotation, ColumnBase):
                 # Found it - call your method
                 return annotation.info.fqn
+            if isinstance(annotation, ManyColumn):
+                # not sure why this cast is needed
+                # pyright doesn't figure out the ManyColumn is always [ColumnBase]?
+                many_col = cast(ManyColumn[ColumnBase], annotation)
+                fqn = many_col.col.info.fqn
+                query = f"array_agg({fqn})"
+                return query
     raise Exception(f"Failed to get column name for {field.name}")
