@@ -14,9 +14,7 @@ def topological_sort_tables(tables: Sequence[type[Table]]) -> list[type[Table]]:
     in_degree: dict[type[Table], int] = {table: 0 for table in tables}
 
     # Map table names to table classes for lookup
-    name_to_table: dict[str, type[Table]] = {
-        table.get_name(): table for table in tables
-    }
+    name_to_table: dict[str, type[Table]] = {table.get_name(): table for table in tables}
 
     for table in tables:
         for field in fields(table):
@@ -35,9 +33,7 @@ def topological_sort_tables(tables: Sequence[type[Table]]) -> list[type[Table]]:
                     in_degree[table] += 1
 
     # Kahn's algorithm
-    queue: deque[type[Table]] = deque(
-        table for table in tables if in_degree[table] == 0
-    )
+    queue: deque[type[Table]] = deque(table for table in tables if in_degree[table] == 0)
     result: list[type[Table]] = []
 
     while queue:

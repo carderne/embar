@@ -180,11 +180,7 @@ class SelectQuery[S: Selection, T: Table, Mode]:
             return results
 
     def _get_dataclass(self) -> type[Selection] | type[S]:
-        data_class = (
-            generate_selection_dataclass(self.table)
-            if self.sel is SelectAll
-            else self.sel
-        )
+        data_class = generate_selection_dataclass(self.table) if self.sel is SelectAll else self.sel
 
         new_fields: list[tuple[str, type, Any]] = []
         for cls_field in fields(data_class):
@@ -241,6 +237,4 @@ class From[S: Selection, Mode]:
     sel: type[S]
 
     def fromm[T: Table](self, table: type[T]) -> SelectQuery[S, T, Mode]:
-        return SelectQuery[S, T, Mode](
-            sel=self.sel, table=table, _conn=self._conn, _mode=self._mode
-        )
+        return SelectQuery[S, T, Mode](sel=self.sel, table=table, _conn=self._conn, _mode=self._mode)

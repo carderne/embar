@@ -27,11 +27,7 @@ class ColumnInfo:
     def ddl(self: "ColumnInfo") -> str:
         primary = "PRIMARY KEY" if self.primary else ""
         nullable = "NOT NULL" if self.not_null else ""
-        reference = (
-            f'REFERENCES "{self.ref.table_name}"("{self.ref.name}")'
-            if self.ref is not None
-            else ""
-        )
+        reference = f'REFERENCES "{self.ref.table_name}"("{self.ref.name}")' if self.ref is not None else ""
         text = f'"{self.name}" {self.col_type} {primary} {nullable} {reference}'
         return text
 

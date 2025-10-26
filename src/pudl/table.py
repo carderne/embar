@@ -19,9 +19,7 @@ class Table(TableBase):
     def __init_subclass__(cls, **kwargs: Any):
         if not hasattr(cls, "_name") or cls._name == Table._name:
             # Convert ClassName -> class_name
-            cls._name: str = "".join(
-                "_" + c.lower() if c.isupper() else c for c in cls.__name__
-            ).lstrip("_")
+            cls._name: str = "".join("_" + c.lower() if c.isupper() else c for c in cls.__name__).lstrip("_")
         super().__init_subclass__(**kwargs)
 
     @classmethod

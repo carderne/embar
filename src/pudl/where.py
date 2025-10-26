@@ -50,9 +50,7 @@ class Eq[T: PyType](WhereClause):
         if isinstance(self.value, ColumnInfo):
             return WhereData(sql=f"{self.column.fqn} = {self.value.fqn}", params={})
 
-        return WhereData(
-            sql=f"{self.column.fqn} = %({name})s", params={name: self.value}
-        )
+        return WhereData(sql=f"{self.column.fqn} = %({name})s", params={name: self.value})
 
 
 @dataclass
@@ -71,9 +69,7 @@ class Like[T: PyType](WhereClause):
         if isinstance(self.value, ColumnInfo):
             return WhereData(sql=f"{self.column.fqn} = {self.value.fqn}", params={})
 
-        return WhereData(
-            sql=f"{self.column.fqn} LIKE %({name})s", params={name: self.value}
-        )
+        return WhereData(sql=f"{self.column.fqn} LIKE %({name})s", params={name: self.value})
 
 
 @dataclass

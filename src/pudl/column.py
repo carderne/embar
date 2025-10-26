@@ -41,9 +41,7 @@ class Column[T: PyType](ColumnBase):
         setattr(obj, f"_{self.name}", value)
 
     def __set_name__(self, owner: Table, attr_name: str):
-        self.name = (
-            self._explicit_name if self._explicit_name is not None else attr_name
-        )
+        self.name = self._explicit_name if self._explicit_name is not None else attr_name
         self.info: ColumnInfo = ColumnInfo(
             name=self.name,
             col_type=self._sql_type,

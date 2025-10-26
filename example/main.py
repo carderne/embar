@@ -1,10 +1,12 @@
 from dataclasses import dataclass
+from datetime import datetime
 import random
 import os
 from typing import Annotated
 
 from pudl.db import Db
 from pudl.selection import Selection
+from pudl.sql import sql
 from pudl.where import Eq, JEq, Like, Or
 
 from . import schema
@@ -24,6 +26,7 @@ class UserSel(Selection):
 class UserFullMessages(Selection):
     email: Annotated[str, User.email]
     messages: Annotated[list[Message], Message.many()]
+    date: Annotated[datetime, sql(t"now()")]
 
 
 @dataclass

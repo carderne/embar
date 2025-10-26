@@ -67,12 +67,13 @@ users = (
 # [ UserSel(id=0, messages=['Hello!']) ]
 ```
 
-And what about a fully nested object:
+And what about a fully nested object and some SQL templating:
 ```python
 @dataclass
 class UserHydrated(Selection):
     email: Annotated[str, User.email]
     messages: Annotated[list[Message], Message.many()]
+    date: Annotated[datetime, sql(t"now()")]
 
 
 users = (
@@ -83,8 +84,9 @@ users = (
     .limit(2)
     .execute()
 )
-# [UserFullMessages(
+# [UserHydrated(
 #      email='john@foo.com',
-#      messages=[Message(content='Hello!', id=1, user_id=0)]
+#      messages=[Message(content='Hello!', id=1, user_id=0)],
+#      date: datetime(2025, 10, 26, ...)
 # )]
 ```

@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import Field, dataclass, field, fields, make_dataclass
-from typing import Annotated, Any, Literal, cast, get_args, get_origin
+from typing import Annotated, Any, Literal, cast, get_args, get_origin, get_type_hints
 
 from pudl.column_base import ManyColumn, ColumnBase
+from pudl.sql import SQLQuery
 from pudl.table_base import ManyTable, TableBase
 
 
@@ -12,8 +13,9 @@ class Selection:
     @classmethod
     def to_sql_columns(cls) -> str:
         parts: list[str] = []
+        hints = get_type_hints(cls, include_extras=True)
         for cls_field in fields(cls):
-            source = _get_annotation(cls_field)
+            source = _get_annotation(hints, cls_field)
             target = cls_field.name
             parts.append(f'{source} AS "{target}"')
 
@@ -26,9 +28,9 @@ class Selection:
 class SelectAll(Selection): ...
 
 
-def _get_annotation(field: Field[Any]) -> str:
-    # Check if it's an Annotated type
-    if get_origin(field.type) is Annotated:
+def _get_annotation(hints: dict[str, Any], field: Field[Any]) -> str:
+    field_type = hints[field.name]
+    if get_origin(field_type) is Annotated:
         annotations = get_args(field.type)
         # Skip first arg (the actual type), search metadata for TableColumn
         for annotation in annotations[1:]:
@@ -46,6 +48,10 @@ def _get_annotation(field: Field[Any]) -> str:
                 fqn = many_table.of.fqn()
                 query = f"json_agg(row_to_json({fqn}.*))"
                 return query
+            if isinstance(annotation, SQLQuery):
+                query = annotation.execute()
+                return query
+
     raise Exception(f"Failed to get column name for {field.name}")
 
 
