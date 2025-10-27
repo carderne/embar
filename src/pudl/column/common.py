@@ -3,13 +3,14 @@ from __future__ import annotations
 from typing import Callable, Self, overload
 
 
-from pudl.column.base import ManyColumn, ColumnInfo, ColumnBase
+from pudl.column.base import ManyColumn, ColumnInfo, ColumnBase, OnDelete
 from pudl.table import Table
 from pudl.types import PyType, Type
 
 
 class Column[T: PyType](ColumnBase):
-    _ref: Callable[[], Column[T]] | None = None
+    _fk: tuple[Callable[[], Column[T]], OnDelete | None] | None = None
+    _on_delete: OnDelete | None = None
     _sql_type: str  # pyright:ignore[reportUninitializedInstanceVariable]
 
     def __init__(
@@ -48,11 +49,17 @@ class Column[T: PyType](ColumnBase):
             default=self.default,
             _table_name=owner.get_name,
         )
-        if self._ref is not None:
-            self.info.ref = self._ref().info
+        if self._fk is not None:
+            ref, on_delete = self._fk
+            self.info.ref = ref().info
+            self.info.on_delete = on_delete
 
-    def fk(self, ref: Callable[[], Column[T]]) -> Self:
-        self._ref = ref
+    def fk(
+        self,
+        ref: Callable[[], Column[T]],
+        on_delete: OnDelete | None = None,
+    ) -> Self:
+        self._fk = (ref, on_delete)
         return self
 
     def many(self) -> ManyColumn[Self]:

@@ -17,5 +17,5 @@ class User(Table):
 @final
 class Message(Table):
     id: Integer = Integer()
-    user_id: Integer = Integer().fk(lambda: User.id)
+    user_id: Integer = Integer().fk(lambda: User.id, "cascade")
     content: Text = Text()
