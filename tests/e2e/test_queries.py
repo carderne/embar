@@ -4,12 +4,22 @@ from datetime import datetime
 from pudl.db.sqlite import Db as SqliteDb
 from pudl.db.pg import Db as PgDb
 from pudl.where import Eq, JEq, Like, Or
+from pudl.selection import Selection
+from pudl.sql import sql
 
 from .schema import User, Message
-from .models import UserSel, UserFullMessages, MessageSel
+from dataclasses import dataclass
+from typing import Annotated
 
 
-def test_select_string_array(db: SqliteDb | PgDb):
+def test_select_string_array(db_loaded: SqliteDb | PgDb):
+    db = db_loaded
+
+    @dataclass
+    class UserSel(Selection):
+        id: Annotated[int, User.id]
+        messages: Annotated[list[str], Message.content.many()]
+
     # fmt: off
     res = (
         db.select(UserSel)
@@ -30,7 +40,15 @@ def test_select_string_array(db: SqliteDb | PgDb):
     assert asdict(got) == asdict(want)
 
 
-def test_select_json_array(db: SqliteDb | PgDb):
+def test_select_json_array(db_loaded: SqliteDb | PgDb):
+    db = db_loaded
+
+    @dataclass
+    class UserFullMessages(Selection):
+        email: Annotated[str, User.email]
+        messages: Annotated[list[Message], Message.many()]
+        date: Annotated[datetime, sql(t"CURRENT_TIMESTAMP")]
+
     # fmt: off
     got = (
         db.select(UserFullMessages)
@@ -49,7 +67,14 @@ def test_select_json_array(db: SqliteDb | PgDb):
     assert isinstance(got[0].date, datetime)
 
 
-def test_select_json(db: SqliteDb | PgDb):
+def test_select_json(db_loaded: SqliteDb | PgDb):
+    db = db_loaded
+
+    @dataclass
+    class MessageSel(Selection):
+        user: Annotated[User, User]
+        message: Annotated[str, Message.content]
+
     # fmt: off
     res = (
         db.select(MessageSel)

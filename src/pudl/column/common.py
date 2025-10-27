@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-from datetime import datetime
 from typing import Callable, Self, overload
 
 
-from pudl.column_base import ManyColumn, ColumnInfo, ColumnBase
+from pudl.column.base import ManyColumn, ColumnInfo, ColumnBase
 from pudl.table import Table
-
-PyType = str | int | float | bool | datetime
+from pudl.types import PyType, Type
 
 
 class Column[T: PyType](ColumnBase):
@@ -63,29 +61,14 @@ class Column[T: PyType](ColumnBase):
 
 class Text(Column[str]):
     _sql_type: str = "TEXT"
-    _pytype: type = str
+    _pytype: Type = str
 
 
 class Integer(Column[int]):
     _sql_type: str = "INTEGER"
-    _pytype: type = int
-
-
-class Serial(Column[int]):
-    _sql_type: str = "SERIAL"
-    _pytype: type = int
+    _pytype: Type = int
 
 
 class Float(Column[float]):
-    _sql_type: str = "FLOAT"
-    _pytype: type = float
-
-
-class Boolean(Column[bool]):
-    _sql_type: str = "BOOLEAN"
-    _pytype: type = bool
-
-
-class Timestamp(Column[datetime]):
-    _sql_type: str = "TIMESTAMP"
-    _pytype: type = str
+    _sql_type: str = "REAL"
+    _pytype: Type = float

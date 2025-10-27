@@ -1,0 +1,35 @@
+from dataclasses import dataclass
+
+from pudl.column.pg import Jsonb
+from pudl.db.pg import Db as PgDb
+from pudl.table import Table
+from pudl.selection import SelectAll
+
+from typing import final
+
+
+@dataclass
+@final
+class TableWithJsonB(Table):
+    data: Jsonb = Jsonb()
+
+
+def test_postgres_jsonb(pg_db: PgDb):
+    db = pg_db
+    db.migrate([TableWithJsonB])
+
+    name = "bob"
+    data = TableWithJsonB(data={"name": name})
+    db.insert(TableWithJsonB).value(data).execute()
+
+    # fmt: off
+    res = (
+        db.select(SelectAll)
+        .fromm(TableWithJsonB)
+        .execute()
+    )
+    # fmt: on
+    print(res)
+    assert len(res) == 1
+    got = res[0]
+    assert got.data["name"] == name

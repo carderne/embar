@@ -4,8 +4,9 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Callable, override
 
-from pudl.column import Column, PyType
-from pudl.column_base import ColumnBase, ColumnInfo
+from pudl.column.common import Column
+from pudl.column.base import ColumnBase, ColumnInfo
+from pudl.types import PyType
 
 GetCount = Callable[[], int]
 

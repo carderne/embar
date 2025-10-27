@@ -7,6 +7,7 @@ from typing import (
     override,
 )
 from psycopg import AsyncConnection, Connection
+from psycopg.types.json import Json
 
 from pudl._util import topological_sort_tables
 from pudl.db.base import AsyncDbBase, DbBase
@@ -56,6 +57,7 @@ class Db(DbBase):
 
     @override
     def executemany(self, query: str, params: Sequence[dict[str, Any]]):
+        params = _jsonify_dicts(params)
         with self._conn.cursor() as cur:
             cur.executemany(query, params)  # pyright:ignore[reportArgumentType]
             self._conn.commit()
@@ -117,6 +119,7 @@ class AsyncDb(AsyncDbBase):
 
     @override
     async def aexecutemany(self, query: str, params: Sequence[dict[str, Any]]):
+        params = _jsonify_dicts(params)
         async with self._conn.cursor() as cur:
             await cur.executemany(query, params)  # pyright:ignore[reportArgumentType]
             await self._conn.commit()
@@ -134,3 +137,12 @@ class AsyncDb(AsyncDbBase):
                 data = dict(zip(columns, row))
                 results.append(data)
             return results
+
+
+def _jsonify_dicts(params: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
+    res = [_jsonify_dicts_inner(p) for p in params]
+    return res
+
+
+def _jsonify_dicts_inner(params: dict[str, Any]) -> dict[str, Any]:
+    return {k: Json(v) if isinstance(v, dict) else v for k, v in params.items()}

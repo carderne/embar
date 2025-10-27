@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Self
 
-from pudl.column_base import ColumnBase
+from pudl.column.base import ColumnBase
 from pudl.table_base import ManyTable, TableBase
 
 
@@ -28,6 +28,7 @@ class Table(TableBase):
 
     @classmethod
     def get_name(cls) -> str:
+        # TODO: the `_name` field seems to get included when ser/de?
         return cls._name
 
     @classmethod

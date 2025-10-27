@@ -58,4 +58,7 @@ reportUnusedCallResult = false
 reportAny = false
 
 [tool.pytest.ini_options]
-addopts = "--doctest-modules"
+testpaths = ["tests", "src"]
+# pytest doesn't like multiple test files with the same name, and we
+# have src/pudl/{db,column}/pg.py with the same name
+addopts = "--doctest-modules --ignore=src/pudl/db --doctest-glob='*.py'"

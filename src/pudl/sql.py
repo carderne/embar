@@ -1,7 +1,7 @@
-from typing import Any, TypeVar, cast, override
+from typing import Any, cast, override
 from string.templatelib import Template
 
-from pudl.column_base import ColumnBase
+from pudl.column.base import ColumnBase
 from pudl.table_base import TableBase
 
 
@@ -32,9 +32,6 @@ class SQLTemplate:
         return result
 
 
-T = TypeVar("T")
-
-
 class SQLQuery:
     def __init__(self, template_str: Any):
         self.template_str: Any = template_str
@@ -44,7 +41,7 @@ class SQLQuery:
 
 
 class SQL:
-    def __getitem__(self, return_type: type[T]) -> type:
+    def __getitem__(self) -> type:
         # Return a callable that creates SQLQuery with the type attached
         class TypedSQLQuery(SQLQuery):
             @override
@@ -57,22 +54,4 @@ class SQL:
         return SQLQuery(template_str)
 
 
-# class SQL:
-#     def __getitem__(self, return_type: type[T]) -> SQLTemplate[T]:
-#         return SQLTemplate(return_type)
-#
-#     def __call__(self, template_str: Any) -> str:
-#         return SQLTemplate(str)(template_str)
-
-
 sql = SQL()
-#
-#
-# # Example usage
-# if __name__ == "__main__":
-#     # Example implementations
-#     class MyTable(TableBase): ...
-#
-#     class MyColumn(ColumnBase): ...
-#
-#     foo = sql[bool](t"Table FQN: {MyTable}")

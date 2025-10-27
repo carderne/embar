@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import final
 
-from pudl.column import Integer, Text
+from pudl.column.common import Integer, Text
 from pudl.table import Table
 
 

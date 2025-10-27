@@ -12,7 +12,7 @@ from typing import (
 
 from dacite import from_dict
 
-from pudl.column_base import ColumnBase
+from pudl.column.base import ColumnBase
 from pudl.db.base import AllDbBase, AsyncDbBase, DbBase
 from pudl.group_by import GroupBy
 from pudl.join import JoinClause, LeftJoin

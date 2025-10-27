@@ -2,7 +2,7 @@ from collections import defaultdict, deque
 from collections.abc import Sequence
 from dataclasses import fields
 
-from pudl.column_base import ColumnBase
+from pudl.column.base import ColumnBase
 from pudl.table import Table
 
 

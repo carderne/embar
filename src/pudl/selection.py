@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import Field, dataclass, field, fields, make_dataclass
 from typing import Annotated, Any, Literal, cast, get_args, get_origin, get_type_hints
 
-from pudl.column_base import ManyColumn, ColumnBase
+from pudl.column.base import ManyColumn, ColumnBase
 from pudl.db.base import DbType
 from pudl.sql import SQLQuery
 from pudl.table_base import ManyTable, TableBase
