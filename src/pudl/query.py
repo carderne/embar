@@ -42,13 +42,13 @@ class InsertQuery[T: Table, Db: AllDbBase]:
         return self
 
     def _build_sql(self) -> tuple[str, list[dict[str, Any]]]:
-        column_names = self.table.column_names()
+        column_names = self.table.column_names().values()
         column_names_quoted = [f'"{c}"' for c in column_names]
         columns = ", ".join(column_names_quoted)
         placeholders = [f"%({name})s" for name in column_names]
         placeholder_str = ", ".join(placeholders)
         sql = f"INSERT INTO {self.table.fqn()} ({columns}) VALUES ({placeholder_str})"
-        values = [it.dict() for it in self.items]
+        values = [it.value_dict() for it in self.items]
         return sql, values
 
     @overload
@@ -120,6 +120,7 @@ class SelectQuery[S: Selection, T: Table, Db: AllDbBase]:
             raise Exception("You need to use 'await ...aexecute()' here!")
 
         sql, params = self._build_sql()
+
         data_class = self._get_dataclass()
 
         data = self._db.fetch(sql, params)

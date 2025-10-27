@@ -12,16 +12,16 @@ class TableBase:
         return f'"{cls._name}"'
 
     @classmethod
-    def column_names(cls) -> list[str]:
+    def column_names(cls) -> dict[str, str]:
         """
-        Unquoted list of column names.
+        Mapping of field names to unquoted column names.
         """
-        columns: list[str] = []
+        columns: dict[str, str] = {}
         for attr_name, attr in cls.__dict__.items():
             if attr_name.startswith("_"):
                 continue
             if isinstance(attr, ColumnBase):
-                columns.append(attr.info.name)
+                columns[attr_name] = attr.info.name
         return columns
 
 

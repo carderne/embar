@@ -41,7 +41,7 @@ class Table(TableBase):
         columns_str = ",".join(columns)
         return f"""CREATE TABLE IF NOT EXISTS {cls.fqn()} ({columns_str});"""
 
-    def dict(self) -> dict[str, Any]:
+    def value_dict(self) -> dict[str, Any]:
         """
         Result is keyed to DB column names, _not_ field names.
         """

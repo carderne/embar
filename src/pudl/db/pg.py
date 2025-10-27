@@ -34,6 +34,7 @@ class Db(DbBase):
         return InsertQuery[T, DbBase](table=table, _db=self)
 
     def migrate(self, tables: Sequence[type[Table]]) -> Self:
+        tables = topological_sort_tables(tables)
         for table in tables:
             self._conn.execute(table.ddl())  # pyright:ignore[reportArgumentType]
         self._conn.commit()
@@ -46,7 +47,6 @@ class Db(DbBase):
             # Check if it's a class and inherits from Table
             if isinstance(obj, type) and issubclass(obj, Table) and obj is not Table:
                 tables.append(obj)
-        tables = topological_sort_tables(tables)
         self.migrate(tables)
         return self
 
@@ -94,6 +94,7 @@ class AsyncDb(AsyncDbBase):
         return InsertQuery[T, Self](table=table, _db=self)
 
     async def migrate(self, tables: Sequence[type[Table]]) -> Self:
+        tables = topological_sort_tables(tables)
         for table in tables:
             ddl = table.ddl()
             await self._conn.execute(ddl)  # pyright:ignore[reportArgumentType]
@@ -107,7 +108,6 @@ class AsyncDb(AsyncDbBase):
             # Check if it's a class and inherits from Table
             if isinstance(obj, type) and issubclass(obj, Table) and obj is not Table:
                 tables.append(obj)
-        tables = topological_sort_tables(tables)
         await self.migrate(tables)
         return self
 

@@ -53,7 +53,9 @@ def _get_annotation(hints: dict[str, Any], field: Field[Any], db_type: DbType) -
                 table = annotation
                 table_fqn = table.fqn()
                 columns = table.column_names()
-                column_pairs = ", ".join([f"'{c}', {table_fqn}.\"{c}\"" for c in columns])
+                column_pairs = ", ".join(
+                    [f"'{field_name}', {table_fqn}.\"{col_name}\"" for field_name, col_name in columns.items()]
+                )
                 match db_type:
                     case "postgres":
                         query = f"json_build_object({column_pairs})"
@@ -66,7 +68,9 @@ def _get_annotation(hints: dict[str, Any], field: Field[Any], db_type: DbType) -
                 table = many_table.of
                 table_fqn = many_table.of.fqn()
                 columns = table.column_names()
-                column_pairs = ", ".join([f"'{c}', {table_fqn}.\"{c}\"" for c in columns])
+                column_pairs = ", ".join(
+                    [f"'{field_name}', {table_fqn}.\"{col_name}\"" for field_name, col_name in columns.items()]
+                )
                 match db_type:
                     case "postgres":
                         query = f"json_agg(json_build_object({column_pairs}))"

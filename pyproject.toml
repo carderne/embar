@@ -4,8 +4,9 @@ fmt = "ruff format"
 lint = "ruff check --fix"
 check = "basedpyright"
 
-test.cmd = "uv run python -m example.main"
-test.envfile = ".env"
+# test.cmd = "uv run python -m example.main"
+# test.envfile = ".env"
+test = "pytest -vv -s"
 
 # run all the above
 all = [ {ref="fmt"}, {ref="lint"}, {ref="check"}, {ref="test"} ]
@@ -31,6 +32,7 @@ dependencies = [
 dev = [
     "basedpyright>=1.31.7",
     "poethepoet>=0.37.0",
+    "pytest>=8.4.2",
     "ruff>=0.14.1",
     "ty>=0.0.1a23",
     "vulture>=2.14",
@@ -54,3 +56,6 @@ pythonVersion = "3.14"
 reportExplicitAny = false
 reportUnusedCallResult = false
 reportAny = false
+
+[tool.pytest.ini_options]
+addopts = "--doctest-modules"
