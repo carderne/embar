@@ -43,10 +43,7 @@ class PostgresContainer:
         while time.time() - start < timeout:
             try:
                 # Actually try to connect to verify the database is ready
-                conn = psycopg.connect(
-                    self.get_connection_url(),
-                    connect_timeout=1
-                )
+                conn = psycopg.connect(self.get_connection_url(), connect_timeout=1)
                 conn.close()
                 return
             except (psycopg.OperationalError, psycopg.Error):

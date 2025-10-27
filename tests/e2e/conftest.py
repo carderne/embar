@@ -30,13 +30,15 @@ def truncate_tables():
     # TODO add between-test teardown
     ...
 
+
 @pytest.fixture(params=["sqlite", "postgres"])
 def db(request: pytest.FixtureRequest, sqlite_db: SqliteDb, pg_db: PgDb) -> SqliteDb | PgDb:
-      """Parametrized fixture that runs tests against both SQLite and Postgres."""
-      if request.param == "sqlite":
-          return sqlite_db
-      else:
-          return pg_db
+    """Parametrized fixture that runs tests against both SQLite and Postgres."""
+    if request.param == "sqlite":
+        return sqlite_db
+    else:
+        return pg_db
+
 
 @pytest.fixture
 def sqlite_db() -> SqliteDb:

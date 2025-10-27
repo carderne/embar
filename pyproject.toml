@@ -4,8 +4,6 @@ fmt = "ruff format"
 lint = "ruff check --fix"
 check = "basedpyright"
 
-# test.cmd = "uv run python -m example.main"
-# test.envfile = ".env"
 test = "pytest -vv -s"
 
 # run all the above
@@ -13,6 +11,8 @@ all = [ {ref="fmt"}, {ref="lint"}, {ref="check"}, {ref="test"} ]
 
 "ci:fmt" = "ruff format --check"  # fail if not formatted
 "ci:lint" = "ruff check"
+"ci:check" = "basedpyright"
+"ci:test" = "pytest"
 
 [project]
 name = "pudl"
