@@ -7,7 +7,24 @@ from pudl.table import Table
 
 
 def topological_sort_tables(tables: Sequence[type[Table]]) -> list[type[Table]]:
-    """Sort table classes by foreign key dependencies using Kahn's algorithm."""
+    """
+    Sort table classes by foreign key dependencies using Kahn's algorithm.
+
+    Tables are returned in the order they should be created.
+
+    Example:
+    >>> from dataclasses import dataclass
+    >>> from pudl.column.common import Integer
+    >>> from pudl.table import Table
+    >>> @dataclass
+    ... class User(Table):
+    ...     id: Integer = Integer()
+    >>> @dataclass
+    ... class Message(Table):
+    ...     user_id: Integer = Integer().fk(lambda: User.id)
+    >>> topological_sort_tables([Message, User])
+    [<class 'pudl._util.User'>, <class 'pudl._util.Message'>]
+    """
 
     # Build dependency graph
     dependencies: dict[type[Table], set[type[Table]]] = defaultdict(set)

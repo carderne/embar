@@ -1,19 +1,21 @@
-from collections.abc import Sequence
 import types
+from collections.abc import Sequence
 from typing import (
     Any,
     Self,
     final,
     override,
 )
+
 from psycopg import AsyncConnection, Connection
 from psycopg.types.json import Json
 
 from pudl._util import topological_sort_tables
 from pudl.db.base import AsyncDbBase, DbBase
-from pudl.selection import Selection
+from pudl.query.fromm import Fromm
+from pudl.query.insert import InsertQuery
+from pudl.query.selection import Selection
 from pudl.table import Table
-from pudl.query import From, InsertQuery
 
 
 @final
@@ -28,8 +30,8 @@ class Db(DbBase):
         if self._conn:
             self._conn.close()
 
-    def select[S: Selection](self, sel: type[S]) -> From[S, DbBase]:
-        return From[S, DbBase](_db=self, sel=sel)
+    def select[S: Selection](self, sel: type[S]) -> Fromm[S, DbBase]:
+        return Fromm[S, DbBase](_db=self, sel=sel)
 
     def insert[T: Table](self, table: type[T]) -> InsertQuery[T, DbBase]:
         return InsertQuery[T, DbBase](table=table, _db=self)
@@ -64,6 +66,7 @@ class Db(DbBase):
 
     @override
     def fetch(self, query: str, params: dict[str, Any]) -> list[dict[str, Any]]:
+        # TODO should this return a Generator instead?
         with self._conn.cursor() as cur:
             cur.execute(query, params)  # pyright:ignore[reportArgumentType]
 
@@ -89,8 +92,8 @@ class AsyncDb(AsyncDbBase):
         if self._conn:
             await self._conn.close()
 
-    def select[S: Selection](self, sel: type[S]) -> From[S, Self]:
-        return From[S, Self](_db=self, sel=sel)
+    def select[S: Selection](self, sel: type[S]) -> Fromm[S, Self]:
+        return Fromm[S, Self](_db=self, sel=sel)
 
     def insert[T: Table](self, table: type[T]) -> InsertQuery[T, Self]:
         return InsertQuery[T, Self](table=table, _db=self)
@@ -140,9 +143,7 @@ class AsyncDb(AsyncDbBase):
 
 
 def _jsonify_dicts(params: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
-    res = [_jsonify_dicts_inner(p) for p in params]
-    return res
-
-
-def _jsonify_dicts_inner(params: dict[str, Any]) -> dict[str, Any]:
-    return {k: Json(v) if isinstance(v, dict) else v for k, v in params.items()}
+    """
+    psycopg requires that dicts get passed through its `Json` function.
+    """
+    return [{k: Json(v) if isinstance(v, dict) else v for k, v in p.items()} for p in params]

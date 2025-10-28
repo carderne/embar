@@ -3,33 +3,54 @@ from __future__ import annotations
 from dataclasses import Field, dataclass, field, fields, make_dataclass
 from typing import Annotated, Any, Literal, cast, get_args, get_origin, get_type_hints
 
-from pudl.column.base import ManyColumn, ColumnBase
+from pudl.column.base import ColumnBase
 from pudl.db.base import DbType
-from pudl.sql import SQLQuery
-from pudl.table_base import ManyTable, TableBase
+from pudl.query.many import ManyColumn, ManyTable
+from pudl.sql import Sql
+from pudl.table_base import TableBase
 
 
 @dataclass
 class Selection:
+    """
+    `Selection` is the base class for [`Select`][pudl.query.select.Select] queries.
+
+    Example:
+    >>> from pudl.column.common import Text
+    >>> from pudl.table import Table
+    >>> class MyTable(Table):
+    ...     my_col: Text = Text()
+    >>> @dataclass
+    ... class MySelection(Selection):
+    ...     my_col: [str, MyTable.my_col]
+    >>>
+    """
+
     @classmethod
     def to_sql_columns(cls, db_type: DbType) -> str:
         parts: list[str] = []
         hints = get_type_hints(cls, include_extras=True)
         for cls_field in fields(cls):
-            source = _get_annotation(hints, cls_field, db_type)
+            source = _get_source_expr(hints, cls_field, db_type)
             target = cls_field.name
             parts.append(f'{source} AS "{target}"')
 
         return ", ".join(parts)
 
 
-# TODO not sure it's possible to make this work
-# (from a typing perspective)
-# with joins...
+# `SelectAll` tells the query engine to get all fields from the `from()` table
+# but currently (?) doesn't work (from a typing POV) with joined tables...
+# TODO figure out if worth keeping even with that limitation
 class SelectAll(Selection): ...
 
 
-def _get_annotation(hints: dict[str, Any], field: Field[Any], db_type: DbType) -> str:
+def _get_source_expr(hints: dict[str, Any], field: Field[Any], db_type: DbType) -> str:
+    """
+    Get the source expression for the given `Selection` field.
+
+    It could be a simple column reference, a table or `Many` reference,
+    or even a ['Sql'][pudl.sql.Sql] query.
+    """
     field_type = hints[field.name]
     if get_origin(field_type) is Annotated:
         annotations = get_args(field.type)
@@ -78,16 +99,35 @@ def _get_annotation(hints: dict[str, Any], field: Field[Any], db_type: DbType) -
                     case "sqlite":
                         query = f"json_group_array(json_object({column_pairs}))"
                         return query
-            if isinstance(annotation, SQLQuery):
+            if isinstance(annotation, Sql):
                 query = annotation.execute()
                 return query
 
-    raise Exception(f"Failed to get column name for {field.name}")
+    raise Exception(f"Failed to get source expression for {field.name}")
 
 
 def convert_annotation(
     field: Field[Any],
 ) -> Annotated[Any, Any] | Literal[False]:
+    """
+    Extract complex annotated types from `Annotated[int, MyTable.my_col]` expressions.
+
+    If the annotated type is a column reference then this does nothing and returns false.
+
+    Only used by `pudl.query.Select` but more at home here with the `Selection` context where it's used.
+
+    Example:
+    >>> from pudl.column.common import Text
+    >>> from pudl.table import Table
+    >>> class MyTable(Table):
+    ...     my_col: Text = Text()
+    >>> @dataclass
+    ... class MySelection(Selection):
+    ...     my_col: [str, MyTable.my_col]
+    >>> field = fields(MySelection)[0]
+    >>> convert_annotation(field)
+    False
+    """
     if get_origin(field.type) is Annotated:
         annotations = get_args(field.type)
         # Skip first arg (the actual type), search metadata for TableColumn
@@ -106,6 +146,17 @@ def convert_annotation(
 
 
 def generate_selection_dataclass(cls: type[TableBase]) -> type[Selection]:
+    """
+    Create a dataclass subclass of `Selection` based on a `Table`.
+
+    Note the new table has the same exact name, maybe something to revisit.
+
+    Example:
+    >>> from pudl.table import Table
+    >>> class MyTable(Table): ...
+    >>> generate_selection_dataclass(MyTable)
+    <class 'pudl.query.selection.MyTable'>
+    """
     fields: list[tuple[str, Annotated[Any, Any], Any]] = []
     for attr_name in dir(cls):
         attr = getattr(cls, attr_name)

@@ -8,10 +8,18 @@ DbType = Literal["sqlite"] | Literal["postgres"]
 
 
 class AllDbBase:
+    """
+    Base class (not an ABC, but could be) for all Db clients.
+    """
+
     db_type: DbType = Undefined
 
 
 class DbBase(ABC, AllDbBase):
+    """
+    Base class for _sync_ Db clients.
+    """
+
     @abstractmethod
     def execute(self, query: str, params: dict[str, Any]): ...
     @abstractmethod
@@ -21,6 +29,10 @@ class DbBase(ABC, AllDbBase):
 
 
 class AsyncDbBase(ABC, AllDbBase):
+    """
+    Base class for async Db clients.
+    """
+
     @abstractmethod
     async def aexecute(self, query: str, params: dict[str, Any]): ...
     @abstractmethod

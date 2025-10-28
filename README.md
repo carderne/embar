@@ -73,7 +73,7 @@ And what about a fully nested object and some SQL templating:
 class UserHydrated(Selection):
     email: Annotated[str, User.email]
     messages: Annotated[list[Message], Message.many()]
-    date: Annotated[datetime, sql(t"now()")]
+    date: Annotated[datetime, Sql(t"now()")]
 
 
 users = (

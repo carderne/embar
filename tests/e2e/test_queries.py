@@ -1,15 +1,14 @@
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from datetime import datetime
-
-from pudl.db.sqlite import Db as SqliteDb
-from pudl.db.pg import Db as PgDb
-from pudl.where import Eq, JEq, Like, Or
-from pudl.selection import Selection
-from pudl.sql import sql
-
-from .schema import User, Message
-from dataclasses import dataclass
 from typing import Annotated
+
+from pudl.db.pg import Db as PgDb
+from pudl.db.sqlite import Db as SqliteDb
+from pudl.query.selection import Selection
+from pudl.query.where import Eq, Like, Or
+from pudl.sql import Sql
+
+from .schema import Message, User
 
 
 def test_select_string_array(db_loaded: SqliteDb | PgDb):
@@ -24,7 +23,7 @@ def test_select_string_array(db_loaded: SqliteDb | PgDb):
     res = (
         db.select(UserSel)
         .fromm(User)
-        .left_join(Message, JEq(User.id, Message.user_id))
+        .left_join(Message, Eq(User.id, Message.user_id))
         .where(Or(
             Eq(User.id, 1),
             Like(User.email, "john%")
@@ -47,13 +46,13 @@ def test_select_json_array(db_loaded: SqliteDb | PgDb):
     class UserFullMessages(Selection):
         email: Annotated[str, User.email]
         messages: Annotated[list[Message], Message.many()]
-        date: Annotated[datetime, sql(t"CURRENT_TIMESTAMP")]
+        date: Annotated[datetime, Sql(t"CURRENT_TIMESTAMP")]
 
     # fmt: off
     got = (
         db.select(UserFullMessages)
         .fromm(User)
-        .left_join(Message, JEq(User.id, Message.user_id))
+        .left_join(Message, Eq(User.id, Message.user_id))
         .group_by(User.id)
         .limit(2)
         .execute()
@@ -79,7 +78,7 @@ def test_select_json(db_loaded: SqliteDb | PgDb):
     res = (
         db.select(MessageSel)
         .fromm(Message)
-        .left_join(User, JEq(User.id, Message.user_id))
+        .left_join(User, Eq(User.id, Message.user_id))
         .limit(2)
         .execute()
     )

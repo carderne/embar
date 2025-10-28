@@ -1,6 +1,7 @@
 import subprocess
 import time
 from typing import final
+
 import psycopg
 
 
@@ -47,7 +48,7 @@ class PostgresContainer:
                 conn.close()
                 return
             except (psycopg.OperationalError, psycopg.Error):
-                time.sleep(0.5)
+                time.sleep(0.1)
         raise TimeoutError("Postgres container failed to become ready")
 
     def stop(self) -> None:

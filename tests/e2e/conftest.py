@@ -1,15 +1,15 @@
 import sqlite3
+
 import psycopg
 import pytest
 
-
-from pudl.db.sqlite import Db as SqliteDb
 from pudl.db.pg import Db as PgDb
-from pudl.sql import sql
+from pudl.db.sqlite import Db as SqliteDb
+from pudl.sql import Sql
 
-from .container import PostgresContainer
 from . import schema
-from .schema import User, Message
+from .container import PostgresContainer
+from .schema import Message, User
 
 postgres = PostgresContainer("postgres:18-alpine3.22", port=25432)
 
@@ -27,9 +27,9 @@ def postgres_container(request: pytest.FixtureRequest):
 
 @pytest.fixture(scope="function")
 def db_clean(db: SqliteDb | PgDb):
-    query1 = sql(t"DELETE FROM {Message}").execute()
+    query1 = Sql(t"DELETE FROM {Message}").execute()
     db.execute(query1, {})
-    query2 = sql(t"DELETE FROM {User}").execute()
+    query2 = Sql(t"DELETE FROM {User}").execute()
     db.execute(query2, {})
     return db
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field, fields, make_dataclass
 from collections.abc import Sequence
+from dataclasses import dataclass, field, fields, make_dataclass
 from typing import (
     Any,
     NoReturn,
@@ -14,70 +14,38 @@ from dacite import from_dict
 
 from pudl.column.base import ColumnBase
 from pudl.db.base import AllDbBase, AsyncDbBase, DbBase
-from pudl.group_by import GroupBy
-from pudl.join import JoinClause, LeftJoin
-from pudl.types import Undefined
-from pudl.where import WhereClause
-from pudl.selection import (
+from pudl.query.group_by import GroupBy
+from pudl.query.join import JoinClause, LeftJoin
+from pudl.query.selection import (
     SelectAll,
     Selection,
     convert_annotation,
     generate_selection_dataclass,
 )
+from pudl.query.where import WhereClause
 from pudl.table import Table
 
 
 @dataclass
-class InsertQuery[T: Table, Db: AllDbBase]:
-    _db: Db
-    table: type[T]
-    items: list[T] = Undefined
-
-    def value(self, item: T) -> Self:
-        self.items = [item]
-        return self
-
-    def values(self, items: Sequence[T]) -> Self:
-        self.items = list(items)
-        return self
-
-    def _build_sql(self) -> tuple[str, list[dict[str, Any]]]:
-        column_names = self.table.column_names().values()
-        column_names_quoted = [f'"{c}"' for c in column_names]
-        columns = ", ".join(column_names_quoted)
-        placeholders = [f"%({name})s" for name in column_names]
-        placeholder_str = ", ".join(placeholders)
-        sql = f"INSERT INTO {self.table.fqn()} ({columns}) VALUES ({placeholder_str})"
-        values = [it.value_dict() for it in self.items]
-        return sql, values
-
-    @overload
-    def execute(self: InsertQuery[T, DbBase]) -> None: ...
-
-    @overload
-    def execute(self: InsertQuery[T, AsyncDbBase]) -> NoReturn: ...
-
-    def execute(self):
-        if not isinstance(self._db, DbBase):
-            raise Exception("You need to use 'await ...aexecute()' here!")
-        sql, params = self._build_sql()
-        self._db.executemany(sql, params)
-
-    @overload
-    async def aexecute(self: InsertQuery[T, DbBase]) -> NoReturn: ...
-
-    @overload
-    async def aexecute(self: InsertQuery[T, AsyncDbBase]) -> None: ...
-
-    async def aexecute(self):
-        if not isinstance(self._db, AsyncDbBase):
-            raise Exception("You need to use '...execute()' here (not 'aexecute()')")
-        sql, params = self._build_sql()
-        await self._db.aexecutemany(sql, params)
-
-
-@dataclass
 class SelectQuery[S: Selection, T: Table, Db: AllDbBase]:
+    """
+    `InsertQuery` is used to insert data into a table.
+
+    It is generic over the `Selection` made, `Table` being inserted into, and the database being used.
+
+    It has a regular `execute()` method, and an async `aexecute()` method.
+    These are typed to return `NoReturn` when the wrong one is used, but there doesn't
+    seem to be a way to make it an error to use them in the wrong case.
+
+    `SelectQuery` is never used directly, but always returned by a [`Fromm`][pudl.fromm.Fromm] instance.
+
+    Example:
+    >>> from pudl.db.pg import Db
+    >>> db = Db(None)
+    >>> select = db.select(None).fromm(None)
+    >>> assert isinstance(select, SelectQuery)
+    """
+
     _db: Db
     table: type[T]
     sel: type[S]
@@ -116,6 +84,16 @@ class SelectQuery[S: Selection, T: Table, Db: AllDbBase]:
     def execute(self: SelectQuery[S, T, AsyncDbBase]) -> NoReturn: ...
 
     def execute(self) -> Sequence[Selection | T]:
+        """
+        execute the query against the underlying db.
+
+        The overrides provide for a few different cases:
+        - A subclass of `Selection` was passed, in which case that's the return type
+        - `SelectAll` was passed, in which case the return type is the `Table`
+        - This is called with an async db, in which case an error is returnd.
+
+        Results are currently (?) parsed with dacite.
+        """
         if not isinstance(self._db, DbBase):
             raise Exception("You need to use 'await ...aexecute()' here!")
 
@@ -140,6 +118,16 @@ class SelectQuery[S: Selection, T: Table, Db: AllDbBase]:
     async def aexecute(self: SelectQuery[S, T, AsyncDbBase]) -> list[S]: ...
 
     async def aexecute(self) -> Sequence[Selection | T]:
+        """
+        execute the query against the underlying (async) db.
+
+        The overrides provide for a few different cases:
+        - A subclass of `Selection` was passed, in which case that's the return type
+        - `SelectAll` was passed, in which case the return type is the `Table`
+        - This is called with a non-async db, in which case an error is returnd.
+
+        Results are currently (?) parsed with dacite.
+        """
         if not isinstance(self._db, AsyncDbBase):
             raise Exception("You need to use '...execute()' here (not 'aexecute()')")
 
@@ -150,22 +138,37 @@ class SelectQuery[S: Selection, T: Table, Db: AllDbBase]:
         return results
 
     def _get_dataclass(self) -> type[Selection] | type[S]:
+        """
+        Generate the dataclass that will be used to deserialize (and validate) the query results.
+
+        If Selection is `SelectAll`, we generate a dataclass based on the `Table`,
+        otherwise the `Seletion` (already a dataclass)
+        is used.
+
+        Extra processing is done to check for nested children that are Tables themselves.
+        """
+        # TODO does this work for doubly nested stuff? Probably not.
         data_class = generate_selection_dataclass(self.table) if self.sel is SelectAll else self.sel
 
         new_fields: list[tuple[str, type, Any]] = []
         for cls_field in fields(data_class):
-            new_type = convert_annotation(cls_field)  # returns just the type
+            new_type = convert_annotation(cls_field)
             if new_type:
                 new_fields.append((cls_field.name, new_type, cls_field))
             else:
+                # This means convert_annotation returned False, i.e. it's a 'simple' field.
+                # We have to recreate it with a Field tuple to match the stuff above for the legitimately new fields.
+                # (I haven't found a way for it to just be left in-place or something.)
                 field_type = cast(type, cls_field.type)
                 new_fields.append((cls_field.name, field_type, cls_field))
 
-        NewClass = make_dataclass(data_class.__name__, new_fields, bases=(Selection,))
-
-        return NewClass
+        new_class = make_dataclass(data_class.__name__, new_fields, bases=(Selection,))
+        return new_class
 
     def _build_sql(self) -> tuple[str, dict[str, Any]]:
+        """
+        Combine all the components of the query and build the SQL and bind parameters (psycopg format).
+        """
         data_class = self._get_dataclass()
         selection = data_class.to_sql_columns(self._db.db_type)
 
@@ -198,12 +201,3 @@ class SelectQuery[S: Selection, T: Table, Db: AllDbBase]:
             sql += f" LIMIT {self._limit_value}"
 
         return sql, params
-
-
-@dataclass
-class From[S: Selection, Db: AllDbBase]:
-    _db: Db
-    sel: type[S]
-
-    def fromm[T: Table](self, table: type[T]) -> SelectQuery[S, T, Db]:
-        return SelectQuery[S, T, Db](sel=self.sel, table=table, _db=self._db)

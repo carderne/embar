@@ -1,8 +1,8 @@
-from collections.abc import Sequence
-from datetime import datetime
 import json
 import sqlite3
 import types
+from collections.abc import Sequence
+from datetime import datetime
 from typing import (
     Any,
     Self,
@@ -12,9 +12,10 @@ from typing import (
 
 from pudl._util import topological_sort_tables
 from pudl.db.base import DbBase
-from pudl.selection import Selection
+from pudl.query.fromm import Fromm
+from pudl.query.insert import InsertQuery
+from pudl.query.selection import Selection
 from pudl.table import Table
-from pudl.query import From, InsertQuery
 
 
 @final
@@ -29,8 +30,8 @@ class Db(DbBase):
         if self._conn:
             self._conn.close()
 
-    def select[S: Selection](self, sel: type[S]) -> From[S, DbBase]:
-        return From[S, DbBase](_db=self, sel=sel)
+    def select[S: Selection](self, sel: type[S]) -> Fromm[S, DbBase]:
+        return Fromm[S, DbBase](_db=self, sel=sel)
 
     def insert[T: Table](self, table: type[T]) -> InsertQuery[T, DbBase]:
         return InsertQuery[T, DbBase](table=table, _db=self)
@@ -53,13 +54,12 @@ class Db(DbBase):
 
     @override
     def execute(self, query: str, params: dict[str, Any]) -> None:
-        # Convert psycopg %(name)s to sqlite :name format
-        query = self._convert_params(query)
+        query = _convert_params(query)
         self._conn.execute(query, params)
 
     @override
     def executemany(self, query: str, params: Sequence[dict[str, Any]]):
-        query = self._convert_params(query)
+        query = _convert_params(query)
         self._conn.executemany(query, params)
         self._conn.commit()
 
@@ -70,7 +70,7 @@ class Db(DbBase):
 
         sqlite returns json/arrays as string, so need to parse them.
         """
-        query = self._convert_params(query)
+        query = _convert_params(query)
         cur = self._conn.execute(query, params)
 
         if cur.description is None:
@@ -92,10 +92,11 @@ class Db(DbBase):
             results.append(row_dict)
         return results
 
-    def _convert_params(self, query: str) -> str:
-        """
-        Convert psycopg %(name)s to sqlite :name format
-        """
-        import re
 
-        return re.sub(r"%\((\w+)\)s", r":\1", query)
+def _convert_params(query: str) -> str:
+    """
+    Convert psycopg %(name)s to sqlite :name format
+    """
+    import re
+
+    return re.sub(r"%\((\w+)\)s", r":\1", query)

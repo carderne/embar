@@ -2,13 +2,16 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import override
 
+from pudl.query.where import GetCount, WhereClause, WhereData
 from pudl.table import Table
-from pudl.where import GetCount, WhereClause, WhereData
 
 
 class JoinClause(ABC):
     @abstractmethod
     def get(self, get_count: GetCount) -> WhereData: ...
+
+
+# TODO add more join types
 
 
 @dataclass

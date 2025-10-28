@@ -1,10 +1,13 @@
 from datetime import datetime
 from typing import Any
 
-from pudl.column.common import Column, Text, Integer, Float
+from pudl.column.common import Column, Float, Integer, Text
 from pudl.types import Type
 
-__all__ = ["Boolean", "Float", "Integer", "Serial", "Text", "Timestamp"]
+# Re-export the common types as well as any new ones defined below
+__all__ = ["Boolean", "Float", "Integer", "Jsonb", "Serial", "Text", "Timestamp"]
+
+# TODO add all postgres column types
 
 
 class Serial(Column[int]):

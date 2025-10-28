@@ -47,6 +47,14 @@ target-version = "py314"
 line-length = 120  # use whatever number makes you happy
 
 [tool.ruff.lint]
+select = [
+  "A",    # warn about shadowing built-ins
+  "E",    # style stuff, whitespaces
+  "F",    # important pyflakes lints
+  "I",    # import sorting
+  "N",    # naming
+  "T100", # breakpoints (probably don't want these in prod!)
+]
 
 [tool.pyright]
 venvPath = "."
@@ -59,6 +67,4 @@ reportAny = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests", "src"]
-# pytest doesn't like multiple test files with the same name, and we
-# have src/pudl/{db,column}/pg.py with the same name
-addopts = "--doctest-modules --ignore=src/pudl/db --doctest-glob='*.py'"
+addopts = "--doctest-modules --doctest-glob='*.py'"

@@ -1,3 +1,5 @@
-from pudl.column.common import Text, Integer, Float
+from pudl.column.common import Float, Integer, Text
 
+# SQLite is weird about column types...
+# TODO are there any column types missing?
 __all__ = ["Float", "Integer", "Text"]
