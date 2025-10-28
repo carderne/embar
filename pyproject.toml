@@ -33,6 +33,7 @@ dev = [
     "basedpyright>=1.31.7",
     "poethepoet>=0.37.0",
     "pytest>=8.4.2",
+    "pytest-markdown-docs>=0.9.0",
     "ruff>=0.14.1",
     "ty>=0.0.1a23",
     "vulture>=2.14",
@@ -66,5 +67,4 @@ reportUnusedCallResult = false
 reportAny = false
 
 [tool.pytest.ini_options]
-testpaths = ["tests", "src"]
-addopts = "--doctest-modules --doctest-glob='*.py'"
+addopts = "--doctest-modules --doctest-glob='*.py' --markdown-docs"
