@@ -33,6 +33,43 @@ wheels = [
 ]
 
 [[package]]
+name = "embar"
+version = "0.0.1"
+source = { editable = "." }
+dependencies = [
+    { name = "dacite" },
+    { name = "psycopg", extra = ["binary"] },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "basedpyright" },
+    { name = "poethepoet" },
+    { name = "pytest" },
+    { name = "pytest-markdown-docs" },
+    { name = "ruff" },
+    { name = "ty" },
+    { name = "vulture" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "dacite", specifier = ">=1.9.2" },
+    { name = "psycopg", extras = ["binary"], specifier = ">=3.2.11" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "basedpyright", specifier = ">=1.31.7" },
+    { name = "poethepoet", specifier = ">=0.37.0" },
+    { name = "pytest", specifier = ">=8.4.2" },
+    { name = "pytest-markdown-docs", specifier = ">=0.9.0" },
+    { name = "ruff", specifier = ">=0.14.1" },
+    { name = "ty", specifier = ">=0.0.1a23" },
+    { name = "vulture", specifier = ">=2.14" },
+]
+
+[[package]]
 name = "iniconfig"
 version = "2.3.0"
 source = { registry = "https://pypi.org/simple" }
@@ -149,43 +186,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/91/51/8c1e291cf4aa9982666f71a886aa782d990aa16853a42de545a0a9a871ef/psycopg_binary-3.2.11-cp314-cp314-musllinux_1_2_ppc64le.whl", hash = "sha256:5f6f948ff1cd252003ff534d7b50a2b25453b4212b283a7514ff8751bdb68c37", size = 3541539, upload-time = "2025-10-18T22:46:58.993Z" },
     { url = "https://files.pythonhosted.org/packages/57/0a/e25edcdfa1111bfc5c95668b7469b5a957b40ce10cc81383688d65564826/psycopg_binary-3.2.11-cp314-cp314-musllinux_1_2_x86_64.whl", hash = "sha256:3bd2c8fb1dec6f93383fbaa561591fa3d676e079f9cb9889af17c3020a19715f", size = 3588090, upload-time = "2025-10-18T22:47:04.105Z" },
     { url = "https://files.pythonhosted.org/packages/a3/aa/f8c2f4b4c13d5680a20e5bfcd61f9e154bce26e7a2c70cb0abeade088d61/psycopg_binary-3.2.11-cp314-cp314-win_amd64.whl", hash = "sha256:c45f61202e5691090a697e599997eaffa3ec298209743caa4fd346145acabafe", size = 3006049, upload-time = "2025-10-18T22:47:07.923Z" },
-]
-
-[[package]]
-name = "pudl"
-version = "0.1.0"
-source = { editable = "." }
-dependencies = [
-    { name = "dacite" },
-    { name = "psycopg", extra = ["binary"] },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "basedpyright" },
-    { name = "poethepoet" },
-    { name = "pytest" },
-    { name = "pytest-markdown-docs" },
-    { name = "ruff" },
-    { name = "ty" },
-    { name = "vulture" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "dacite", specifier = ">=1.9.2" },
-    { name = "psycopg", extras = ["binary"], specifier = ">=3.2.11" },
-]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "basedpyright", specifier = ">=1.31.7" },
-    { name = "poethepoet", specifier = ">=0.37.0" },
-    { name = "pytest", specifier = ">=8.4.2" },
-    { name = "pytest-markdown-docs", specifier = ">=0.9.0" },
-    { name = "ruff", specifier = ">=0.14.1" },
-    { name = "ty", specifier = ">=0.0.1a23" },
-    { name = "vulture", specifier = ">=2.14" },
 ]
 
 [[package]]

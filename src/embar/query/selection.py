@@ -3,21 +3,21 @@ from __future__ import annotations
 from dataclasses import Field, dataclass, field, fields, make_dataclass
 from typing import Annotated, Any, Literal, cast, get_args, get_origin, get_type_hints
 
-from pudl.column.base import ColumnBase
-from pudl.db.base import DbType
-from pudl.query.many import ManyColumn, ManyTable
-from pudl.sql import Sql
-from pudl.table_base import TableBase
+from embar.column.base import ColumnBase
+from embar.db.base import DbType
+from embar.query.many import ManyColumn, ManyTable
+from embar.sql import Sql
+from embar.table_base import TableBase
 
 
 @dataclass
 class Selection:
     """
-    `Selection` is the base class for [`Select`][pudl.query.select.Select] queries.
+    `Selection` is the base class for [`Select`][embar.query.select.Select] queries.
 
     Example:
-    >>> from pudl.column.common import Text
-    >>> from pudl.table import Table
+    >>> from embar.column.common import Text
+    >>> from embar.table import Table
     >>> class MyTable(Table):
     ...     my_col: Text = Text()
     >>> @dataclass
@@ -49,7 +49,7 @@ def _get_source_expr(hints: dict[str, Any], field: Field[Any], db_type: DbType) 
     Get the source expression for the given `Selection` field.
 
     It could be a simple column reference, a table or `Many` reference,
-    or even a ['Sql'][pudl.sql.Sql] query.
+    or even a ['Sql'][embar.sql.Sql] query.
     """
     field_type = hints[field.name]
     if get_origin(field_type) is Annotated:
@@ -114,11 +114,11 @@ def convert_annotation(
 
     If the annotated type is a column reference then this does nothing and returns false.
 
-    Only used by `pudl.query.Select` but more at home here with the `Selection` context where it's used.
+    Only used by `embar.query.Select` but more at home here with the `Selection` context where it's used.
 
     Example:
-    >>> from pudl.column.common import Text
-    >>> from pudl.table import Table
+    >>> from embar.column.common import Text
+    >>> from embar.table import Table
     >>> class MyTable(Table):
     ...     my_col: Text = Text()
     >>> @dataclass
@@ -152,10 +152,10 @@ def generate_selection_dataclass(cls: type[TableBase]) -> type[Selection]:
     Note the new table has the same exact name, maybe something to revisit.
 
     Example:
-    >>> from pudl.table import Table
+    >>> from embar.table import Table
     >>> class MyTable(Table): ...
     >>> generate_selection_dataclass(MyTable)
-    <class 'pudl.query.selection.MyTable'>
+    <class 'embar.query.selection.MyTable'>
     """
     fields: list[tuple[str, Annotated[Any, Any], Any]] = []
     for attr_name in dir(cls):

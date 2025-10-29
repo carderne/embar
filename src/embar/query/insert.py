@@ -9,9 +9,9 @@ from typing import (
     overload,
 )
 
-from pudl.db.base import AllDbBase, AsyncDbBase, DbBase
-from pudl.table import Table
-from pudl.types import Undefined
+from embar.db.base import AllDbBase, AsyncDbBase, DbBase
+from embar.table import Table
+from embar.types import Undefined
 
 
 @dataclass
@@ -28,7 +28,7 @@ class InsertQuery[T: Table, Db: AllDbBase]:
     `InsertQuery` is never used directly, but always returned by a Db instance.
 
     Example:
-    >>> from pudl.db.pg import Db
+    >>> from embar.db.pg import Db
     >>> db = Db(None)
     >>> insert = db.insert(None)
     >>> assert isinstance(insert, InsertQuery)
@@ -57,8 +57,8 @@ class InsertQuery[T: Table, Db: AllDbBase]:
         Create the SQL query and binding parameters (psycopg format) for the query.
 
         Example:
-        >>> from pudl.column.common import Text
-        >>> from pudl.table import Table
+        >>> from embar.column.common import Text
+        >>> from embar.table import Table
         >>> @dataclass
         ... class MyTable(Table):
         ...     my_col: Text = Text()

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
-from pudl.column.base import ColumnBase
-from pudl.table_base import TableBase
+from embar.column.base import ColumnBase
+from embar.table_base import TableBase
 
 
 @dataclass

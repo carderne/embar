@@ -9,9 +9,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Self
 
-from pudl.column.base import ColumnBase
-from pudl.query.many import ManyTable
-from pudl.table_base import TableBase
+from embar.column.base import ColumnBase
+from embar.query.many import ManyTable
+from embar.table_base import TableBase
 
 
 @dataclass
@@ -26,7 +26,7 @@ class Table(TableBase):
     - Values returned from Select queries are based on dynamically generated classes or
       `Selection` classes, never directly instances of `Table`
 
-    It's a `dataclass` so that [`topological_sort_tables`][pudl._util.topological_sort_tables]
+    It's a `dataclass` so that [`topological_sort_tables`][embar._util.topological_sort_tables]
     can pick up the fields.
     """
 
@@ -42,10 +42,10 @@ class Table(TableBase):
     @classmethod
     def many(cls) -> ManyTable[type[Self]]:
         """
-        Used to nest many of another table in a column in a [`Selection`][pudl.selection.Selection].
+        Used to nest many of another table in a column in a [`Selection`][embar.selection.Selection].
 
         Example:
-        >>> from pudl.query.selection import Selection
+        >>> from embar.query.selection import Selection
         >>> class MyTable(Table): ...
         >>> class MySelectQuery(Selection):
         ...     messages: Annotated[list[MyTable], MyTable.many()]

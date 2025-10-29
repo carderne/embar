@@ -1,10 +1,10 @@
 from dataclasses import dataclass
 from typing import final
 
-from pudl.column.pg import Jsonb
-from pudl.db.pg import Db as PgDb
-from pudl.query.selection import SelectAll
-from pudl.table import Table
+from embar.column.pg import Jsonb
+from embar.db.pg import Db as PgDb
+from embar.query.selection import SelectAll
+from embar.table import Table
 
 
 @dataclass

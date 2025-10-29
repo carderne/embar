@@ -4,9 +4,9 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Callable, override
 
-from pudl.column.base import ColumnInfo
-from pudl.column.common import Column
-from pudl.types import PyType
+from embar.column.base import ColumnInfo
+from embar.column.common import Column
+from embar.types import PyType
 
 # Where clauses get passed a get_count() function that returns a monotonically
 # increasing integer. This allows each SQL binding parameter to get a unique

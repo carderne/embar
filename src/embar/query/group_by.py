@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from pudl.column.base import ColumnBase
+from embar.column.base import ColumnBase
 
 
 @dataclass

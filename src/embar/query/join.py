@@ -2,8 +2,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import override
 
-from pudl.query.where import GetCount, WhereClause, WhereData
-from pudl.table import Table
+from embar.query.where import GetCount, WhereClause, WhereData
+from embar.table import Table
 
 
 class JoinClause(ABC):

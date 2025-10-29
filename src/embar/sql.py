@@ -1,19 +1,19 @@
 from string.templatelib import Template
 from typing import Any, cast
 
-from pudl.column.base import ColumnBase
-from pudl.table_base import TableBase
+from embar.column.base import ColumnBase
+from embar.table_base import TableBase
 
 
 class Sql:
     """
     Used to run raw SQL queries.
 
-    On creation, nothing actually happens. Only later inside the [`Selection`][pudl.selection.Selection]
+    On creation, nothing actually happens. Only later inside the [`Selection`][embar.selection.Selection]
     class is the `execute()` method called.
 
     Example:
-    >>> from pudl.table import Table
+    >>> from embar.table import Table
     >>> class MyTable(Table): ...
     >>> Sql(t"DELETE FROM {MyTable}").execute()
     'DELETE FROM "my_table"'

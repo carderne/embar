@@ -2,8 +2,8 @@ from collections import defaultdict, deque
 from collections.abc import Sequence
 from dataclasses import fields
 
-from pudl.column.base import ColumnBase
-from pudl.table import Table
+from embar.column.base import ColumnBase
+from embar.table import Table
 
 
 def topological_sort_tables(tables: Sequence[type[Table]]) -> list[type[Table]]:
@@ -14,8 +14,8 @@ def topological_sort_tables(tables: Sequence[type[Table]]) -> list[type[Table]]:
 
     Example:
     >>> from dataclasses import dataclass
-    >>> from pudl.column.common import Integer
-    >>> from pudl.table import Table
+    >>> from embar.column.common import Integer
+    >>> from embar.table import Table
     >>> @dataclass
     ... class User(Table):
     ...     id: Integer = Integer()
@@ -23,7 +23,7 @@ def topological_sort_tables(tables: Sequence[type[Table]]) -> list[type[Table]]:
     ... class Message(Table):
     ...     user_id: Integer = Integer().fk(lambda: User.id)
     >>> topological_sort_tables([Message, User])
-    [<class 'pudl._util.User'>, <class 'pudl._util.Message'>]
+    [<class 'embar._util.User'>, <class 'embar._util.Message'>]
     """
 
     # Build dependency graph

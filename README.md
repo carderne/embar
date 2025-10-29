@@ -1,19 +1,18 @@
-# Pudl
-
+# Embar
 <div align="center">
-  <img src="https://raw.githubusercontent.com/carderne/pudl/refs/heads/main/docs/assets/logo.svg?token=GHSAT0AAAAAACLGWZ4ZYBJDLTZCWPWHOY4A2IA4ARA" alt="Pudl logo" width="100" role="img">
+  <img src="https://github.com/user-attachments/assets/b8146626-3e64-424d-bb34-374d63a75d5b" alt="Embar logo" width="70" role="img">
   <p>A Python ORM with types</p>
 </div>
 
 ----
 
 <div align="center">
-<a href="https://github.com/carderne/pudl">
-<img alt="GitHub badge" src="https://img.shields.io/badge/Github-Pudl-blue?logo=github">
+<a href="https://github.com/carderne/embar">
+<img alt="GitHub badge" src="https://img.shields.io/badge/Github-Embar-blue?logo=github">
 </a>
 </div>
 
-Pudl is a new ORM for Python, designed for simple SQL-esque queries and well-typed queries and results.
+Embar is a new ORM for Python, designed for simple SQL-esque queries and well-typed queries and results.
 
 There seems to be a gap in the Python ORM market.
 - [SQLAlchemy](https://www.sqlalchemy.org/) (and, by extension, [SQLModel](https://sqlmodel.tiangolo.com/)) is too complicated.
@@ -23,12 +22,12 @@ There seems to be a gap in the Python ORM market.
 - [Piccolo](https://github.com/piccolo-orm/piccolo) looks interesting...
 - [ormar](https://github.com/collerek/ormar) too...
 
-Pudl is inspired by [Drizzle](https://orm.drizzle.team/).
+Embar is inspired by [Drizzle](https://orm.drizzle.team/).
 
 ## Quickstart
 Install:
 ```bash
-uv add pudl  # TODO not published to PyPI yet!
+uv add embar
 ```
 
 Set up your database models:
@@ -36,8 +35,8 @@ Set up your database models:
 # schema.py
 from dataclasses import dataclass
 from typing import final
-from pudl.column.common import Integer, Text
-from pudl.table import Table
+from embar.column.common import Integer, Text
+from embar.table import Table
 
 @dataclass
 @final
@@ -58,7 +57,7 @@ Then create a database client, apply migrations and insert some data:
 ```python continuation
 # main.py
 import sqlite3
-from pudl.db.sqlite import Db as SqliteDb
+from embar.db.sqlite import Db as SqliteDb
 
 conn = sqlite3.connect(":memory:")
 db = SqliteDb(conn)
@@ -73,8 +72,8 @@ db.insert(Message).value(message).execute()
 Now you're ready to query some data!
 ```python continuation
 from typing import Annotated
-from pudl.query.selection import Selection
-from pudl.query.where import Eq, Like, Or
+from embar.query.selection import Selection
+from embar.query.where import Eq, Like, Or
 
 @dataclass
 class UserSel(Selection):
@@ -99,7 +98,7 @@ users = (
 And what about a fully nested object and some SQL templating:
 ```python continuation
 from datetime import datetime
-from pudl.sql import Sql
+from embar.sql import Sql
 
 @dataclass
 class UserHydrated(Selection):

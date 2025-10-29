@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Callable, Literal
 
-from pudl.types import Type, Undefined
+from embar.types import Type, Undefined
 
 type OnDelete = (
     Literal["no action"] | Literal["restrict"] | Literal["set null"] | Literal["set default"] | Literal["cascade"]
@@ -49,7 +49,7 @@ class ColumnInfo:
         """
         Generate the DDL just for this column.
 
-        Used by the [`Table.ddl()`][pudl.table.Table.ddl] method to generate the full DDL.
+        Used by the [`Table.ddl()`][embar.table.Table.ddl] method to generate the full DDL.
 
         Example:
         >>> col = ColumnInfo(_table_name=lambda: "foo", name="bar", col_type="TEXT", primary=True, not_null=True)
@@ -68,7 +68,7 @@ class ColumnInfo:
 
 class ColumnBase:
     """
-    Base class for all [`Column`][pudl.column.common.column] classes.
+    Base class for all [`Column`][embar.column.common.column] classes.
 
     Mostly here to avoid circular dependencies with modules that need to know about the fields below.
     """

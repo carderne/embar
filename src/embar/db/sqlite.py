@@ -10,12 +10,12 @@ from typing import (
     override,
 )
 
-from pudl._util import topological_sort_tables
-from pudl.db.base import DbBase
-from pudl.query.fromm import Fromm
-from pudl.query.insert import InsertQuery
-from pudl.query.selection import Selection
-from pudl.table import Table
+from embar._util import topological_sort_tables
+from embar.db.base import DbBase
+from embar.query.fromm import Fromm
+from embar.query.insert import InsertQuery
+from embar.query.selection import Selection
+from embar.table import Table
 
 
 @final

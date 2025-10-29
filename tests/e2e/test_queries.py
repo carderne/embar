@@ -2,11 +2,11 @@ from dataclasses import asdict, dataclass
 from datetime import datetime
 from typing import Annotated
 
-from pudl.db.pg import Db as PgDb
-from pudl.db.sqlite import Db as SqliteDb
-from pudl.query.selection import Selection
-from pudl.query.where import Eq, Like, Or
-from pudl.sql import Sql
+from embar.db.pg import Db as PgDb
+from embar.db.sqlite import Db as SqliteDb
+from embar.query.selection import Selection
+from embar.query.where import Eq, Like, Or
+from embar.sql import Sql
 
 from .schema import Message, User
 

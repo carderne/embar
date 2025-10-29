@@ -12,18 +12,18 @@ from typing import (
 
 from dacite import from_dict
 
-from pudl.column.base import ColumnBase
-from pudl.db.base import AllDbBase, AsyncDbBase, DbBase
-from pudl.query.group_by import GroupBy
-from pudl.query.join import JoinClause, LeftJoin
-from pudl.query.selection import (
+from embar.column.base import ColumnBase
+from embar.db.base import AllDbBase, AsyncDbBase, DbBase
+from embar.query.group_by import GroupBy
+from embar.query.join import JoinClause, LeftJoin
+from embar.query.selection import (
     SelectAll,
     Selection,
     convert_annotation,
     generate_selection_dataclass,
 )
-from pudl.query.where import WhereClause
-from pudl.table import Table
+from embar.query.where import WhereClause
+from embar.table import Table
 
 
 @dataclass
@@ -37,10 +37,10 @@ class SelectQuery[S: Selection, T: Table, Db: AllDbBase]:
     These are typed to return `NoReturn` when the wrong one is used, but there doesn't
     seem to be a way to make it an error to use them in the wrong case.
 
-    `SelectQuery` is never used directly, but always returned by a [`Fromm`][pudl.fromm.Fromm] instance.
+    `SelectQuery` is never used directly, but always returned by a [`Fromm`][embar.fromm.Fromm] instance.
 
     Example:
-    >>> from pudl.db.pg import Db
+    >>> from embar.db.pg import Db
     >>> db = Db(None)
     >>> select = db.select(None).fromm(None)
     >>> assert isinstance(select, SelectQuery)

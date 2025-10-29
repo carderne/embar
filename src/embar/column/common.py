@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from typing import Callable, Self, overload
 
-from pudl.column.base import ColumnBase, ColumnInfo, OnDelete
-from pudl.query.many import ManyColumn
-from pudl.table import Table
-from pudl.types import PyType, Type
+from embar.column.base import ColumnBase, ColumnInfo, OnDelete
+from embar.query.many import ManyColumn
+from embar.table import Table
+from embar.types import PyType, Type
 
 
 class Column[T: PyType](ColumnBase):
@@ -46,7 +46,7 @@ class Column[T: PyType](ColumnBase):
         but as `T` in object instances. The overloads ensure this works for typechecking too.
 
         >>> from dataclasses import dataclass
-        >>> from pudl.table import Table
+        >>> from embar.table import Table
         >>> @dataclass
         ... class MyTable(Table):
         ...     my_col: Text = Text()      # typechecked as `Text`

@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from typing import final
 
-from pudl.column.common import Integer, Text
-from pudl.table import Table
+from embar.column.common import Integer, Text
+from embar.table import Table
 
 
 @dataclass

@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 
-from pudl.db.base import AllDbBase
-from pudl.query.select import SelectQuery
-from pudl.query.selection import Selection
-from pudl.table import Table
+from embar.db.base import AllDbBase
+from embar.query.select import SelectQuery
+from embar.query.selection import Selection
+from embar.table import Table
 
 
 @dataclass

@@ -3,9 +3,9 @@ import sqlite3
 import psycopg
 import pytest
 
-from pudl.db.pg import Db as PgDb
-from pudl.db.sqlite import Db as SqliteDb
-from pudl.sql import Sql
+from embar.db.pg import Db as PgDb
+from embar.db.sqlite import Db as SqliteDb
+from embar.sql import Sql
 
 from . import schema
 from .container import PostgresContainer

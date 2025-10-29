@@ -15,14 +15,24 @@ all = [ {ref="fmt"}, {ref="lint"}, {ref="check"}, {ref="test"} ]
 "ci:test" = "pytest"
 
 [project]
-name = "pudl"
-version = "0.1.0"
-description = "Add your description here"
-readme = "README.md"
+name = "embar"
+version = "0.0.1"
+description = "A SQL-y and well-typed ORM for Python"
 authors = [
     { name = "Chris Arderne", email = "chris@rdrn.me" }
 ]
+keywords = ["ORM", "SQL"]
+classifiers = [
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Database :: Front-Ends",
+]
+
 requires-python = ">=3.14"
+
 dependencies = [
     "dacite>=1.9.2",
     "psycopg[binary]>=3.2.11",
