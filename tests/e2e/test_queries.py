@@ -8,7 +8,12 @@ from embar.query.selection import Selection
 from embar.query.where import Eq, Like, Or
 from embar.sql import Sql
 
-from .schema import Message, User
+from ..schemas.schema import Message, User
+
+
+def test_table_col_names():
+    assert Message.get_name() == "message"
+    assert User.get_name() == "users"
 
 
 def test_select_string_array(db_loaded: SqliteDb | PgDb):

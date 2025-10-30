@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from typing import Any, Literal
 
-from embar.types import Undefined
+from embar.custom_types import Undefined
 
 DbType = Literal["sqlite"] | Literal["postgres"]
 

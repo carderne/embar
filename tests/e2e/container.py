@@ -4,6 +4,8 @@ from typing import final
 
 import psycopg
 
+MAX_TRIES = 2
+
 
 @final
 class PostgresContainer:
@@ -15,27 +17,34 @@ class PostgresContainer:
         self.dbname = "db"
         self._container_id: str | None = None
 
-    def start(self) -> None:
-        result = subprocess.run(
-            [
-                "docker",
-                "run",
-                "-d",
-                "-p",
-                f"{self.port}:5432",
-                "-e",
-                f"POSTGRES_USER={self.username}",
-                "-e",
-                f"POSTGRES_PASSWORD={self.password}",
-                "-e",
-                f"POSTGRES_DB={self.dbname}",
-                self.image,
-            ],
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-        self._container_id = result.stdout.strip()
+    def start(self, tries: int = 1) -> None:
+        try:
+            result = subprocess.run(
+                [
+                    "docker",
+                    "run",
+                    "-d",
+                    "-p",
+                    f"{self.port}:5432",
+                    "-e",
+                    f"POSTGRES_USER={self.username}",
+                    "-e",
+                    f"POSTGRES_PASSWORD={self.password}",
+                    "-e",
+                    f"POSTGRES_DB={self.dbname}",
+                    self.image,
+                ],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            self._container_id = result.stdout.strip()
+        except subprocess.CalledProcessError as e:
+            if tries < MAX_TRIES:
+                self.port = self.port + 1
+                self.start(tries + 1)
+            else:
+                raise e
         self._wait_until_ready()
 
     def _wait_until_ready(self, timeout: int = 30) -> None:

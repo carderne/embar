@@ -1,12 +1,9 @@
-from __future__ import annotations
-
 from collections.abc import Sequence
-from dataclasses import dataclass, field, fields, make_dataclass
+from dataclasses import dataclass, field, make_dataclass
 from typing import (
     Any,
     NoReturn,
     Self,
-    cast,
     overload,
 )
 
@@ -99,10 +96,10 @@ class SelectQuery[S: Selection, T: Table, Db: AllDbBase]:
 
         sql, params = self._build_sql()
 
-        data_class = self._get_dataclass()
+        selection = self._get_selection()
 
         data = self._db.fetch(sql, params)
-        results = [from_dict(data_class, d) for d in data]
+        results = [from_dict(selection, d) for d in data]
         return results
 
     @overload
@@ -132,12 +129,12 @@ class SelectQuery[S: Selection, T: Table, Db: AllDbBase]:
             raise Exception("You need to use '...execute()' here (not 'aexecute()')")
 
         sql, params = self._build_sql()
-        data_class = self._get_dataclass()
+        data_class = self._get_selection()
         data = await self._db.afetch(sql, params)
         results = [from_dict(data_class, d) for d in data]
         return results
 
-    def _get_dataclass(self) -> type[Selection] | type[S]:
+    def _get_selection(self) -> type[Selection] | type[S]:
         """
         Generate the dataclass that will be used to deserialize (and validate) the query results.
 
@@ -148,28 +145,35 @@ class SelectQuery[S: Selection, T: Table, Db: AllDbBase]:
         Extra processing is done to check for nested children that are Tables themselves.
         """
         # TODO does this work for doubly nested stuff? Probably not.
-        data_class = generate_selection_dataclass(self.table) if self.sel is SelectAll else self.sel
+        selection = generate_selection_dataclass(self.table) if self.sel is SelectAll else self.sel
+        selection.__init_subclass__()
 
-        new_fields: list[tuple[str, type, Any]] = []
-        for cls_field in fields(data_class):
-            new_type = convert_annotation(cls_field)
+        new_fields: list[tuple[str, type]] = []
+        for field_name, field_type in selection._fields.items():  # pyright:ignore[reportPrivateUsage]
+            new_type = convert_annotation(field_type)
             if new_type:
-                new_fields.append((cls_field.name, new_type, cls_field))
+                new_fields.append((field_name, new_type))
             else:
                 # This means convert_annotation returned False, i.e. it's a 'simple' field.
                 # We have to recreate it with a Field tuple to match the stuff above for the legitimately new fields.
                 # (I haven't found a way for it to just be left in-place or something.)
-                field_type = cast(type, cls_field.type)
-                new_fields.append((cls_field.name, field_type, cls_field))
+                # field_type = cast(type, cls_field.type)
+                new_fields.append((field_name, field_type))
 
-        new_class = make_dataclass(data_class.__name__, new_fields, bases=(Selection,))
+        new_class = make_dataclass(selection.__name__, new_fields, bases=(Selection,))
+
+        # Pretty gruesome stuf going on here...
+        # __init_subclass__ won't have been called, so _fields won't have been assigned
+        # so do it manually...
+        new_class.__init_subclass__()
+
         return new_class
 
     def _build_sql(self) -> tuple[str, dict[str, Any]]:
         """
         Combine all the components of the query and build the SQL and bind parameters (psycopg format).
         """
-        data_class = self._get_dataclass()
+        data_class = self._get_selection()
         selection = data_class.to_sql_columns(self._db.db_type)
 
         sql = f"SELECT {selection} FROM {self.table.fqn()}"

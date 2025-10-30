@@ -1,21 +1,16 @@
-from dataclasses import dataclass
-from typing import final
-
 from embar.column.common import Integer, Text
+from embar.config import TableConfig
 from embar.table import Table
 
 
-@dataclass
-@final
 class User(Table):
-    _name = "user"
+    embar_config: TableConfig = TableConfig(table_name="users")
+
     id: Integer = Integer(primary=True)
-    email: Text = Text("user_email", default="text", not_null=True)
+    email: Text = Text("user_email", not_null=True)
 
 
-@dataclass
-@final
 class Message(Table):
     id: Integer = Integer()
     user_id: Integer = Integer().fk(lambda: User.id, "cascade")
-    content: Text = Text()
+    content: Text = Text(default="no message")

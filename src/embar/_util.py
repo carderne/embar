@@ -1,8 +1,6 @@
 from collections import defaultdict, deque
 from collections.abc import Sequence
-from dataclasses import fields
 
-from embar.column.base import ColumnBase
 from embar.table import Table
 
 
@@ -34,13 +32,7 @@ def topological_sort_tables(tables: Sequence[type[Table]]) -> list[type[Table]]:
     name_to_table: dict[str, type[Table]] = {table.get_name(): table for table in tables}
 
     for table in tables:
-        for field in fields(table):
-            # Get the column instance from the field's default
-            column = field.default
-            if not isinstance(column, ColumnBase):
-                continue
-
-            # Check if this column has a foreign key reference
+        for column in table._fields.values():  # pyright:ignore[reportPrivateUsage]
             if column.info.ref is not None:
                 ref_column = column.info.ref
                 ref_table_name = ref_column.table_name

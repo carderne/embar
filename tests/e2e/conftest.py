@@ -7,9 +7,9 @@ from embar.db.pg import Db as PgDb
 from embar.db.sqlite import Db as SqliteDb
 from embar.sql import Sql
 
-from . import schema
+from ..schemas import schema
+from ..schemas.schema import Message, User
 from .container import PostgresContainer
-from .schema import Message, User
 
 postgres = PostgresContainer("postgres:18-alpine3.22", port=25432)
 

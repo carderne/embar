@@ -1,14 +1,9 @@
-from dataclasses import dataclass
-from typing import final
-
 from embar.column.pg import Jsonb
 from embar.db.pg import Db as PgDb
 from embar.query.selection import SelectAll
 from embar.table import Table
 
 
-@dataclass
-@final
 class TableWithJsonB(Table):
     data: Jsonb = Jsonb()
 
@@ -28,7 +23,6 @@ def test_postgres_jsonb(pg_db: PgDb):
         .execute()
     )
     # fmt: on
-    print(res)
     assert len(res) == 1
     got = res[0]
     assert got.data["name"] == name

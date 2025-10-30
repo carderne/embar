@@ -33,20 +33,16 @@ uv add embar
 Set up your database models:
 ```python
 # schema.py
-from dataclasses import dataclass
-from typing import final
 from embar.column.common import Integer, Text
+from embar.config import TableConfig
 from embar.table import Table
 
-@dataclass
-@final
 class User(Table):
-    _name = "user"
+    embar_config = TableConfig(table_name="users")
+
     id: Integer = Integer(primary=True)
     email: Text = Text("user_email", default="text", not_null=True)
 
-@dataclass
-@final
 class Message(Table):
     id: Integer = Integer()
     user_id: Integer = Integer().fk(lambda: User.id)
@@ -75,7 +71,6 @@ from typing import Annotated
 from embar.query.selection import Selection
 from embar.query.where import Eq, Like, Or
 
-@dataclass
 class UserSel(Selection):
     id: Annotated[int, User.id]
     messages: Annotated[list[str], Message.content.many()]
@@ -100,7 +95,6 @@ And what about a fully nested object and some SQL templating:
 from datetime import datetime
 from embar.sql import Sql
 
-@dataclass
 class UserHydrated(Selection):
     email: Annotated[str, User.email]
     messages: Annotated[list[Message], Message.many()]

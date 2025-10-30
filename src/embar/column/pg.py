@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any
 
 from embar.column.common import Column, Float, Integer, Text
-from embar.types import Type
+from embar.custom_types import Type
 
 # Re-export the common types as well as any new ones defined below
 __all__ = ["Boolean", "Float", "Integer", "Jsonb", "Serial", "Text", "Timestamp"]

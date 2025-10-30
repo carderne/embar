@@ -1,9 +1,7 @@
-from __future__ import annotations
-
 from dataclasses import dataclass
 from typing import Any, Callable, Literal
 
-from embar.types import Type, Undefined
+from embar.custom_types import Type, Undefined
 
 type OnDelete = (
     Literal["no action"] | Literal["restrict"] | Literal["set null"] | Literal["set default"] | Literal["cascade"]
@@ -23,6 +21,7 @@ class ColumnInfo:
     _table_name: Callable[[], str]
     name: str
     col_type: str
+    py_type: Type
     primary: bool
     not_null: bool
     default: Any | None = None
@@ -39,7 +38,9 @@ class ColumnInfo:
         Return the Fully Qualified Name (table and column both in quotes).
 
         Example:
-        >>> col = ColumnInfo(_table_name=lambda: "foo", name="bar", col_type="TEXT", primary=False, not_null=False)
+        >>> col = ColumnInfo(
+        ...    _table_name=lambda: "foo", name="bar", col_type="TEXT", py_type=str, primary=False, not_null=False
+        ... )
         >>> col.fqn
         '"foo"."bar"'
         """
@@ -52,7 +53,9 @@ class ColumnInfo:
         Used by the [`Table.ddl()`][embar.table.Table.ddl] method to generate the full DDL.
 
         Example:
-        >>> col = ColumnInfo(_table_name=lambda: "foo", name="bar", col_type="TEXT", primary=True, not_null=True)
+        >>> col = ColumnInfo(
+        ...    _table_name=lambda: "foo", name="bar", col_type="TEXT", py_type=str, primary=True, not_null=True
+        ... )
         >>> col.ddl()
         '"bar" TEXT  NOT NULL PRIMARY KEY  '
         """

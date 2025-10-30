@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import (
@@ -9,9 +7,9 @@ from typing import (
     overload,
 )
 
+from embar.custom_types import Undefined
 from embar.db.base import AllDbBase, AsyncDbBase, DbBase
 from embar.table import Table
-from embar.types import Undefined
 
 
 @dataclass

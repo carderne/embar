@@ -4,17 +4,17 @@ to import table_base.py without triggering table.py, causing a circular loop by 
 (that's the reason the two were separated in the first place).
 """
 
-from __future__ import annotations
-
-from dataclasses import dataclass
-from typing import Any, Self
+from typing import Any, ClassVar, Self, dataclass_transform
 
 from embar.column.base import ColumnBase
+from embar.column.common import Column, Integer, Text
+from embar.config import TableConfig
+from embar.custom_types import Undefined
 from embar.query.many import ManyTable
 from embar.table_base import TableBase
 
 
-@dataclass
+@dataclass_transform(kw_only_default=True, field_specifiers=(Integer, Text, Integer.fk))
 class Table(TableBase):
     """
     All table definitions inherit from `Table`.
@@ -30,14 +30,57 @@ class Table(TableBase):
     can pick up the fields.
     """
 
+    _fields: ClassVar[dict[str, ColumnBase]]
+
     def __init_subclass__(cls, **kwargs: Any):
         """
-        Creates a `_name` attribute for the class based on its name, if one isn't provided.
+        Populate `_fields` and the `embar_config` if not provided.
         """
-        if not hasattr(cls, "_name") or cls._name == Table._name:
-            # Convert ClassName -> class_name
-            cls._name: str = "".join("_" + c.lower() if c.isupper() else c for c in cls.__name__).lstrip("_")
+        cls._fields = {name: attr for name, attr in cls.__dict__.items() if isinstance(attr, ColumnBase)}
+
+        if cls.embar_config == Undefined:
+            cls.embar_config: TableConfig = TableConfig()
+
+        # Set table_name if not provided
+        if cls.embar_config.table_name == Undefined:
+            cls.embar_config.table_name = "".join("_" + c.lower() if c.isupper() else c for c in cls.__name__).lstrip(
+                "_"
+            )
         super().__init_subclass__(**kwargs)
+
+    def __init__(self, **kwargs: Any) -> None:
+        """
+        Minimal replication of `dataclass` behaviour.
+        """
+        columns: dict[str, type[Column[Any]]] = {  # pyright:ignore[reportUnknownVariableType,reportAssignmentType]
+            name: attr for name, attr in type(self).__dict__.items() if isinstance(attr, Column)
+        }
+
+        for name, value in kwargs.items():
+            if name not in columns:
+                raise TypeError(f"Unknown field: {name}")
+            setattr(self, name, value)
+
+        # Handle defaults for missing fields
+        missing = set(columns.keys()) - set(kwargs.keys())
+        for name in list(missing):
+            if columns[name].default is not None:  # pyright:ignore[reportGeneralTypeIssues]
+                setattr(self, name, columns[name].default)  # pyright:ignore[reportGeneralTypeIssues]
+                missing.remove(name)
+
+        if missing:
+            raise TypeError(f"Missing required fields: {missing}")
+
+    @classmethod
+    def column_names(cls) -> dict[str, str]:
+        """
+        Mapping of field names to _unquoted_ column names.
+
+        Column names are allowed to be different to field names, so in queries
+        we always need to map one to/from the other.
+        """
+        cols = {name: col.info.name for name, col in cls._fields.items()}
+        return cols
 
     @classmethod
     def many(cls) -> ManyTable[type[Self]]:
@@ -45,19 +88,13 @@ class Table(TableBase):
         Used to nest many of another table in a column in a [`Selection`][embar.selection.Selection].
 
         Example:
+        >>> from typing import Annotated
         >>> from embar.query.selection import Selection
         >>> class MyTable(Table): ...
         >>> class MySelectQuery(Selection):
         ...     messages: Annotated[list[MyTable], MyTable.many()]
         """
         return ManyTable[type[Self]](cls)
-
-    @classmethod
-    def get_name(cls) -> str:
-        """
-        Get the table's _database_ name.
-        """
-        return cls._name
 
     @classmethod
     def ddl(cls) -> str:

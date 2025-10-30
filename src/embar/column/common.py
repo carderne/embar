@@ -1,11 +1,8 @@
-from __future__ import annotations
-
-from typing import Callable, Self, overload
+from typing import Any, Callable, Self, overload
 
 from embar.column.base import ColumnBase, ColumnInfo, OnDelete
+from embar.custom_types import PyType, Type
 from embar.query.many import ManyColumn
-from embar.table import Table
-from embar.types import PyType, Type
 
 
 class Column[T: PyType](ColumnBase):
@@ -20,20 +17,27 @@ class Column[T: PyType](ColumnBase):
 
     # This must always be assigned by children, type-checker won't catch it
     _sql_type: str  # pyright:ignore[reportUninitializedInstanceVariable]
+    _pytype: Type
+
+    _explicit_name: str | None
+    name: str | None
+    default: T | None
+    primary: bool
+    not_null: bool
 
     def __init__(
         self,
         name: str | None = None,
-        default: str | None = None,
+        default: T | None = None,
         primary: bool = False,
         not_null: bool = False,
     ):
-        self.name: str | None = name
-        # if no _explicit_name, one is craeted automatically (see __set_name__)
-        self._explicit_name: str | None = name
-        self.default: str | None = default
-        self.primary: bool = primary
-        self.not_null: bool = not_null
+        self.name = name
+        # if no _explicit_name, one is created automatically (see __set_name__)
+        self._explicit_name = name
+        self.default = default
+        self.primary = primary
+        self.not_null = not_null
 
     @overload
     def __get__(self, obj: None, owner: type) -> Self: ...
@@ -62,7 +66,7 @@ class Column[T: PyType](ColumnBase):
         # TODO is this still needed?
         setattr(obj, f"_{self.name}", value)
 
-    def __set_name__(self, owner: Table, attr_name: str):
+    def __set_name__(self, owner: Any, attr_name: str) -> None:
         """
         Called after the class body has executed, when the owning `Table` is being created.
 
@@ -72,6 +76,7 @@ class Column[T: PyType](ColumnBase):
         self.info: ColumnInfo = ColumnInfo(
             name=self.name,
             col_type=self._sql_type,
+            py_type=self._pytype,
             primary=self.primary,
             not_null=self.not_null,
             default=self.default,

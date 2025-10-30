@@ -1,16 +1,15 @@
-from __future__ import annotations
-
-from dataclasses import Field, dataclass, field, fields, make_dataclass
-from typing import Annotated, Any, Literal, cast, get_args, get_origin, get_type_hints
+from dataclasses import field, make_dataclass
+from typing import Annotated, Any, ClassVar, Literal, cast, dataclass_transform, get_args, get_origin, get_type_hints
 
 from embar.column.base import ColumnBase
 from embar.db.base import DbType
 from embar.query.many import ManyColumn, ManyTable
 from embar.sql import Sql
+from embar.table import Table
 from embar.table_base import TableBase
 
 
-@dataclass
+@dataclass_transform(kw_only_default=True)
 class Selection:
     """
     `Selection` is the base class for [`Select`][embar.query.select.Select] queries.
@@ -20,19 +19,26 @@ class Selection:
     >>> from embar.table import Table
     >>> class MyTable(Table):
     ...     my_col: Text = Text()
-    >>> @dataclass
-    ... class MySelection(Selection):
+    >>> class MySelection(Selection):
     ...     my_col: [str, MyTable.my_col]
-    >>>
     """
+
+    _fields: ClassVar[dict[str, type]]
+
+    def __init_subclass__(cls, **kwargs: Any):
+        """
+        Populate `_fields` and the `embar_config` if not provided.
+        """
+        hints = get_type_hints(cls, include_extras=True)
+        cls._fields = {k: v for k, v in hints.items() if get_origin(v) is Annotated}
 
     @classmethod
     def to_sql_columns(cls, db_type: DbType) -> str:
         parts: list[str] = []
         hints = get_type_hints(cls, include_extras=True)
-        for cls_field in fields(cls):
-            source = _get_source_expr(hints, cls_field, db_type)
-            target = cls_field.name
+        for field_name, field_type in cls._fields.items():
+            source = _get_source_expr(field_name, field_type, db_type, hints)
+            target = field_name
             parts.append(f'{source} AS "{target}"')
 
         return ", ".join(parts)
@@ -44,16 +50,16 @@ class Selection:
 class SelectAll(Selection): ...
 
 
-def _get_source_expr(hints: dict[str, Any], field: Field[Any], db_type: DbType) -> str:
+def _get_source_expr(field_name: str, field_type: type, db_type: DbType, hints: dict[str, Any]) -> str:
     """
     Get the source expression for the given `Selection` field.
 
     It could be a simple column reference, a table or `Many` reference,
     or even a ['Sql'][embar.sql.Sql] query.
     """
-    field_type = hints[field.name]
+    field_type = hints[field_name]
     if get_origin(field_type) is Annotated:
-        annotations = get_args(field.type)
+        annotations = get_args(field_type)
         # Skip first arg (the actual type), search metadata for TableColumn
         for annotation in annotations[1:]:
             if isinstance(annotation, ColumnBase):
@@ -70,7 +76,7 @@ def _get_source_expr(hints: dict[str, Any], field: Field[Any], db_type: DbType) 
                     case "sqlite":
                         query = f"json_group_array({fqn})"
                         return query
-            if isinstance(annotation, type) and issubclass(annotation, TableBase):
+            if isinstance(annotation, type) and issubclass(annotation, Table):
                 table = annotation
                 table_fqn = table.fqn()
                 columns = table.column_names()
@@ -85,7 +91,7 @@ def _get_source_expr(hints: dict[str, Any], field: Field[Any], db_type: DbType) 
                         query = f"json_object({column_pairs})"
                         return query
             if isinstance(annotation, ManyTable):
-                many_table = cast(ManyTable[type[TableBase]], annotation)
+                many_table = cast(ManyTable[type[Table]], annotation)
                 table = many_table.of
                 table_fqn = many_table.of.fqn()
                 columns = table.column_names()
@@ -103,11 +109,11 @@ def _get_source_expr(hints: dict[str, Any], field: Field[Any], db_type: DbType) 
                 query = annotation.execute()
                 return query
 
-    raise Exception(f"Failed to get source expression for {field.name}")
+    raise Exception(f"Failed to get source expression for {field_name}")
 
 
 def convert_annotation(
-    field: Field[Any],
+    field_type: type,
 ) -> Annotated[Any, Any] | Literal[False]:
     """
     Extract complex annotated types from `Annotated[int, MyTable.my_col]` expressions.
@@ -121,15 +127,14 @@ def convert_annotation(
     >>> from embar.table import Table
     >>> class MyTable(Table):
     ...     my_col: Text = Text()
-    >>> @dataclass
-    ... class MySelection(Selection):
-    ...     my_col: [str, MyTable.my_col]
-    >>> field = fields(MySelection)[0]
+    >>> class MySelection(Selection):
+    ...     my_col: Annotated[str, MyTable.my_col]
+    >>> field = MySelection._fields["my_col"]
     >>> convert_annotation(field)
     False
     """
-    if get_origin(field.type) is Annotated:
-        annotations = get_args(field.type)
+    if get_origin(field_type) is Annotated:
+        annotations = get_args(field_type)
         # Skip first arg (the actual type), search metadata for TableColumn
         for annotation in annotations[1:]:
             if isinstance(annotation, ManyTable):
@@ -158,16 +163,14 @@ def generate_selection_dataclass(cls: type[TableBase]) -> type[Selection]:
     <class 'embar.query.selection.MyTable'>
     """
     fields: list[tuple[str, Annotated[Any, Any], Any]] = []
-    for attr_name in dir(cls):
-        attr = getattr(cls, attr_name)
-        if isinstance(attr, ColumnBase):
-            column_type = attr._pytype  # pyright:ignore[reportPrivateUsage]
-            fields.append(
-                (
-                    attr_name,
-                    Annotated[column_type, attr],
-                    field(default_factory=lambda a=attr: a.info.fqn),
-                )
+    for field_name, column in cls._fields.items():  # pyright:ignore[reportPrivateUsage]
+        field_type = column.info.py_type
+        fields.append(
+            (
+                field_name,
+                Annotated[field_type, column],
+                field(default_factory=lambda a=column: column.info.fqn),
             )
+        )
 
     return make_dataclass(cls.__name__, fields, bases=(Selection,))
