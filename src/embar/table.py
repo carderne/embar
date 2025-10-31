@@ -108,7 +108,7 @@ class Table(TableBase):
             if isinstance(attr, ColumnBase):
                 columns.append(attr.info.ddl())
         columns_str = ",".join(columns)
-        return f"""CREATE TABLE IF NOT EXISTS {cls.fqn()} ({columns_str});"""
+        return f"""CREATE TABLE IF NOT EXISTS {cls.fqn()} ({columns_str})"""
 
     def value_dict(self) -> dict[str, Any]:
         """

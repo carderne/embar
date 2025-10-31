@@ -1,6 +1,7 @@
 from collections.abc import Sequence
 from dataclasses import make_dataclass
-from typing import Any, NoReturn, Self, overload
+from textwrap import dedent
+from typing import Any, NoReturn, Self, cast, overload
 
 from dacite import from_dict
 
@@ -60,8 +61,11 @@ class SelectQuery[S: Selection, T: Table, Db: AllDbBase]:
         self._where_clause = where_clause
         return self
 
-    def group_by(self, col: ColumnBase) -> Self:
-        self._group_clause = GroupBy(col)
+    def group_by(self, *cols: ColumnBase | tuple[ColumnBase, ...]) -> Self:
+        if len(cols) == 1 and isinstance(cols[0], tuple):
+            cols = cols[0]
+        cols = cast(tuple[ColumnBase, ...], cols)
+        self._group_clause = GroupBy(cols)
         return self
 
     def limit(self, n: int) -> Self:
@@ -176,7 +180,11 @@ class SelectQuery[S: Selection, T: Table, Db: AllDbBase]:
         data_class = self._get_selection()
         selection = data_class.to_sql_columns(self._db.db_type)
 
-        sql = f"SELECT {selection} FROM {self.table.fqn()}"
+        sql = f"""
+            SELECT {selection}
+            FROM {self.table.fqn()}
+        """
+        sql = dedent(sql).strip()
 
         count = -1
 
@@ -189,19 +197,22 @@ class SelectQuery[S: Selection, T: Table, Db: AllDbBase]:
 
         for join in self._joins:
             join_data = join.get(get_count)
-            sql += join_data.sql
+            sql += f"\n{join_data.sql}"
             params = {**params, **join_data.params}
 
         if self._where_clause is not None:
             where_data = self._where_clause.get(get_count)
-            sql += f" WHERE {where_data.sql} "
+            sql += f"\nWHERE {where_data.sql}"
             params = {**params, **where_data.params}
 
         if self._group_clause is not None:
-            group_by_col = self._group_clause.col.info.fqn
-            sql += f" GROUP BY {group_by_col} "
+            col_names = [c.info.fqn for c in self._group_clause.cols]
+            group_by_col = ", ".join(col_names)
+            sql += f"\nGROUP BY {group_by_col}"
 
         if self._limit_value is not None:
-            sql += f" LIMIT {self._limit_value}"
+            sql += f"\nLIMIT {self._limit_value}"
+
+        sql = sql.strip()
 
         return sql, params

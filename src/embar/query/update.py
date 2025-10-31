@@ -99,7 +99,7 @@ class UpdateQuery[T: Table, Db: AllDbBase]:
 
         if self._where_clause is not None:
             where_data = self._where_clause.get(get_count)
-            sql += f" WHERE {where_data.sql} "
+            sql += f"\nWHERE {where_data.sql}"
             params = {**params, **where_data.params}
 
         return sql, params

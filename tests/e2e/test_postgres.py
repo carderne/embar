@@ -38,7 +38,7 @@ def test_postgres_varchar():
         status: Varchar = Varchar(length=10)
 
     ddl = TableWithVarchar.ddl()
-    assert ddl == 'CREATE TABLE IF NOT EXISTS "table_with_varchar" ("status" VARCHAR(10));'
+    assert ddl == 'CREATE TABLE IF NOT EXISTS "table_with_varchar" ("status" VARCHAR(10))'
 
 
 def test_postgres_enum(pg_db: PgDb):

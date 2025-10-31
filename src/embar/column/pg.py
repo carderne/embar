@@ -230,7 +230,7 @@ class PgEnum[E: EmbarEnum]:
     def ddl(cls) -> str:
         quoted = [f"'{e.name}'" for e in cls.enum]
         values = ", ".join(quoted)
-        sql = f"CREATE TYPE {cls.name} AS ENUM ({values});"
+        sql = f"CREATE TYPE {cls.name} AS ENUM ({values})"
         return sql
 
 

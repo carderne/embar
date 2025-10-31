@@ -28,22 +28,21 @@ class Sql:
         """
         Actually generate the SQL output.
         """
-        # TODO: this method needs a less-confusing name
-        result_parts: list[str] = []
+        query_parts: list[str] = []
 
         # Iterate over template components
         for item in self.template_obj:
             if isinstance(item, str):
-                result_parts.append(item)
+                query_parts.append(item)
             else:
                 value = item.value
 
                 if isinstance(value, type) and issubclass(value, TableBase):
-                    result_parts.append(value.fqn())
+                    query_parts.append(value.fqn())
                 elif isinstance(value, ColumnBase):
-                    result_parts.append(value.info.fqn)
+                    query_parts.append(value.info.fqn)
                 else:
                     raise Exception(f"Unexpected interpolation type: {type(cast(Any, value))}")
 
-        result = "".join(result_parts)
+        result = "".join(query_parts)
         return result
