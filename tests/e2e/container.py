@@ -25,6 +25,7 @@ class PostgresContainer:
                     "docker",
                     "run",
                     "-d",
+                    "--rm",
                     "-p",
                     f"{self.port}:5432",
                     "-e",
@@ -63,7 +64,7 @@ class PostgresContainer:
 
     def stop(self) -> None:
         if self._container_id:
-            subprocess.run(["docker", "rm", "-f", self._container_id], capture_output=True)
+            subprocess.run(["docker", "stop", self._container_id], capture_output=True)
             self._container_id = None
 
     def __enter__(self) -> "PostgresContainer":

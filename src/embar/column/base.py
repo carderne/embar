@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Any, Callable, Literal
 
-from embar.custom_types import Type, Undefined
+from embar.custom_types import Type
 
 type OnDelete = (
     Literal["no action"] | Literal["restrict"] | Literal["set null"] | Literal["set default"] | Literal["cascade"]
@@ -19,14 +19,18 @@ class ColumnInfo:
     # _table_name is callable as generally the `Table` won't yet have a name
     # at the time the Column is created.
     _table_name: Callable[[], str]
+
     name: str
     col_type: str
     py_type: Type
     primary: bool
     not_null: bool
     default: Any | None = None
+
     ref: ColumnInfo | None = None
     on_delete: OnDelete | None = None
+
+    args: str | None = None
 
     @property
     def table_name(self) -> str:
@@ -57,16 +61,17 @@ class ColumnInfo:
         ...    _table_name=lambda: "foo", name="bar", col_type="TEXT", py_type=str, primary=True, not_null=True
         ... )
         >>> col.ddl()
-        '"bar" TEXT  NOT NULL PRIMARY KEY  '
+        '"bar" TEXT NOT NULL PRIMARY KEY'
         """
-        # TODO sort out all the double spacing stuff
+        args = self.args if self.args is not None else ""
         default = f"DEFAULT '{self.default}'" if self.default is not None else ""
         nullable = "NOT NULL" if self.not_null else ""
         primary = "PRIMARY KEY" if self.primary else ""
         reference = f'REFERENCES "{self.ref.table_name}"("{self.ref.name}")' if self.ref is not None else ""
         on_delete = f"ON DELETE {self.on_delete}" if self.on_delete is not None else ""
-        text = f'"{self.name}" {self.col_type} {default} {nullable} {primary} {reference} {on_delete}'
-        return text
+        text = f'"{self.name}" {self.col_type}{args} {default} {nullable} {primary} {reference} {on_delete}'
+        clean = " ".join(text.split()).strip()
+        return clean
 
 
 class ColumnBase:
@@ -77,6 +82,7 @@ class ColumnBase:
     """
 
     info: ColumnInfo  # pyright:ignore[reportUninitializedInstanceVariable]
-    # TODO Check if any methods use _pytype while it could be Undefined
-    # If so the class probably needs to be split...
-    _pytype: Type = Undefined
+
+    # These must always be assigned by children, type-checker won't catch it
+    _sql_type: str  # pyright:ignore[reportUninitializedInstanceVariable]
+    _py_type: Type  # pyright:ignore[reportUninitializedInstanceVariable]

@@ -11,6 +11,7 @@ from psycopg import AsyncConnection, Connection
 from psycopg.types.json import Json
 
 from embar._util import topological_sort_tables
+from embar.column.pg import EmbarEnum, PgEnum
 from embar.db.base import AsyncDbBase, DbBase
 from embar.query.fromm import Fromm
 from embar.query.insert import InsertQuery
@@ -40,7 +41,12 @@ class Db(DbBase):
     def update[T: Table](self, table: type[T]) -> UpdateQuery[T, DbBase]:
         return UpdateQuery[T, DbBase](table=table, db=self)
 
-    def migrate(self, tables: Sequence[type[Table]]) -> Self:
+    def migrate(self, tables: Sequence[type[Table]], enums: Sequence[type[PgEnum[Any]]] | None = None) -> Self:
+        if enums is not None:
+            for enum in enums:
+                ddl = enum.ddl()
+                self._conn.execute(ddl)  # pyright:ignore[reportArgumentType]
+
         tables = topological_sort_tables(tables)
         for table in tables:
             self._conn.execute(table.ddl())  # pyright:ignore[reportArgumentType]
@@ -48,13 +54,16 @@ class Db(DbBase):
         return self
 
     def migrates(self, schema: types.ModuleType) -> Self:
+        enums: list[type[PgEnum[EmbarEnum]]] = []
         tables: list[type[Table]] = []
         for name in dir(schema):
             obj = getattr(schema, name)
             # Check if it's a class and inherits from Table
             if isinstance(obj, type) and issubclass(obj, Table) and obj is not Table:
                 tables.append(obj)
-        self.migrate(tables)
+            if isinstance(obj, type) and issubclass(obj, PgEnum) and obj is not PgEnum:
+                enums.append(obj)  # pyright:ignore[reportUnknownArgumentType]
+        self.migrate(tables, enums)
         return self
 
     @override
@@ -102,7 +111,14 @@ class AsyncDb(AsyncDbBase):
     def insert[T: Table](self, table: type[T]) -> InsertQuery[T, Self]:
         return InsertQuery[T, Self](table=table, _db=self)
 
-    async def migrate(self, tables: Sequence[type[Table]]) -> Self:
+    async def migrate(
+        self, tables: Sequence[type[Table]], enums: Sequence[type[PgEnum[EmbarEnum]]] | None = None
+    ) -> Self:
+        if enums is not None:
+            for enum in enums:
+                ddl = enum.ddl()
+                await self._conn.execute(ddl)  # pyright:ignore[reportArgumentType]
+
         tables = topological_sort_tables(tables)
         for table in tables:
             ddl = table.ddl()
@@ -111,12 +127,15 @@ class AsyncDb(AsyncDbBase):
         return self
 
     async def migrates(self, schema: types.ModuleType) -> Self:
+        enums: list[type[PgEnum[EmbarEnum]]] = []
         tables: list[type[Table]] = []
         for name in dir(schema):
             obj = getattr(schema, name)
             # Check if it's a class and inherits from Table
             if isinstance(obj, type) and issubclass(obj, Table) and obj is not Table:
                 tables.append(obj)
+            if isinstance(obj, type) and issubclass(obj, PgEnum) and obj is not PgEnum:
+                enums.append(obj)  # pyright:ignore[reportUnknownArgumentType]
         await self.migrate(tables)
         return self
 

@@ -4,6 +4,8 @@ from embar.column.base import ColumnBase, ColumnInfo, OnDelete
 from embar.custom_types import PyType, Type
 from embar.query.many import ManyColumn
 
+SQL_TYPES_WITH_ARGS = ["NUMERIC", "DECIMAL", "VARCHAR", "CHAR"]
+
 
 class Column[T: PyType](ColumnBase):
     """
@@ -15,15 +17,14 @@ class Column[T: PyType](ColumnBase):
     # - any on_delete option
     _fk: tuple[Callable[[], Column[T]], OnDelete | None] | None = None
 
-    # This must always be assigned by children, type-checker won't catch it
-    _sql_type: str  # pyright:ignore[reportUninitializedInstanceVariable]
-    _pytype: Type
-
     _explicit_name: str | None
-    name: str | None
-    default: T | None
-    primary: bool
-    not_null: bool
+    _name: str | None
+    default: T | None  # not protected because used by Table
+    _primary: bool
+    _not_null: bool
+
+    # This is to support eg VARCHAR(100) and also NUMERIC(10, 2)
+    _extra_args: tuple[int] | tuple[int, int] | None = None
 
     def __init__(
         self,
@@ -32,12 +33,12 @@ class Column[T: PyType](ColumnBase):
         primary: bool = False,
         not_null: bool = False,
     ):
-        self.name = name
+        self._name = name
         # if no _explicit_name, one is created automatically (see __set_name__)
         self._explicit_name = name
         self.default = default
-        self.primary = primary
-        self.not_null = not_null
+        self._primary = primary
+        self._not_null = not_null
 
     @overload
     def __get__(self, obj: None, owner: type) -> Self: ...
@@ -60,11 +61,13 @@ class Column[T: PyType](ColumnBase):
         """
         if obj is None:
             return self  # Class access returns descriptor
-        return getattr(obj, f"_{self.name}")  # Instance access returns str
+        return getattr(obj, f"_{self._name}")  # Instance access returns str
 
     def __set__(self, obj: object, value: T) -> None:
-        # TODO is this still needed?
-        setattr(obj, f"_{self.name}", value)
+        """
+        Allows values of type T (rather than `Column[T]`) to be assigned to this class when it's a field of an object.
+        """
+        setattr(obj, f"_{self._name}", value)
 
     def __set_name__(self, owner: Any, attr_name: str) -> None:
         """
@@ -72,13 +75,13 @@ class Column[T: PyType](ColumnBase):
 
         This is needed so that each `Column` can be told what the owning table's name is.
         """
-        self.name = self._explicit_name if self._explicit_name is not None else attr_name
+        self._name = self._explicit_name if self._explicit_name is not None else attr_name
         self.info: ColumnInfo = ColumnInfo(
-            name=self.name,
+            name=self._name,
             col_type=self._sql_type,
-            py_type=self._pytype,
-            primary=self.primary,
-            not_null=self.not_null,
+            py_type=self._py_type,
+            primary=self._primary,
+            not_null=self._not_null,
             default=self.default,
             # This is passed a function, not a value.
             # Becuase in cases where the Table doesn't have an explicit name set, its name still
@@ -90,11 +93,18 @@ class Column[T: PyType](ColumnBase):
             self.info.ref = ref().info
             self.info.on_delete = on_delete
 
+        if self._sql_type in SQL_TYPES_WITH_ARGS and self._extra_args is not None:
+            args = ", ".join(str(x) for x in self._extra_args)
+            self.info.args = f"({args})"
+
     def fk(
         self,
         ref: Callable[[], Column[T]],
         on_delete: OnDelete | None = None,
     ) -> Self:
+        """
+        Create a foreign key reference to another table.
+        """
         self._fk = (ref, on_delete)
         return self
 
@@ -104,14 +114,14 @@ class Column[T: PyType](ColumnBase):
 
 class Text(Column[str]):
     _sql_type: str = "TEXT"
-    _pytype: Type = str
+    _py_type: Type = str
 
 
 class Integer(Column[int]):
     _sql_type: str = "INTEGER"
-    _pytype: Type = int
+    _py_type: Type = int
 
 
 class Float(Column[float]):
     _sql_type: str = "REAL"
-    _pytype: Type = float
+    _py_type: Type = float

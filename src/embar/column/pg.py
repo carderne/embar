@@ -1,30 +1,251 @@
-from datetime import datetime
-from typing import Any
+from datetime import date, datetime, time, timedelta
+from decimal import Decimal
+from enum import Enum
+from typing import Any, override
 
 from embar.column.common import Column, Float, Integer, Text
 from embar.custom_types import Type
 
 # Re-export the common types as well as any new ones defined below
-__all__ = ["Boolean", "Float", "Integer", "Jsonb", "Serial", "Text", "Timestamp"]
-
-# TODO add all postgres column types
+__all__ = [
+    "BigInt",
+    "BigSerial",
+    "Boolean",
+    "Char",
+    "Date",
+    "PgDecimal",
+    "DoublePrecision",
+    "Float",
+    "Integer",
+    "Interval",
+    "Json",
+    "Jsonb",
+    "Numeric",
+    "Serial",
+    "SmallInt",
+    "SmallSerial",
+    "Text",
+    "Time",
+    "Timestamp",
+    "Varchar",
+    "EnumCol",
+]
 
 
 class Serial(Column[int]):
     _sql_type: str = "SERIAL"
-    _pytype: Type = int
+    _py_type: Type = int
 
 
 class Boolean(Column[bool]):
     _sql_type: str = "BOOLEAN"
-    _pytype: Type = bool
+    _py_type: Type = bool
 
 
 class Timestamp(Column[datetime]):
     _sql_type: str = "TIMESTAMP"
-    _pytype: Type = str
+    _py_type: Type = str
 
 
 class Jsonb(Column[dict[str, Any]]):
     _sql_type: str = "JSONB"
-    _pytype: Type = dict[str, Any]
+    _py_type: Type = dict[str, Any]
+
+
+# Integer types
+class SmallInt(Column[int]):
+    _sql_type: str = "SMALLINT"
+    _py_type: Type = int
+
+
+class BigInt(Column[int]):
+    _sql_type: str = "BIGINT"
+    _py_type: Type = int
+
+
+# Serial types
+class SmallSerial(Column[int]):
+    _sql_type: str = "SMALLSERIAL"
+    _py_type: Type = int
+
+
+class BigSerial(Column[int]):
+    _sql_type: str = "BIGSERIAL"
+    _py_type: Type = int
+
+
+# String types
+class Varchar(Column[str]):
+    _sql_type: str = "VARCHAR"
+    _py_type: Type = str
+
+    def __init__(
+        self,
+        name: str | None = None,
+        default: str | None = None,
+        primary: bool = False,
+        not_null: bool = False,
+        length: int | None = None,
+    ):
+        self._extra_args: tuple[int] | tuple[int, int] | None = (length,) if length is not None else None
+        super().__init__(name=name, default=default, primary=primary, not_null=not_null)
+
+
+class Char(Column[str]):
+    _sql_type: str = "CHAR"
+    _py_type: Type = str
+
+    def __init__(
+        self,
+        name: str | None = None,
+        default: str | None = None,
+        primary: bool = False,
+        not_null: bool = False,
+        length: int | None = None,
+    ):
+        self._extra_args: tuple[int] | tuple[int, int] | None = (length,) if length is not None else None
+        super().__init__(name=name, default=default, primary=primary, not_null=not_null)
+
+
+# Numeric types
+class Numeric(Column[Decimal]):
+    _sql_type: str = "NUMERIC"
+    _py_type: Type = Decimal
+
+    _extra_args: tuple[int] | tuple[int, int] | None
+
+    def __init__(
+        self,
+        name: str | None = None,
+        default: Decimal | None = None,
+        primary: bool = False,
+        not_null: bool = False,
+        precision: int | None = None,
+        scale: int | None = None,
+    ):
+        if precision is None:
+            if scale is not None:
+                raise Exception("Numeric: 'precision' cannot be None if scale is set")
+        elif scale is None:
+            self._extra_args = (precision,)
+        else:
+            self._extra_args = (precision, scale)
+        super().__init__(name=name, default=default, primary=primary, not_null=not_null)
+
+
+class PgDecimal(Column[Decimal]):
+    # Note: DECIMAL is an alias for NUMERIC in PostgreSQL
+    _sql_type: str = "DECIMAL"
+    _py_type: Type = Decimal
+
+    _extra_args: tuple[int] | tuple[int, int] | None
+
+    def __init__(
+        self,
+        name: str | None = None,
+        default: Decimal | None = None,
+        primary: bool = False,
+        not_null: bool = False,
+        precision: int | None = None,
+        scale: int | None = None,
+    ):
+        if precision is None:
+            if scale is not None:
+                raise Exception("Numeric: 'precision' cannot be None if scale is set")
+        elif scale is None:
+            self._extra_args = (precision,)
+        else:
+            self._extra_args = (precision, scale)
+        super().__init__(name=name, default=default, primary=primary, not_null=not_null)
+
+
+class DoublePrecision(Column[float]):
+    _sql_type: str = "DOUBLE PRECISION"
+    _py_type: Type = float
+
+
+# JSON types
+class Json(Column[dict[str, Any]]):
+    _sql_type: str = "JSON"
+    _py_type: Type = dict[str, Any]
+
+
+# Date/Time types
+class Time(Column[time]):
+    _sql_type: str = "TIME"
+    _py_type: Type = time
+
+
+class Date(Column[date]):
+    _sql_type: str = "DATE"
+    _py_type: Type = date
+
+
+class Interval(Column[timedelta]):
+    _sql_type: str = "INTERVAL"
+    _py_type: Type = timedelta
+
+
+# Enum
+class EmbarEnum(str, Enum):
+    """
+    `EmbarEnum` is just a regular Enum but without having to set the right side.
+
+    Example:
+    >>> from enum import auto
+    >>> class StatusEnum(EmbarEnum):
+    ...    PENDING = auto()
+    ...    DONE = auto()
+    """
+
+    @staticmethod
+    @override
+    def _generate_next_value_(name: str, start: int, count: int, last_values: list[Any]) -> str:
+        return name
+
+
+class PgEnum[E: EmbarEnum]:
+    """
+    `PgEnum is used to create Postgres enum types.
+
+    Subclasses must always assign values to the two class variables!
+
+    Example:
+    >>> from enum import auto
+    >>> from embar.table import Table
+    >>> class StatusEnum(EmbarEnum):
+    ...    PENDING = auto()
+    ...    DONE = auto()
+    >>> class StatusPgEnum(PgEnum[StatusEnum]):
+    ...     name: str = "status_enum"
+    ...     enum: type[StatusEnum] = StatusEnum
+    >>> class TableWithStatus(Table):
+    ...     status: EnumCol[StatusEnum] = EnumCol(StatusPgEnum)
+    """
+
+    name: str  # pyright:ignore[reportUninitializedInstanceVariable]
+    enum: type[E]  # pyright:ignore[reportUninitializedInstanceVariable]
+
+    @classmethod
+    def ddl(cls) -> str:
+        quoted = [f"'{e.name}'" for e in cls.enum]
+        values = ", ".join(quoted)
+        sql = f"CREATE TYPE {cls.name} AS ENUM ({values});"
+        return sql
+
+
+class EnumCol[E: EmbarEnum](Column[str]):
+    _sql_type: str
+    _py_type: Type = str
+
+    def __init__(
+        self,
+        pg_enum: type[PgEnum[E]],
+        name: str | None = None,
+        default: E | None = None,
+        primary: bool = False,
+        not_null: bool = False,
+    ):
+        self._sql_type = pg_enum.name
+
+        super().__init__(name=name, default=default, primary=primary, not_null=not_null)
