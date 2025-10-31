@@ -15,6 +15,7 @@ from embar.db.base import AsyncDbBase, DbBase
 from embar.query.fromm import Fromm
 from embar.query.insert import InsertQuery
 from embar.query.selection import Selection
+from embar.query.update import UpdateQuery
 from embar.table import Table
 
 
@@ -35,6 +36,9 @@ class Db(DbBase):
 
     def insert[T: Table](self, table: type[T]) -> InsertQuery[T, DbBase]:
         return InsertQuery[T, DbBase](table=table, _db=self)
+
+    def update[T: Table](self, table: type[T]) -> UpdateQuery[T, DbBase]:
+        return UpdateQuery[T, DbBase](table=table, db=self)
 
     def migrate(self, tables: Sequence[type[Table]]) -> Self:
         tables = topological_sort_tables(tables)

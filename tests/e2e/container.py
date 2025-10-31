@@ -1,5 +1,6 @@
 import subprocess
 import time
+from types import TracebackType
 from typing import final
 
 import psycopg
@@ -62,8 +63,26 @@ class PostgresContainer:
 
     def stop(self) -> None:
         if self._container_id:
-            subprocess.run(["docker", "rm", "-f", self._container_id], check=True)
+            subprocess.run(["docker", "rm", "-f", self._container_id], capture_output=True)
             self._container_id = None
+
+    def __enter__(self) -> "PostgresContainer":
+        self.start()
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
+        self.stop()
+
+    def __del__(self) -> None:
+        try:
+            self.stop()
+        except Exception:
+            pass
 
     def get_connection_url(self) -> str:
         return f"postgresql://{self.username}:{self.password}@localhost:{self.port}/{self.dbname}"

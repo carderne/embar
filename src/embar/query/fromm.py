@@ -18,4 +18,4 @@ class Fromm[S: Selection, Db: AllDbBase]:
     sel: type[S]
 
     def fromm[T: Table](self, table: type[T]) -> SelectQuery[S, T, Db]:
-        return SelectQuery[S, T, Db](sel=self.sel, table=table, _db=self._db)
+        return SelectQuery[S, T, Db](sel=self.sel, table=table, db=self._db)

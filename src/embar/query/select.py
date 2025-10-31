@@ -1,11 +1,6 @@
 from collections.abc import Sequence
-from dataclasses import dataclass, field, make_dataclass
-from typing import (
-    Any,
-    NoReturn,
-    Self,
-    overload,
-)
+from dataclasses import make_dataclass
+from typing import Any, NoReturn, Self, overload
 
 from dacite import from_dict
 
@@ -23,7 +18,6 @@ from embar.query.where import WhereClause
 from embar.table import Table
 
 
-@dataclass
 class SelectQuery[S: Selection, T: Table, Db: AllDbBase]:
     """
     `InsertQuery` is used to insert data into a table.
@@ -43,14 +37,20 @@ class SelectQuery[S: Selection, T: Table, Db: AllDbBase]:
     >>> assert isinstance(select, SelectQuery)
     """
 
-    _db: Db
-    table: type[T]
     sel: type[S]
+    table: type[T]
+    _db: Db
 
-    _joins: list[JoinClause] = field(default_factory=list)
+    _joins: list[JoinClause]
     _where_clause: WhereClause | None = None
     _group_clause: GroupBy | None = None
     _limit_value: int | None = None
+
+    def __init__(self, sel: type[S], table: type[T], db: Db):
+        self.sel = sel
+        self.table = table
+        self._db = db
+        self._joins = []
 
     def left_join(self, table: type[Table], on: WhereClause) -> Self:
         self._joins.append(LeftJoin(table, on))

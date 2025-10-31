@@ -1,4 +1,3 @@
-from dataclasses import asdict, dataclass
 from datetime import datetime
 from typing import Annotated
 
@@ -19,7 +18,6 @@ def test_table_col_names():
 def test_select_string_array(db_loaded: SqliteDb | PgDb):
     db = db_loaded
 
-    @dataclass
     class UserSel(Selection):
         id: Annotated[int, User.id]
         messages: Annotated[list[str], Message.content.many()]
@@ -41,13 +39,13 @@ def test_select_string_array(db_loaded: SqliteDb | PgDb):
     assert len(res) == 1
     got = res[0]
     want = UserSel(id=1, messages=["Hello!"])
-    assert asdict(got) == asdict(want)
+
+    assert got == want
 
 
 def test_select_json_array(db_loaded: SqliteDb | PgDb):
     db = db_loaded
 
-    @dataclass
     class UserFullMessages(Selection):
         email: Annotated[str, User.email]
         messages: Annotated[list[Message], Message.many()]
@@ -74,7 +72,6 @@ def test_select_json_array(db_loaded: SqliteDb | PgDb):
 def test_select_json(db_loaded: SqliteDb | PgDb):
     db = db_loaded
 
-    @dataclass
     class MessageSel(Selection):
         user: Annotated[User, User]
         message: Annotated[str, Message.content]

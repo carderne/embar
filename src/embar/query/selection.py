@@ -1,5 +1,16 @@
 from dataclasses import field, make_dataclass
-from typing import Annotated, Any, ClassVar, Literal, cast, dataclass_transform, get_args, get_origin, get_type_hints
+from typing import (
+    Annotated,
+    Any,
+    ClassVar,
+    Literal,
+    cast,
+    dataclass_transform,
+    get_args,
+    get_origin,
+    get_type_hints,
+    override,
+)
 
 from embar.column.base import ColumnBase
 from embar.db.base import DbType
@@ -20,17 +31,51 @@ class Selection:
     >>> class MyTable(Table):
     ...     my_col: Text = Text()
     >>> class MySelection(Selection):
-    ...     my_col: [str, MyTable.my_col]
+    ...     my_col: Annotated[str, MyTable.my_col]
     """
 
     _fields: ClassVar[dict[str, type]]
+
+    def __init__(self, **kwargs: Any):
+        """
+        Minimal replication of `dataclass` behaviour.
+        """
+        for field_name in self.__class__.__annotations__:
+            if field_name not in kwargs:
+                raise TypeError(f"missing required argument: '{field_name}'")
+            setattr(self, field_name, kwargs[field_name])
 
     def __init_subclass__(cls, **kwargs: Any):
         """
         Populate `_fields` and the `embar_config` if not provided.
         """
         hints = get_type_hints(cls, include_extras=True)
+        # _fields is what embar uses to track fields
         cls._fields = {k: v for k, v in hints.items() if get_origin(v) is Annotated}
+
+        # __dataclass_fields__ is only needed/wanted by dataclass stuff,
+        # eg dataclasses.asdict
+        # not committed to keeping this...
+        # cls.__dataclass_fields__: dict[str, Field[Any]] = {
+        #     field_name: Field(
+        #         default=MISSING,
+        #         default_factory=lambda: MISSING,
+        #         repr=True,
+        #         compare=False,
+        #         hash=False,
+        #         init=False,
+        #         doc=None,
+        #         metadata={},
+        #         kw_only=True,
+        #     )
+        #     for field_name in cls.__annotations__
+        # }
+
+    @override
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Selection):
+            return False
+        return all(getattr(self, f) == getattr(other, f) for f in self._fields)
 
     @classmethod
     def to_sql_columns(cls, db_type: DbType) -> str:

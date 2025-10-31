@@ -11,14 +11,11 @@ def topological_sort_tables(tables: Sequence[type[Table]]) -> list[type[Table]]:
     Tables are returned in the order they should be created.
 
     Example:
-    >>> from dataclasses import dataclass
     >>> from embar.column.common import Integer
     >>> from embar.table import Table
-    >>> @dataclass
-    ... class User(Table):
+    >>> class User(Table):
     ...     id: Integer = Integer()
-    >>> @dataclass
-    ... class Message(Table):
+    >>> class Message(Table):
     ...     user_id: Integer = Integer().fk(lambda: User.id)
     >>> topological_sort_tables([Message, User])
     [<class 'embar._util.User'>, <class 'embar._util.Message'>]

@@ -11,18 +11,16 @@ from ..schemas import schema
 from ..schemas.schema import Message, User
 from .container import PostgresContainer
 
-postgres = PostgresContainer("postgres:18-alpine3.22", port=25432)
-
 
 @pytest.fixture(scope="module")
 def postgres_container(request: pytest.FixtureRequest):
-    postgres.start()
-
-    def remove_container():
-        postgres.stop()
-
-    request.addfinalizer(remove_container)
-    return postgres
+    try:
+        with PostgresContainer("postgres:18-alpine3.22", port=25432) as postgres:
+            # Add finalizer as backup safety net
+            request.addfinalizer(postgres.stop)
+            yield postgres
+    except Exception as e:
+        pytest.exit(f"postgres_container fixture failed: {e}", 1)
 
 
 @pytest.fixture(scope="function")

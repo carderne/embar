@@ -25,12 +25,12 @@ There seems to be a gap in the Python ORM market.
 Embar is inspired by [Drizzle](https://orm.drizzle.team/).
 
 ## Quickstart
-Install:
+### Install
 ```bash
 uv add embar
 ```
 
-Set up your database models:
+### Set up database models
 ```python
 # schema.py
 from embar.column.common import Integer, Text
@@ -49,7 +49,7 @@ class Message(Table):
     content: Text = Text()
 ```
 
-Then create a database client, apply migrations and insert some data:
+### Create client and apply migrations
 ```python continuation
 # main.py
 import sqlite3
@@ -58,6 +58,10 @@ from embar.db.sqlite import Db as SqliteDb
 conn = sqlite3.connect(":memory:")
 db = SqliteDb(conn)
 db.migrate([User, Message])
+```
+
+### Insert some data
+```python continuation
 user = User(id=1, email="foo@bar.com")
 message = Message(id=1, user_id=user.id, content="Hello!")
 
@@ -65,7 +69,8 @@ db.insert(User).value(user).execute()
 db.insert(Message).value(message).execute()
 ```
 
-Now you're ready to query some data!
+### Query some data
+With join, where and group by.
 ```python continuation
 from typing import Annotated
 from embar.query.selection import Selection
@@ -90,7 +95,8 @@ users = (
 # [ UserSel(id=1, messages=['Hello!']) ]
 ```
 
-And what about a fully nested object and some SQL templating:
+### Query some more data
+This time with fully nested child tables, and some raw SQL.
 ```python continuation
 from datetime import datetime
 from embar.sql import Sql
@@ -114,6 +120,25 @@ users = (
 #      messages=[Message(content='Hello!', id=1, user_id=1)],
 #      date: datetime(2025, 10, 26, ...)
 # )]
+```
+
+### Update a row
+Unfortunately this requires another model to be defined, as Python doesn't have a `Partial[]` type.
+
+```python continuation
+from typing import TypedDict
+
+class MessageUpdate(TypedDict, total=False):
+    id: int
+    user_id: int
+    content: str
+
+(
+    db.update(Message)
+    .set(MessageUpdate(content="Goodbye"))
+    .where(Eq(Message.id, 1))
+    .execute()
+)
 ```
 
 ## Contributing
