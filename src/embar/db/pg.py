@@ -69,13 +69,14 @@ class Db(DbBase):
     @override
     def execute(self, query: str, params: dict[str, Any]) -> None:
         self._conn.execute(query, params)  # pyright:ignore[reportArgumentType]
+        self._conn.commit()
 
     @override
     def executemany(self, query: str, params: Sequence[dict[str, Any]]):
         params = _jsonify_dicts(params)
         with self._conn.cursor() as cur:
             cur.executemany(query, params)  # pyright:ignore[reportArgumentType]
-            self._conn.commit()
+        self._conn.commit()
 
     @override
     def fetch(self, query: str, params: dict[str, Any]) -> list[dict[str, Any]]:
@@ -90,7 +91,21 @@ class Db(DbBase):
             for row in cur.fetchall():
                 data = dict(zip(columns, row))
                 results.append(data)
-            return results
+        self._conn.commit()  # Commit after SELECT
+        return results
+
+    @override
+    def truncate(self, schema: str | None = None):
+        schema = schema if schema is not None else "public"
+        with self._conn.cursor() as cursor:
+            # Get all table names from public schema
+            cursor.execute(f"SELECT tablename FROM pg_tables WHERE schemaname = '{schema}'")  # pyright:ignore[reportArgumentType]
+            tables = cursor.fetchall()
+            if not tables:
+                return
+            table_names = ", ".join([f'"{table[0]}"' for table in tables])
+            cursor.execute(f"TRUNCATE TABLE {table_names} CASCADE")  # pyright:ignore[reportArgumentType]
+            self._conn.commit()
 
 
 @final
@@ -140,18 +155,18 @@ class AsyncDb(AsyncDbBase):
         return self
 
     @override
-    async def aexecute(self, query: str, params: dict[str, Any]) -> None:
+    async def execute(self, query: str, params: dict[str, Any]) -> None:
         await self._conn.execute(query, params)  # pyright:ignore[reportArgumentType]
 
     @override
-    async def aexecutemany(self, query: str, params: Sequence[dict[str, Any]]):
+    async def executemany(self, query: str, params: Sequence[dict[str, Any]]):
         params = _jsonify_dicts(params)
         async with self._conn.cursor() as cur:
             await cur.executemany(query, params)  # pyright:ignore[reportArgumentType]
             await self._conn.commit()
 
     @override
-    async def afetch(self, query: str, params: dict[str, Any]) -> list[dict[str, Any]]:
+    async def fetch(self, query: str, params: dict[str, Any]) -> list[dict[str, Any]]:
         async with self._conn.cursor() as cur:
             await cur.execute(query, params)  # pyright:ignore[reportArgumentType]
 
@@ -162,7 +177,20 @@ class AsyncDb(AsyncDbBase):
             for row in await cur.fetchall():
                 data = dict(zip(columns, row))
                 results.append(data)
-            return results
+        await self._conn.commit()
+        return results
+
+    @override
+    async def truncate(self, schema: str | None = None):
+        schema = schema if schema is not None else "public"
+        async with self._conn.cursor() as cursor:
+            # Get all table names from public schema
+            await cursor.execute(f"SELECT tablename FROM pg_tables WHERE schemaname = '{schema}'")  # pyright:ignore[reportArgumentType]
+            tables = await cursor.fetchall()
+            if tables:
+                table_names = ", ".join([f'"{table[0]}"' for table in tables])
+                await cursor.execute(f"TRUNCATE TABLE {table_names} RESTART IDENTITY CASCADE")  # pyright:ignore[reportArgumentType]
+            await self._conn.commit()
 
 
 def _jsonify_dicts(params: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:

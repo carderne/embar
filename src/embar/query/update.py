@@ -1,10 +1,5 @@
 from collections.abc import Mapping
-from typing import (
-    Any,
-    NoReturn,
-    Self,
-    overload,
-)
+from typing import Any, Self, cast
 
 from embar.custom_types import Undefined
 from embar.db.base import AllDbBase, AsyncDbBase, DbBase
@@ -44,31 +39,33 @@ class UpdateQuery[T: Table, Db: AllDbBase]:
         self._where_clause = where_clause
         return self
 
-    @overload
-    def execute(self: UpdateQuery[T, DbBase]) -> None: ...
+    def __await__(self):
+        """
+        async users should construct their query and await it.
 
-    @overload
-    def execute(self: UpdateQuery[T, AsyncDbBase]) -> NoReturn: ...
-
-    def execute(self):
-        if not isinstance(self._db, DbBase):
-            raise Exception("You need to use 'await ...aexecute()' here!")
-
+        non-async users have the `run()` convenience method below.
+        """
         sql, params = self._build_sql()
-        self._db.execute(sql, params)
+        if isinstance(self._db, AsyncDbBase):
+            return self._db.execute(sql, params).__await__()
 
-    @overload
-    async def aexecute(self: UpdateQuery[T, DbBase]) -> NoReturn: ...
+        async def get_result():
+            db = cast(DbBase, self._db)
+            return db.execute(sql, params)
 
-    @overload
-    async def aexecute(self: UpdateQuery[T, AsyncDbBase]) -> None: ...
+        return get_result().__await__()
 
-    async def aexecute(self):
-        if not isinstance(self._db, AsyncDbBase):
-            raise Exception("You need to use '...execute()' here (not 'aexecute()')")
+    def run(self):
+        """
+        Run the query against the underlying DB.
 
-        sql, params = self._build_sql()
-        await self._db.aexecute(sql, params)
+        Convenience method for those not using async.
+        But still works if awaited.
+        """
+        if isinstance(self._db, DbBase):
+            sql, params = self._build_sql()
+            return self._db.execute(sql, params)
+        return self
 
     def _build_sql(self) -> tuple[str, dict[str, Any]]:
         """

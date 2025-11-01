@@ -9,7 +9,8 @@ from embar.query.selection import SelectAll
 from embar.table import Table
 
 
-def test_postgres_jsonb(pg_db: PgDb):
+@pytest.mark.asyncio
+async def test_postgres_jsonb(pg_db: PgDb):
     db = pg_db
 
     class TableWithJsonB(Table):
@@ -19,13 +20,13 @@ def test_postgres_jsonb(pg_db: PgDb):
 
     name = "bob"
     data = TableWithJsonB(data={"name": name})
-    db.insert(TableWithJsonB).value(data).execute()
+    await db.insert(TableWithJsonB).value(data)
 
     # fmt: off
     res = (
         db.select(SelectAll)
         .fromm(TableWithJsonB)
-        .execute()
+        .run()
     )
     # fmt: on
     assert len(res) == 1
@@ -41,7 +42,8 @@ def test_postgres_varchar():
     assert ddl == 'CREATE TABLE IF NOT EXISTS "table_with_varchar" ("status" VARCHAR(10))'
 
 
-def test_postgres_enum(pg_db: PgDb):
+@pytest.mark.asyncio
+async def test_postgres_enum(pg_db: PgDb):
     db = pg_db
 
     class StatusEnum(EmbarEnum):
@@ -58,12 +60,12 @@ def test_postgres_enum(pg_db: PgDb):
     db.migrate([TableWithStatus], enums=[StatusPgEnum])
 
     good_row = TableWithStatus(status="DONE")
-    db.insert(TableWithStatus).value(good_row).execute()
+    await db.insert(TableWithStatus).value(good_row)
     # fmt: off
     res = (
         db.select(SelectAll)
         .fromm(TableWithStatus)
-        .execute()
+        .run()
     )
     # fmt: on
     assert len(res) == 1
@@ -72,4 +74,4 @@ def test_postgres_enum(pg_db: PgDb):
 
     bad_row = TableWithStatus(status="foo")
     with pytest.raises(InvalidTextRepresentation):
-        db.insert(TableWithStatus).value(bad_row).execute()
+        await db.insert(TableWithStatus).value(bad_row)

@@ -1,6 +1,8 @@
 from datetime import datetime
 from typing import Annotated
 
+import pytest
+
 from embar.db.pg import Db as PgDb
 from embar.db.sqlite import Db as SqliteDb
 from embar.query.selection import Selection
@@ -15,7 +17,8 @@ def test_table_col_names():
     assert User.get_name() == "users"
 
 
-def test_select_string_array(db_loaded: SqliteDb | PgDb):
+@pytest.mark.asyncio
+async def test_select_string_array(db_loaded: SqliteDb | PgDb):
     db = db_loaded
 
     class UserSel(Selection):
@@ -33,7 +36,7 @@ def test_select_string_array(db_loaded: SqliteDb | PgDb):
         ))
         .group_by(User.id)
         .limit(1)
-        .execute()
+        .run()
     )
     # fmt: on
     assert len(res) == 1
@@ -58,7 +61,7 @@ def test_select_json_array(db_loaded: SqliteDb | PgDb):
         .left_join(Message, Eq(User.id, Message.user_id))
         .group_by(User.id)
         .limit(2)
-        .execute()
+        .run()
     )
     # fmt: on
 
@@ -82,7 +85,7 @@ def test_select_json(db_loaded: SqliteDb | PgDb):
         .fromm(Message)
         .left_join(User, Eq(User.id, Message.user_id))
         .limit(2)
-        .execute()
+        .run()
     )
     # fmt: on
     assert len(res) == 1

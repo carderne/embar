@@ -1,11 +1,6 @@
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import (
-    Any,
-    NoReturn,
-    Self,
-    overload,
-)
+from typing import Any, Self, cast
 
 from embar.custom_types import Undefined
 from embar.db.base import AllDbBase, AsyncDbBase, DbBase
@@ -76,36 +71,30 @@ class InsertQuery[T: Table, Db: AllDbBase]:
         values = [it.value_dict() for it in self.items]
         return sql, values
 
-    @overload
-    def execute(self: InsertQuery[T, DbBase]) -> None: ...
+    def __await__(self):
+        """
+        async users should construct their query and await it.
 
-    @overload
-    def execute(self: InsertQuery[T, AsyncDbBase]) -> NoReturn: ...
+        non-async users have the `run()` convenience method below.
+        """
+        sql, params = self._build_sql()
+        if isinstance(self._db, AsyncDbBase):
+            return self._db.executemany(sql, params).__await__()
 
-    def execute(self):
+        async def get_result():
+            db = cast(DbBase, self._db)
+            return db.executemany(sql, params)
+
+        return get_result().__await__()
+
+    def run(self):
         """
         Run the query against the underlying DB.
 
-        Errors if `self._db` is async.
+        Convenience method for those not using async.
+        But still works if awaited.
         """
-        if not isinstance(self._db, DbBase):
-            raise Exception("You need to use 'await ...aexecute()' here!")
-        sql, params = self._build_sql()
-        self._db.executemany(sql, params)
-
-    @overload
-    async def aexecute(self: InsertQuery[T, DbBase]) -> NoReturn: ...
-
-    @overload
-    async def aexecute(self: InsertQuery[T, AsyncDbBase]) -> None: ...
-
-    async def aexecute(self):
-        """
-        Run the query against the underlying DB.
-
-        Errors if `self._db` is non-async.
-        """
-        if not isinstance(self._db, AsyncDbBase):
-            raise Exception("You need to use '...execute()' here (not 'aexecute()')")
-        sql, params = self._build_sql()
-        await self._db.aexecutemany(sql, params)
+        if isinstance(self._db, DbBase):
+            sql, params = self._build_sql()
+            return self._db.executemany(sql, params)
+        return self

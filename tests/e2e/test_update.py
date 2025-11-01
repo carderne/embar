@@ -17,7 +17,7 @@ def test_update_row(db_loaded: SqliteDb | PgDb):
         db.update(Message)
         .set(MessageUpdate(content=new_content))
         .where(Eq(Message.id, 1))
-        .execute()
+        .run()
     )
     # fmt: on
 
@@ -31,7 +31,7 @@ def test_update_row(db_loaded: SqliteDb | PgDb):
             Eq(Message.id, 1),
         )
         .limit(1)
-        .execute()
+        .run()
     )
 
     assert len(res) == 1

@@ -65,8 +65,8 @@ db.migrate([User, Message])
 user = User(id=1, email="foo@bar.com")
 message = Message(id=1, user_id=user.id, content="Hello!")
 
-db.insert(User).value(user).execute()
-db.insert(Message).value(message).execute()
+db.insert(User).value(user).run()
+db.insert(Message).value(message).run()
 ```
 
 ### Query some data
@@ -90,7 +90,7 @@ users = (
         Like(User.email, "foo%")
     ))
     .group_by(User.id)
-    .execute()
+    .run()
 )
 # [ UserSel(id=1, messages=['Hello!']) ]
 ```
@@ -113,7 +113,7 @@ users = (
     .left_join(Message, Eq(User.id, Message.user_id))
     .group_by(User.id)
     .limit(2)
-    .execute()
+    .run()
 )
 # [UserHydrated(
 #      email='foo@bar.com',
@@ -137,7 +137,7 @@ class MessageUpdate(TypedDict, total=False):
     db.update(Message)
     .set(MessageUpdate(content="Goodbye"))
     .where(Eq(Message.id, 1))
-    .execute()
+    .run()
 )
 ```
 

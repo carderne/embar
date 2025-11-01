@@ -53,24 +53,6 @@ class Selection:
         # _fields is what embar uses to track fields
         cls._fields = {k: v for k, v in hints.items() if get_origin(v) is Annotated}
 
-        # __dataclass_fields__ is only needed/wanted by dataclass stuff,
-        # eg dataclasses.asdict
-        # not committed to keeping this...
-        # cls.__dataclass_fields__: dict[str, Field[Any]] = {
-        #     field_name: Field(
-        #         default=MISSING,
-        #         default_factory=lambda: MISSING,
-        #         repr=True,
-        #         compare=False,
-        #         hash=False,
-        #         init=False,
-        #         doc=None,
-        #         metadata={},
-        #         kw_only=True,
-        #     )
-        #     for field_name in cls.__annotations__
-        # }
-
     @override
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Selection):

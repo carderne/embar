@@ -1,7 +1,7 @@
-from collections.abc import Sequence
+from collections.abc import Generator, Sequence
 from dataclasses import make_dataclass
 from textwrap import dedent
-from typing import Any, NoReturn, Self, cast, overload
+from typing import Any, Self, cast, overload
 
 from dacite import from_dict
 
@@ -61,10 +61,7 @@ class SelectQuery[S: Selection, T: Table, Db: AllDbBase]:
         self._where_clause = where_clause
         return self
 
-    def group_by(self, *cols: ColumnBase | tuple[ColumnBase, ...]) -> Self:
-        if len(cols) == 1 and isinstance(cols[0], tuple):
-            cols = cols[0]
-        cols = cast(tuple[ColumnBase, ...], cols)
+    def group_by(self, *cols: ColumnBase) -> Self:
         self._group_clause = GroupBy(cols)
         return self
 
@@ -73,70 +70,56 @@ class SelectQuery[S: Selection, T: Table, Db: AllDbBase]:
         return self
 
     @overload
-    def execute(self: SelectQuery[SelectAll, T, DbBase]) -> list[T]: ...
-
+    def __await__(self: SelectQuery[SelectAll, T, Db]) -> Generator[Any, None, Sequence[T]]: ...
     @overload
-    def execute(self: SelectQuery[S, T, DbBase]) -> list[S]: ...
+    def __await__(self: SelectQuery[S, T, Db]) -> Generator[Any, None, Sequence[S]]: ...
 
-    @overload
-    def execute(self: SelectQuery[SelectAll, T, AsyncDbBase]) -> NoReturn: ...
-
-    @overload
-    def execute(self: SelectQuery[S, T, AsyncDbBase]) -> NoReturn: ...
-
-    def execute(self) -> Sequence[Selection | T]:
+    def __await__(self) -> Generator[Any, None, Sequence[T | S]]:
         """
-        execute the query against the underlying db.
+        Async users should construct their query and await it.
+
+        Non-async users have the `run()` convenience method below.
+        But this method will still work if called in an async context against a non-async db.
 
         The overrides provide for a few different cases:
         - A subclass of `Selection` was passed, in which case that's the return type
         - `SelectAll` was passed, in which case the return type is the `Table`
-        - This is called with an async db, in which case an error is returnd.
+        - This is called with an async db, in which case an error is returned.
 
         Results are currently (?) parsed with dacite.
         """
-        if not isinstance(self._db, DbBase):
-            raise Exception("You need to use 'await ...aexecute()' here!")
-
         sql, params = self._build_sql()
-
         selection = self._get_selection()
+        selection = cast(type[T] | type[S], selection)
 
-        data = self._db.fetch(sql, params)
-        results = [from_dict(selection, d) for d in data]
-        return results
+        async def awaitable():
+            db = self._db
+            if isinstance(db, AsyncDbBase):
+                data = await db.fetch(sql, params)
+            else:
+                db = cast(DbBase, self._db)
+                data = db.fetch(sql, params)
+            results = [from_dict(selection, d) for d in data]
+            return results
+
+        return awaitable().__await__()
 
     @overload
-    async def aexecute(self: SelectQuery[SelectAll, T, DbBase]) -> NoReturn: ...
-
+    def run(self: SelectQuery[SelectAll, T, DbBase]) -> Sequence[T]: ...
     @overload
-    async def aexecute(self: SelectQuery[S, T, DbBase]) -> NoReturn: ...
-
+    def run(self: SelectQuery[S, T, DbBase]) -> Sequence[S]: ...
     @overload
-    async def aexecute(self: SelectQuery[SelectAll, T, AsyncDbBase]) -> list[T]: ...
+    def run(self: SelectQuery[S, T, AsyncDbBase]) -> SelectQuery[S, T, Db]: ...
 
-    @overload
-    async def aexecute(self: SelectQuery[S, T, AsyncDbBase]) -> list[S]: ...
-
-    async def aexecute(self) -> Sequence[Selection | T]:
-        """
-        execute the query against the underlying (async) db.
-
-        The overrides provide for a few different cases:
-        - A subclass of `Selection` was passed, in which case that's the return type
-        - `SelectAll` was passed, in which case the return type is the `Table`
-        - This is called with a non-async db, in which case an error is returnd.
-
-        Results are currently (?) parsed with dacite.
-        """
-        if not isinstance(self._db, AsyncDbBase):
-            raise Exception("You need to use '...execute()' here (not 'aexecute()')")
-
-        sql, params = self._build_sql()
-        data_class = self._get_selection()
-        data = await self._db.afetch(sql, params)
-        results = [from_dict(data_class, d) for d in data]
-        return results
+    def run(self) -> Sequence[S | T] | SelectQuery[S, T, Db]:
+        if isinstance(self._db, DbBase):
+            sql, params = self._build_sql()
+            selection = self._get_selection()
+            selection = cast(type[T] | type[S], selection)
+            data = self._db.fetch(sql, params)
+            results = [from_dict(selection, d) for d in data]
+            return results
+        return self
 
     def _get_selection(self) -> type[Selection] | type[S]:
         """

@@ -60,6 +60,7 @@ class Db(DbBase):
     def execute(self, query: str, params: dict[str, Any]) -> None:
         query = _convert_params(query)
         self._conn.execute(query, params)
+        self._conn.commit()
 
     @override
     def executemany(self, query: str, params: Sequence[dict[str, Any]]):
@@ -95,6 +96,15 @@ class Db(DbBase):
                             pass  # Keep as string
             results.append(row_dict)
         return results
+
+    @override
+    def truncate(self, schema: str | None = None):
+        cursor = self._conn.cursor()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
+        tables = cursor.fetchall()
+        for (table_name,) in tables:
+            cursor.execute(f"DELETE FROM {table_name}")
+        self._conn.commit()
 
 
 def _convert_params(query: str) -> str:
