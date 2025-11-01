@@ -1,7 +1,6 @@
 from collections.abc import Mapping
 from typing import Any, Self, cast
 
-from embar.custom_types import Undefined
 from embar.db.base import AllDbBase, AsyncDbBase, DbBase
 from embar.query.where import WhereClause
 from embar.table import Table
@@ -12,6 +11,7 @@ class UpdateQuery[T: Table, Db: AllDbBase]:
     `UpdateQuery` is used to update rows.
 
     It is never used directly, but always created from a Db.
+    It returns an `UpdateQueryReady` instance once `set()` has been called.
 
     Example:
     >>> from embar.db.pg import Db
@@ -23,17 +23,28 @@ class UpdateQuery[T: Table, Db: AllDbBase]:
     table: type[T]
     _db: Db
 
-    _where_clause: WhereClause | None = None
-
-    data: Mapping[str, Any] = Undefined
-
     def __init__(self, table: type[T], db: Db):
         self.table = table
         self._db = db
 
-    def set(self, data: Mapping[str, Any]) -> Self:
+    def set(self, data: Mapping[str, Any]) -> UpdateQueryReady[T, Db]:
+        return UpdateQueryReady(table=self.table, db=self._db, data=data)
+
+
+class UpdateQueryReady[T: Table, Db: AllDbBase]:
+    """
+    `UpdateQueryReady` is an update query that is ready to be awaited or run.
+    """
+
+    table: type[T]
+    _db: Db
+    data: Mapping[str, Any]
+    _where_clause: WhereClause | None = None
+
+    def __init__(self, table: type[T], db: Db, data: Mapping[str, Any]):
+        self.table = table
+        self._db = db
         self.data = data
-        return self
 
     def where(self, where_clause: WhereClause) -> Self:
         self._where_clause = where_clause

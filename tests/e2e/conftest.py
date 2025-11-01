@@ -28,8 +28,8 @@ def postgres_container(request: pytest.FixtureRequest):
 def db_loaded(db: SqliteDb | PgDb):
     user = User(id=1, email="john@foo.com")
     message = Message(id=1, user_id=user.id, content="Hello!")
-    db.insert(User).value(user).run()
-    db.insert(Message).value(message).run()
+    db.insert(User).values(user).run()
+    db.insert(Message).values(message).run()
     return db
 
 

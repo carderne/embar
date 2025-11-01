@@ -15,7 +15,7 @@ async def test_await_on_async_pg(async_pg_db: AsyncPgDb):
     await db.migrate([User])
 
     user = User(id=1, email="john@foo.com")
-    await db.insert(User).value(user)
+    await db.insert(User).values(user)
 
     res = await db.select(User.all()).fromm(User)
 
@@ -31,7 +31,7 @@ def test_no_await_on_async_pg(async_pg_db: AsyncPgDb):
         db.migrate([User])  # pyright:ignore[reportUnusedCoroutine]
 
     user = User(id=1, email="john@foo.com")
-    db.insert(User).value(user)
+    db.insert(User).values(user)
 
     res = db.select(User.all()).fromm(User)
 
@@ -46,7 +46,7 @@ async def test_await_on_sync_pg(pg_db: PgDb):
     db.migrate([User])
 
     user = User(id=1, email="john@foo.com")
-    await db.insert(User).value(user)
+    await db.insert(User).values(user)
 
     res = await db.select(User.all()).fromm(User)
 
@@ -61,7 +61,7 @@ def test_no_await_on_sync_pg(pg_db: PgDb):
     db.migrate([User])
 
     user = User(id=1, email="john@foo.com")
-    db.insert(User).value(user).run()
+    db.insert(User).values(user).run()
 
     # note the added .run()
     res = db.select(User.all()).fromm(User).run()
@@ -78,7 +78,7 @@ async def test_await_on_sqlite(sqlite_db: SqliteDb):
     db.migrate([User])
 
     user = User(id=1, email="john@foo.com")
-    await db.insert(User).value(user)
+    await db.insert(User).values(user)
 
     res = await db.select(User.all()).fromm(User)
 
@@ -93,7 +93,7 @@ def test_no_await_on_sqlite(sqlite_db: SqliteDb):
     db.migrate([User])
 
     user = User(id=1, email="john@foo.com")
-    db.insert(User).value(user).run()
+    db.insert(User).values(user).run()
 
     # note the added .run()
     res = db.select(User.all()).fromm(User).run()

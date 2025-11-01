@@ -25,10 +25,6 @@ class SelectQuery[S: Selection, T: Table, Db: AllDbBase]:
 
     It is generic over the `Selection` made, `Table` being inserted into, and the database being used.
 
-    It has a regular `execute()` method, and an async `aexecute()` method.
-    These are typed to return `NoReturn` when the wrong one is used, but there doesn't
-    seem to be a way to make it an error to use them in the wrong case.
-
     `SelectQuery` is never used directly, but always returned by a [`Fromm`][embar.fromm.Fromm] instance.
 
     Example:

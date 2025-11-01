@@ -33,10 +33,10 @@ class Db(DbBase):
             self._conn.close()
 
     def select[S: Selection](self, sel: type[S]) -> Fromm[S, DbBase]:
-        return Fromm[S, DbBase](_db=self, sel=sel)
+        return Fromm[S, DbBase](db=self, sel=sel)
 
     def insert[T: Table](self, table: type[T]) -> InsertQuery[T, DbBase]:
-        return InsertQuery[T, DbBase](table=table, _db=self)
+        return InsertQuery[T, DbBase](table=table, db=self)
 
     def update[T: Table](self, table: type[T]) -> UpdateQuery[T, DbBase]:
         return UpdateQuery[T, DbBase](table=table, db=self)
@@ -120,10 +120,10 @@ class AsyncDb(AsyncDbBase):
             await self._conn.close()
 
     def select[S: Selection](self, sel: type[S]) -> Fromm[S, Self]:
-        return Fromm[S, Self](_db=self, sel=sel)
+        return Fromm[S, Self](db=self, sel=sel)
 
     def insert[T: Table](self, table: type[T]) -> InsertQuery[T, Self]:
-        return InsertQuery[T, Self](table=table, _db=self)
+        return InsertQuery[T, Self](table=table, db=self)
 
     async def migrate(
         self, tables: Sequence[type[Table]], enums: Sequence[type[PgEnum[EmbarEnum]]] | None = None

@@ -19,7 +19,7 @@ async def test_postgres_jsonb(pg_db: PgDb):
 
     name = "bob"
     data = TableWithJsonB(data={"name": name})
-    await db.insert(TableWithJsonB).value(data)
+    await db.insert(TableWithJsonB).values(data)
 
     # fmt: off
     res = (
@@ -59,7 +59,7 @@ async def test_postgres_enum(pg_db: PgDb):
     db.migrate([TableWithStatus], enums=[StatusPgEnum])
 
     good_row = TableWithStatus(status="DONE")
-    await db.insert(TableWithStatus).value(good_row)
+    await db.insert(TableWithStatus).values(good_row)
     # fmt: off
     res = (
         db.select(TableWithStatus.all())
@@ -73,4 +73,4 @@ async def test_postgres_enum(pg_db: PgDb):
 
     bad_row = TableWithStatus(status="foo")
     with pytest.raises(InvalidTextRepresentation):
-        await db.insert(TableWithStatus).value(bad_row)
+        await db.insert(TableWithStatus).values(bad_row)

@@ -65,8 +65,8 @@ db.migrate([User, Message])
 user = User(id=1, email="foo@bar.com")
 message = Message(id=1, user_id=user.id, content="Hello!")
 
-db.insert(User).value(user).run()
-db.insert(Message).value(message).run()
+db.insert(User).values(user).run()
+db.insert(Message).values(message).run()
 ```
 
 ### Query some data
