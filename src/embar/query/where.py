@@ -57,9 +57,9 @@ class Eq[T: PyType](WhereClause):
         name = f"eq_{self.left.name}_{count}"
 
         if isinstance(self.right, ColumnInfo):
-            return WhereData(sql=f"{self.left.fqn} = {self.right.fqn}", params={})
+            return WhereData(sql=f"{self.left.fqn()} = {self.right.fqn()}", params={})
 
-        return WhereData(sql=f"{self.left.fqn} = %({name})s", params={name: self.right})
+        return WhereData(sql=f"{self.left.fqn()} = %({name})s", params={name: self.right})
 
 
 class Ne[T: PyType](WhereClause):
@@ -80,9 +80,9 @@ class Ne[T: PyType](WhereClause):
         name = f"ne_{self.left.name}_{count}"
 
         if isinstance(self.right, ColumnInfo):
-            return WhereData(sql=f"{self.left.fqn} != {self.right.fqn}", params={})
+            return WhereData(sql=f"{self.left.fqn()} != {self.right.fqn()}", params={})
 
-        return WhereData(sql=f"{self.left.fqn} != %({name})s", params={name: self.right})
+        return WhereData(sql=f"{self.left.fqn()} != %({name})s", params={name: self.right})
 
 
 class Gt[T: PyType](WhereClause):
@@ -103,9 +103,9 @@ class Gt[T: PyType](WhereClause):
         name = f"gt_{self.left.name}_{count}"
 
         if isinstance(self.right, ColumnInfo):
-            return WhereData(sql=f"{self.left.fqn} > {self.right.fqn}", params={})
+            return WhereData(sql=f"{self.left.fqn()} > {self.right.fqn()}", params={})
 
-        return WhereData(sql=f"{self.left.fqn} > %({name})s", params={name: self.right})
+        return WhereData(sql=f"{self.left.fqn()} > %({name})s", params={name: self.right})
 
 
 class Gte[T: PyType](WhereClause):
@@ -126,9 +126,9 @@ class Gte[T: PyType](WhereClause):
         name = f"gte_{self.left.name}_{count}"
 
         if isinstance(self.right, ColumnInfo):
-            return WhereData(sql=f"{self.left.fqn} >= {self.right.fqn}", params={})
+            return WhereData(sql=f"{self.left.fqn()} >= {self.right.fqn()}", params={})
 
-        return WhereData(sql=f"{self.left.fqn} >= %({name})s", params={name: self.right})
+        return WhereData(sql=f"{self.left.fqn()} >= %({name})s", params={name: self.right})
 
 
 class Lt[T: PyType](WhereClause):
@@ -149,9 +149,9 @@ class Lt[T: PyType](WhereClause):
         name = f"lt_{self.left.name}_{count}"
 
         if isinstance(self.right, ColumnInfo):
-            return WhereData(sql=f"{self.left.fqn} < {self.right.fqn}", params={})
+            return WhereData(sql=f"{self.left.fqn()} < {self.right.fqn()}", params={})
 
-        return WhereData(sql=f"{self.left.fqn} < %({name})s", params={name: self.right})
+        return WhereData(sql=f"{self.left.fqn()} < %({name})s", params={name: self.right})
 
 
 class Lte[T: PyType](WhereClause):
@@ -172,9 +172,9 @@ class Lte[T: PyType](WhereClause):
         name = f"lte_{self.left.name}_{count}"
 
         if isinstance(self.right, ColumnInfo):
-            return WhereData(sql=f"{self.left.fqn} <= {self.right.fqn}", params={})
+            return WhereData(sql=f"{self.left.fqn()} <= {self.right.fqn()}", params={})
 
-        return WhereData(sql=f"{self.left.fqn} <= %({name})s", params={name: self.right})
+        return WhereData(sql=f"{self.left.fqn()} <= %({name})s", params={name: self.right})
 
 
 # String matching operators
@@ -191,9 +191,9 @@ class Like[T: PyType](WhereClause):
         count = get_count()
         name = f"like_{self.left.name}_{count}"
         if isinstance(self.right, ColumnInfo):
-            return WhereData(sql=f"{self.left.fqn} = {self.right.fqn}", params={})
+            return WhereData(sql=f"{self.left.fqn()} = {self.right.fqn()}", params={})
 
-        return WhereData(sql=f"{self.left.fqn} LIKE %({name})s", params={name: self.right})
+        return WhereData(sql=f"{self.left.fqn()} LIKE %({name})s", params={name: self.right})
 
 
 class Ilike[T: PyType](WhereClause):
@@ -213,9 +213,9 @@ class Ilike[T: PyType](WhereClause):
         count = get_count()
         name = f"ilike_{self.left.name}_{count}"
         if isinstance(self.right, ColumnInfo):
-            return WhereData(sql=f"{self.left.fqn} ILIKE {self.right.fqn}", params={})
+            return WhereData(sql=f"{self.left.fqn()} ILIKE {self.right.fqn()}", params={})
 
-        return WhereData(sql=f"{self.left.fqn} ILIKE %({name})s", params={name: self.right})
+        return WhereData(sql=f"{self.left.fqn()} ILIKE %({name})s", params={name: self.right})
 
 
 class NotLike[T: PyType](WhereClause):
@@ -235,9 +235,9 @@ class NotLike[T: PyType](WhereClause):
         count = get_count()
         name = f"notlike_{self.left.name}_{count}"
         if isinstance(self.right, ColumnInfo):
-            return WhereData(sql=f"{self.left.fqn} NOT LIKE {self.right.fqn}", params={})
+            return WhereData(sql=f"{self.left.fqn()} NOT LIKE {self.right.fqn()}", params={})
 
-        return WhereData(sql=f"{self.left.fqn} NOT LIKE %({name})s", params={name: self.right})
+        return WhereData(sql=f"{self.left.fqn()} NOT LIKE %({name})s", params={name: self.right})
 
 
 # Null checks
@@ -253,7 +253,7 @@ class IsNull(WhereClause):
 
     @override
     def get(self, get_count: GetCount) -> WhereData:
-        return WhereData(sql=f"{self.column.fqn} IS NULL", params={})
+        return WhereData(sql=f"{self.column.fqn()} IS NULL", params={})
 
 
 class IsNotNull(WhereClause):
@@ -268,7 +268,7 @@ class IsNotNull(WhereClause):
 
     @override
     def get(self, get_count: GetCount) -> WhereData:
-        return WhereData(sql=f"{self.column.fqn} IS NOT NULL", params={})
+        return WhereData(sql=f"{self.column.fqn()} IS NOT NULL", params={})
 
 
 # Array/list operations
@@ -288,7 +288,7 @@ class InArray[T: PyType](WhereClause):
     def get(self, get_count: GetCount) -> WhereData:
         count = get_count()
         name = f"in_{self.column.name}_{count}"
-        return WhereData(sql=f"{self.column.fqn} = ANY(%({name})s)", params={name: self.values})
+        return WhereData(sql=f"{self.column.fqn()} = ANY(%({name})s)", params={name: self.values})
 
 
 class NotInArray[T: PyType](WhereClause):
@@ -307,7 +307,7 @@ class NotInArray[T: PyType](WhereClause):
     def get(self, get_count: GetCount) -> WhereData:
         count = get_count()
         name = f"notin_{self.column.name}_{count}"
-        return WhereData(sql=f"{self.column.fqn} != ALL(%({name})s)", params={name: self.values})
+        return WhereData(sql=f"{self.column.fqn()} != ALL(%({name})s)", params={name: self.values})
 
 
 # Range operations
@@ -333,7 +333,7 @@ class Between[T: PyType](WhereClause):
         lower_name = f"between_lower_{self.column.name}_{count}"
         upper_name = f"between_upper_{self.column.name}_{count}"
         return WhereData(
-            sql=f"{self.column.fqn} BETWEEN %({lower_name})s AND %({upper_name})s",
+            sql=f"{self.column.fqn()} BETWEEN %({lower_name})s AND %({upper_name})s",
             params={lower_name: self.lower, upper_name: self.upper},
         )
 
@@ -358,7 +358,7 @@ class NotBetween[T: PyType](WhereClause):
         lower_name = f"notbetween_lower_{self.column.name}_{count}"
         upper_name = f"notbetween_upper_{self.column.name}_{count}"
         return WhereData(
-            sql=f"{self.column.fqn} NOT BETWEEN %({lower_name})s AND %({upper_name})s",
+            sql=f"{self.column.fqn()} NOT BETWEEN %({lower_name})s AND %({upper_name})s",
             params={lower_name: self.lower, upper_name: self.upper},
         )
 

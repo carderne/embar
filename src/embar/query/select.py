@@ -189,7 +189,7 @@ class SelectQuery[S: Selection, T: Table, Db: AllDbBase]:
             params = {**params, **where_data.params}
 
         if self._group_clause is not None:
-            col_names = [c.info.fqn for c in self._group_clause.cols]
+            col_names = [c.info.fqn() for c in self._group_clause.cols]
             group_by_col = ", ".join(col_names)
             sql += f"\nGROUP BY {group_by_col}"
 

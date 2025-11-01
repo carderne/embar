@@ -52,8 +52,7 @@ class InsertQuery[T: Table, Db: AllDbBase]:
         Example:
         >>> from embar.column.common import Text
         >>> from embar.table import Table
-        >>> @dataclass
-        ... class MyTable(Table):
+        >>> class MyTable(Table):
         ...     my_col: Text = Text()
         >>> row = MyTable(my_col="foo")
         >>> insert = InsertQuery(_db=None, table=MyTable, items=[row])

@@ -5,7 +5,6 @@ from psycopg.errors import InvalidTextRepresentation
 
 from embar.column.pg import EmbarEnum, EnumCol, Jsonb, PgEnum, Varchar
 from embar.db.pg import Db as PgDb
-from embar.query.selection import SelectAll
 from embar.table import Table
 
 
@@ -24,7 +23,7 @@ async def test_postgres_jsonb(pg_db: PgDb):
 
     # fmt: off
     res = (
-        db.select(SelectAll)
+        db.select(TableWithJsonB.all())
         .fromm(TableWithJsonB)
         .run()
     )
@@ -63,7 +62,7 @@ async def test_postgres_enum(pg_db: PgDb):
     await db.insert(TableWithStatus).value(good_row)
     # fmt: off
     res = (
-        db.select(SelectAll)
+        db.select(TableWithStatus.all())
         .fromm(TableWithStatus)
         .run()
     )

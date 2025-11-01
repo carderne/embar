@@ -4,13 +4,14 @@ to import table_base.py without triggering table.py, causing a circular loop by 
 (that's the reason the two were separated in the first place).
 """
 
-from typing import Any, ClassVar, Self, dataclass_transform
+from typing import Any, Self, dataclass_transform
 
 from embar.column.base import ColumnBase
 from embar.column.common import Column, Integer, Text
 from embar.config import TableConfig
 from embar.custom_types import Undefined
 from embar.query.many import ManyTable
+from embar.query.selection import SelectAll
 from embar.table_base import TableBase
 
 
@@ -30,13 +31,11 @@ class Table(TableBase):
     can pick up the fields.
     """
 
-    _fields: ClassVar[dict[str, ColumnBase]]
-
     def __init_subclass__(cls, **kwargs: Any):
         """
         Populate `_fields` and the `embar_config` if not provided.
         """
-        cls._fields = {name: attr for name, attr in cls.__dict__.items() if isinstance(attr, ColumnBase)}
+        cls._fields = {name: attr for name, attr in cls.__dict__.items() if isinstance(attr, ColumnBase)}  # pyright:ignore[reportUnannotatedClassAttribute]
 
         if cls.embar_config == Undefined:
             cls.embar_config: TableConfig = TableConfig()
@@ -52,8 +51,8 @@ class Table(TableBase):
         """
         Minimal replication of `dataclass` behaviour.
         """
-        columns: dict[str, type[Column[Any]]] = {  # pyright:ignore[reportUnknownVariableType,reportAssignmentType]
-            name: attr for name, attr in type(self).__dict__.items() if isinstance(attr, Column)
+        columns: dict[str, type[Column[Any]]] = {  # pyright:ignore[reportAssignmentType]
+            name: attr for name, attr in type(self).__dict__.items() if isinstance(attr, ColumnBase)
         }
 
         for name, value in kwargs.items():
@@ -70,17 +69,6 @@ class Table(TableBase):
 
         if missing:
             raise TypeError(f"Missing required fields: {missing}")
-
-    @classmethod
-    def column_names(cls) -> dict[str, str]:
-        """
-        Mapping of field names to _unquoted_ column names.
-
-        Column names are allowed to be different to field names, so in queries
-        we always need to map one to/from the other.
-        """
-        cols = {name: col.info.name for name, col in cls._fields.items()}
-        return cols
 
     @classmethod
     def many(cls) -> ManyTable[type[Self]]:
@@ -109,6 +97,18 @@ class Table(TableBase):
                 columns.append(attr.info.ddl())
         columns_str = ",".join(columns)
         return f"""CREATE TABLE IF NOT EXISTS {cls.fqn()} ({columns_str})"""
+
+    @classmethod
+    def all(cls) -> type[SelectAll]:
+        """
+        Generate a Select query `Selection` that returns all the table's fields.
+
+        Example:
+        >>> class MyTable(Table): ...
+        >>> selection = MyTable.all()
+        >>> assert selection == SelectAll
+        """
+        return SelectAll
 
     def value_dict(self) -> dict[str, Any]:
         """

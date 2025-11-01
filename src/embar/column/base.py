@@ -36,7 +36,6 @@ class ColumnInfo:
     def table_name(self) -> str:
         return self._table_name()
 
-    @property
     def fqn(self) -> str:
         """
         Return the Fully Qualified Name (table and column both in quotes).
@@ -45,7 +44,7 @@ class ColumnInfo:
         >>> col = ColumnInfo(
         ...    _table_name=lambda: "foo", name="bar", col_type="TEXT", py_type=str, primary=False, not_null=False
         ... )
-        >>> col.fqn
+        >>> col.fqn()
         '"foo"."bar"'
         """
         return f'"{self._table_name()}"."{self.name}"'

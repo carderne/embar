@@ -40,7 +40,7 @@ class Sql:
                 if isinstance(value, type) and issubclass(value, TableBase):
                     query_parts.append(value.fqn())
                 elif isinstance(value, ColumnBase):
-                    query_parts.append(value.info.fqn)
+                    query_parts.append(value.info.fqn())
                 else:
                     raise Exception(f"Unexpected interpolation type: {type(cast(Any, value))}")
 

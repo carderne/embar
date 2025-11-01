@@ -86,7 +86,6 @@ class Db(DbBase):
             row_dict = dict(row)
             for key, value in row_dict.items():
                 if isinstance(value, str):
-                    # TODO do this in a more sensible way (use the schema!)
                     try:
                         row_dict[key] = json.loads(value)
                     except (json.JSONDecodeError, ValueError):

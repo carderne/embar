@@ -16,7 +16,6 @@ from embar.column.base import ColumnBase
 from embar.db.base import DbType
 from embar.query.many import ManyColumn, ManyTable
 from embar.sql import Sql
-from embar.table import Table
 from embar.table_base import TableBase
 
 
@@ -71,10 +70,15 @@ class Selection:
         return ", ".join(parts)
 
 
-# `SelectAll` tells the query engine to get all fields from the `from()` table
-# but currently (?) doesn't work (from a typing POV) with joined tables...
-# TODO figure out if worth keeping even with that limitation
-class SelectAll(Selection): ...
+class SelectAll(Selection):
+    """
+    `SelectAll` tells the query engine to get all fields from the `from()` table ONLY.
+
+    Ideally it could get fields from joined tables too, but no way for that to work (from a typing POV)
+    Not recommended for public use, users should rather use their table's `all()` method.
+    """
+
+    ...
 
 
 def _get_source_expr(field_name: str, field_type: type, db_type: DbType, hints: dict[str, Any]) -> str:
@@ -90,12 +94,12 @@ def _get_source_expr(field_name: str, field_type: type, db_type: DbType, hints: 
         # Skip first arg (the actual type), search metadata for TableColumn
         for annotation in annotations[1:]:
             if isinstance(annotation, ColumnBase):
-                return annotation.info.fqn
+                return annotation.info.fqn()
             if isinstance(annotation, ManyColumn):
                 # not sure why this cast is needed
                 # pyright doesn't figure out the ManyColumn is always [ColumnBase]?
                 many_col = cast(ManyColumn[ColumnBase], annotation)
-                fqn = many_col.of.info.fqn
+                fqn = many_col.of.info.fqn()
                 match db_type:
                     case "postgres":
                         query = f"array_agg({fqn})"
@@ -103,7 +107,7 @@ def _get_source_expr(field_name: str, field_type: type, db_type: DbType, hints: 
                     case "sqlite":
                         query = f"json_group_array({fqn})"
                         return query
-            if isinstance(annotation, type) and issubclass(annotation, Table):
+            if isinstance(annotation, type) and issubclass(annotation, TableBase):
                 table = annotation
                 table_fqn = table.fqn()
                 columns = table.column_names()
@@ -118,7 +122,7 @@ def _get_source_expr(field_name: str, field_type: type, db_type: DbType, hints: 
                         query = f"json_object({column_pairs})"
                         return query
             if isinstance(annotation, ManyTable):
-                many_table = cast(ManyTable[type[Table]], annotation)
+                many_table = cast(ManyTable[type[TableBase]], annotation)
                 table = many_table.of
                 table_fqn = many_table.of.fqn()
                 columns = table.column_names()
@@ -196,7 +200,7 @@ def generate_selection_dataclass(cls: type[TableBase]) -> type[Selection]:
             (
                 field_name,
                 Annotated[field_type, column],
-                field(default_factory=lambda a=column: column.info.fqn),
+                field(default_factory=lambda a=column: column.info.fqn()),
             )
         )
 

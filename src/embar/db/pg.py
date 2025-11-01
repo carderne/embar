@@ -80,7 +80,6 @@ class Db(DbBase):
 
     @override
     def fetch(self, query: str, params: dict[str, Any]) -> list[dict[str, Any]]:
-        # TODO should this return a Generator instead?
         with self._conn.cursor() as cur:
             cur.execute(query, params)  # pyright:ignore[reportArgumentType]
 
