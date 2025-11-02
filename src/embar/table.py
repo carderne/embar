@@ -26,9 +26,6 @@ class Table(TableBase):
     - New rows to insert into a table are created as objects
     - Values returned from Select queries are based on dynamically generated classes or
       `Selection` classes, never directly instances of `Table`
-
-    It's a `dataclass` so that [`topological_sort_tables`][embar._util.topological_sort_tables]
-    can pick up the fields.
     """
 
     def __init_subclass__(cls, **kwargs: Any):
@@ -39,12 +36,8 @@ class Table(TableBase):
 
         if cls.embar_config == Undefined:
             cls.embar_config: TableConfig = TableConfig()
+            cls.embar_config.__set_name__(cls, "embar_config")
 
-        # Set table_name if not provided
-        if cls.embar_config.table_name == Undefined:
-            cls.embar_config.table_name = "".join("_" + c.lower() if c.isupper() else c for c in cls.__name__).lstrip(
-                "_"
-            )
         super().__init_subclass__(**kwargs)
 
     def __init__(self, **kwargs: Any) -> None:
@@ -96,7 +89,7 @@ class Table(TableBase):
             if isinstance(attr, ColumnBase):
                 columns.append(attr.info.ddl())
         columns_str = ",".join(columns)
-        return f"""CREATE TABLE IF NOT EXISTS {cls.fqn()} ({columns_str})"""
+        return f"""CREATE TABLE IF NOT EXISTS {cls.fqn()} ({columns_str});"""
 
     @classmethod
     def all(cls) -> type[SelectAll]:

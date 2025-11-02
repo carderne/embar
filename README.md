@@ -133,7 +133,7 @@ users_query = (
     .group_by(User.id)
     .sql()
 )
-print(users_query.sql)
+users_query.sql
 # SELECT 
 #     "users"."user_email" AS "email",
 #     json_group_array(json_object(
@@ -164,6 +164,35 @@ class MessageUpdate(TypedDict, total=False):
     .where(Eq(Message.id, 1))
     .run()
 )
+```
+
+### Add indexes
+```python continuation
+from embar.constraint import Index
+
+class Message(Table):
+    embar_config: TableConfig = TableConfig(
+        constraints=[Index("message_idx").on(lambda: Message.user_id)]
+    )
+    user_id: Integer = Integer().fk(lambda: User.id)
+```
+
+### Run raw SQL
+```python continuation
+db.sql(t"DELETE FROM {Message}").run()
+```
+
+Or with a return:
+```python continuation
+class UserId(Selection):
+    id: Annotated[int, int]
+
+res = (
+    db.sql(t"SELECT * FROM {User}")
+    .model(UserId)
+    .run()
+)
+# [UserId(id=1)]
 ```
 
 ## Contributing

@@ -46,7 +46,7 @@ class Selection:
 
     def __init_subclass__(cls, **kwargs: Any):
         """
-        Populate `_fields` and the `embar_config` if not provided.
+        Populate `_fields` if not provided.
         """
         hints = get_type_hints(cls, include_extras=True)
         # _fields is what embar uses to track fields
@@ -143,7 +143,7 @@ def _get_source_expr(field_name: str, field_type: type, db_type: DbType, hints: 
     raise Exception(f"Failed to get source expression for {field_name}")
 
 
-def convert_annotation(
+def _convert_annotation(
     field_type: type,
 ) -> Annotated[Any, Any] | Literal[False]:
     """
@@ -161,7 +161,7 @@ def convert_annotation(
     >>> class MySelection(Selection):
     ...     my_col: Annotated[str, MyTable.my_col]
     >>> field = MySelection._fields["my_col"]
-    >>> convert_annotation(field)
+    >>> _convert_annotation(field)
     False
     """
     if get_origin(field_type) is Annotated:
@@ -204,4 +204,31 @@ def generate_selection_dataclass(cls: type[TableBase]) -> type[Selection]:
             )
         )
 
-    return make_dataclass(cls.__name__, fields, bases=(Selection,))
+    data_class = make_dataclass(cls.__name__, fields, bases=(Selection,))
+    data_class.__init_subclass__()
+    return data_class
+
+
+def selection_to_dataclass[S: Selection](selection: type[S]) -> type[S]:
+    selection.__init_subclass__()
+
+    new_fields: list[tuple[str, type]] = []
+    for field_name, field_type in selection._fields.items():  # pyright:ignore[reportPrivateUsage]
+        new_type = _convert_annotation(field_type)
+        if new_type:
+            new_fields.append((field_name, new_type))
+        else:
+            # This means convert_annotation returned False, i.e. it's a 'simple' field.
+            # We have to recreate it with a Field tuple to match the stuff above for the legitimately new fields.
+            # (I haven't found a way for it to just be left in-place or something.)
+            # field_type = cast(type, cls_field.type)
+            new_fields.append((field_name, field_type))
+
+    new_class = make_dataclass(selection.__name__, new_fields, bases=(Selection,))
+
+    # Pretty gruesome stuff going on here...
+    # __init_subclass__ won't have been called, so _fields won't have been assigned
+    # so do it manually...
+    new_class.__init_subclass__()
+
+    return new_class

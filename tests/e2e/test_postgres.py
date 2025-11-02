@@ -1,10 +1,14 @@
 from enum import auto
+from typing import Annotated
 
 import pytest
 from psycopg.errors import InvalidTextRepresentation
 
-from embar.column.pg import EmbarEnum, EnumCol, Jsonb, PgEnum, Varchar
+from embar.column.pg import EmbarEnum, EnumCol, Jsonb, PgEnum, Text, Varchar
+from embar.config import TableConfig
+from embar.constraint import Index
 from embar.db.pg import Db as PgDb
+from embar.query.selection import Selection
 from embar.table import Table
 
 
@@ -38,7 +42,37 @@ def test_postgres_varchar():
         status: Varchar = Varchar(length=10)
 
     ddl = TableWithVarchar.ddl()
-    assert ddl == 'CREATE TABLE IF NOT EXISTS "table_with_varchar" ("status" VARCHAR(10))'
+    assert ddl == 'CREATE TABLE IF NOT EXISTS "table_with_varchar" ("status" VARCHAR(10));'
+
+
+def test_postgres_index(pg_db: PgDb):
+    table_name = "table_with_index"
+
+    class TableWithIndex(Table):
+        embar_config: TableConfig = TableConfig(
+            table_name=table_name, constraints=[Index("table_index").on(lambda: TableWithIndex.id)]
+        )
+
+        id: Text = Text()
+
+    db = pg_db
+    db.migrate([TableWithIndex])
+
+    class IndexResults(Selection):
+        indexname: Annotated[str, str]
+
+    # breakpoint()
+    # fmt: off
+    res = (
+        # this is a rare instance where we don't want to interpolate {TableWithIndex} because that will
+        # wrap it "" rather than ''
+        db.sql(t"SELECT indexname FROM pg_indexes WHERE tablename = 'table_with_index';")
+        .model(IndexResults)
+        .run()
+    )
+    # fmt: off
+
+    assert len(res) == 1
 
 
 @pytest.mark.asyncio

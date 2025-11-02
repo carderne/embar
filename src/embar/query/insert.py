@@ -101,4 +101,4 @@ class InsertQueryReady[T: Table, Db: AllDbBase]:
         placeholder_str = ", ".join(placeholders)
         sql = f"INSERT INTO {self.table.fqn()} ({columns}) VALUES ({placeholder_str})"
         values = [it.value_dict() for it in self.items]
-        return Query(sql, {}, many_params=values)
+        return Query(sql, many_params=values)

@@ -21,7 +21,7 @@ class LeftJoin(JoinClause):
 
     @override
     def get(self, get_count: GetCount) -> Query:
-        on = self.on.get(get_count)
+        on = self.on.sql(get_count)
 
         sql = f"LEFT JOIN {self.table.fqn()} ON {on.sql}"
         return Query(sql=sql, params=on.params)
@@ -37,7 +37,7 @@ class RightJoin(JoinClause):
 
     @override
     def get(self, get_count: GetCount) -> Query:
-        on = self.on.get(get_count)
+        on = self.on.sql(get_count)
 
         sql = f"RIGHT JOIN {self.table.fqn()} ON {on.sql}"
         return Query(sql=sql, params=on.params)
@@ -53,7 +53,7 @@ class InnerJoin(JoinClause):
 
     @override
     def get(self, get_count: GetCount) -> Query:
-        on = self.on.get(get_count)
+        on = self.on.sql(get_count)
 
         sql = f"INNER JOIN {self.table.fqn()} ON {on.sql}"
         return Query(sql=sql, params=on.params)
@@ -69,7 +69,7 @@ class FullJoin(JoinClause):
 
     @override
     def get(self, get_count: GetCount) -> Query:
-        on = self.on.get(get_count)
+        on = self.on.sql(get_count)
 
         sql = f"FULL OUTER JOIN {self.table.fqn()} ON {on.sql}"
         return Query(sql=sql, params=on.params)
@@ -84,4 +84,4 @@ class CrossJoin(JoinClause):
     @override
     def get(self, get_count: GetCount) -> Query:
         sql = f"CROSS JOIN {self.table.fqn()}"
-        return Query(sql=sql, params={})
+        return Query(sql=sql)

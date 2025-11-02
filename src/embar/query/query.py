@@ -9,7 +9,9 @@ class Query:
     params: dict[str, PyType]
     many_params: Sequence[dict[str, PyType]]
 
-    def __init__(self, sql: str, params: dict[str, Any], many_params: Sequence[dict[str, Any]] | None = None):
+    def __init__(
+        self, sql: str, params: dict[str, Any] | None = None, many_params: Sequence[dict[str, Any]] | None = None
+    ):
         self.sql = sql
-        self.params = params
+        self.params = params if params is not None else {}
         self.many_params = many_params if many_params is not None else []

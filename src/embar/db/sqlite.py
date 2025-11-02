@@ -3,6 +3,7 @@ import sqlite3
 import types
 from collections.abc import Sequence
 from datetime import datetime
+from string.templatelib import Template
 from typing import (
     Any,
     Self,
@@ -17,6 +18,7 @@ from embar.query.query import Query
 from embar.query.select import SelectQuery
 from embar.query.selection import Selection
 from embar.query.update import UpdateQuery
+from embar.sql_db import DbSql
 from embar.table import Table
 
 
@@ -41,10 +43,17 @@ class Db(DbBase):
     def update[T: Table](self, table: type[T]) -> UpdateQuery[T, DbBase]:
         return UpdateQuery[T, DbBase](table=table, db=self)
 
+    def sql(self, template: Template) -> DbSql[Self]:
+        return DbSql(template, self)
+
     def migrate(self, tables: Sequence[type[Table]]) -> Self:
         tables = topological_sort_tables(tables)
         for table in tables:
             self._conn.execute(table.ddl())
+            for constraint in table.embar_config.constraints:
+                query = constraint.sql()
+                sql = _convert_params(query.sql)
+                self._conn.execute(sql, query.params)
         self._conn.commit()
         return self
 

@@ -107,7 +107,7 @@ class UpdateQueryReady[T: Table, Db: AllDbBase]:
         sql = f"UPDATE {self.table.fqn()} SET {set_stmt}"
 
         if self._where_clause is not None:
-            where_data = self._where_clause.get(get_count)
+            where_data = self._where_clause.sql(get_count)
             sql += f"\nWHERE {where_data.sql}"
             params = {**params, **where_data.params}
 
