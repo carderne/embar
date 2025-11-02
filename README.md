@@ -12,17 +12,17 @@
 </a>
 </div>
 
-Embar is a new ORM for Python, designed for simple SQL-esque queries and well-typed queries and results.
+Embar is a new ORM for Python with the following goals:
+- Type safety: your type checker should know what arguments are valid, and what is being returned from any call.
+- Type hints: your LSP should be able to guide you towards the query you want to write.
+- SQL-esque: you should be able to write queries simply by knowing SQL and your data model.
+- You should be able to actually just write SQL when you need to.
 
-There seems to be a gap in the Python ORM market.
-- [SQLAlchemy](https://www.sqlalchemy.org/) (and, by extension, [SQLModel](https://sqlmodel.tiangolo.com/)) is too complicated.
-- [PonyORM](https://docs.ponyorm.org/) has no types
-- Same for [PugSQL](https://pugsql.org/)
-- [TortoiseORM](https://github.com/tortoise/tortoise-orm) is probably appealing if you like [Django](https://www.djangoproject.com/)/[ActiveRecord](https://en.wikipedia.org/wiki/Active_record_pattern)
-- [Piccolo](https://github.com/piccolo-orm/piccolo) looks interesting...
-- [ormar](https://github.com/collerek/ormar) too...
+These are mostly inspired by [Drizzle](https://orm.drizzle.team/).
+The Python ecosystem deserves something with similar DX.
 
-Embar is inspired by [Drizzle](https://orm.drizzle.team/).
+**Embar uses [Template strings](https://docs.python.org/3.14/library/string.templatelib.html#template-strings) and so only supports Python 3.14.**
+
 
 ## Quickstart
 ### Install
@@ -151,6 +151,8 @@ uv sync
 
 This project uses [poethepoet](https://poethepoet.natn.io/index.html) for tasks/scripts.
 
+You'll need Docker installed to run tests.
+
 Format, lint, type-check, test:
 ```bash
 uv run poe fmt
@@ -170,3 +172,13 @@ alias poe="uv run poe"
 # Then you can just:
 poe test
 ```
+
+## Other ORMs to co consider
+There seems to be a gap in the Python ORM market.
+- [SQLAlchemy](https://www.sqlalchemy.org/) (and, by extension, [SQLModel](https://sqlmodel.tiangolo.com/)) is too complicated
+- [PonyORM](https://docs.ponyorm.org/) has no types
+- Same for [PugSQL](https://pugsql.org/)
+- [TortoiseORM](https://github.com/tortoise/tortoise-orm) is probably appealing if you like [Django](https://www.djangoproject.com/)/[ActiveRecord](https://en.wikipedia.org/wiki/Active_record_pattern)
+- [Piccolo](https://github.com/piccolo-orm/piccolo) is cool but not type-safe
+- [ormar](https://github.com/collerek/ormar) is not very type-aware and still basedon SQLAlchemy
+

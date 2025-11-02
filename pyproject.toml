@@ -16,8 +16,9 @@ all = [ {ref="fmt"}, {ref="lint"}, {ref="check"}, {ref="test"} ]
 
 [project]
 name = "embar"
-version = "0.0.1"
+version = "0.1.0"
 description = "A SQL-y and well-typed ORM for Python"
+readme = "README.md"
 authors = [
     { name = "Chris Arderne", email = "chris@rdrn.me" }
 ]
@@ -37,6 +38,10 @@ dependencies = [
     "dacite>=1.9.2",
     "psycopg[binary]>=3.2.11",
 ]
+
+[project.urls]
+homepage = "https://github.com/carderne/embar"
+repository = "https://github.com/carderne/embar"
 
 [dependency-groups]
 dev = [
