@@ -2,6 +2,7 @@ from collections.abc import Mapping
 from typing import Any, Self, cast
 
 from embar.db.base import AllDbBase, AsyncDbBase, DbBase
+from embar.query.query import Query
 from embar.query.where import WhereClause
 from embar.table import Table
 
@@ -56,13 +57,13 @@ class UpdateQueryReady[T: Table, Db: AllDbBase]:
 
         non-async users have the `run()` convenience method below.
         """
-        sql, params = self._build_sql()
+        query = self.sql()
         if isinstance(self._db, AsyncDbBase):
-            return self._db.execute(sql, params).__await__()
+            return self._db.execute(query).__await__()
 
         async def get_result():
             db = cast(DbBase, self._db)
-            return db.execute(sql, params)
+            return db.execute(query)
 
         return get_result().__await__()
 
@@ -74,11 +75,11 @@ class UpdateQueryReady[T: Table, Db: AllDbBase]:
         But still works if awaited.
         """
         if isinstance(self._db, DbBase):
-            sql, params = self._build_sql()
-            return self._db.execute(sql, params)
+            query = self.sql()
+            return self._db.execute(query)
         return self
 
-    def _build_sql(self) -> tuple[str, dict[str, Any]]:
+    def sql(self) -> Query:
         """
         Combine all the components of the query and build the SQL and bind parameters (psycopg format).
         """
@@ -110,4 +111,4 @@ class UpdateQueryReady[T: Table, Db: AllDbBase]:
             sql += f"\nWHERE {where_data.sql}"
             params = {**params, **where_data.params}
 
-        return sql, params
+        return Query(sql, params)

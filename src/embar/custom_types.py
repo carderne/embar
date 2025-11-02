@@ -11,4 +11,6 @@ type Type = type | TypeAliasType
 
 # All the types that are allowed to ser/de to/from the DB.
 # Used by dacite (other libraries in the future) to control ser/de.
-type PyType = str | int | float | Decimal | bool | bytes | date | time | datetime | timedelta | dict[str, Any]
+type PyType = (
+    str | int | float | Decimal | bool | bytes | date | time | datetime | timedelta | dict[str, Any] | list[PyType]
+)

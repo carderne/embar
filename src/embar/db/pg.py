@@ -14,6 +14,7 @@ from embar._util import topological_sort_tables
 from embar.column.pg import EmbarEnum, PgEnum
 from embar.db.base import AsyncDbBase, DbBase
 from embar.query.insert import InsertQuery
+from embar.query.query import Query
 from embar.query.select import SelectQuery
 from embar.query.selection import Selection
 from embar.query.update import UpdateQuery
@@ -67,21 +68,21 @@ class Db(DbBase):
         return self
 
     @override
-    def execute(self, query: str, params: dict[str, Any]) -> None:
-        self._conn.execute(query, params)  # pyright:ignore[reportArgumentType]
+    def execute(self, query: Query) -> None:
+        self._conn.execute(query.sql, query.params)  # pyright:ignore[reportArgumentType]
         self._conn.commit()
 
     @override
-    def executemany(self, query: str, params: Sequence[dict[str, Any]]):
-        params = _jsonify_dicts(params)
+    def executemany(self, query: Query):
+        params = _jsonify_dicts(query.many_params)
         with self._conn.cursor() as cur:
-            cur.executemany(query, params)  # pyright:ignore[reportArgumentType]
+            cur.executemany(query.sql, params)  # pyright:ignore[reportArgumentType]
         self._conn.commit()
 
     @override
-    def fetch(self, query: str, params: dict[str, Any]) -> list[dict[str, Any]]:
+    def fetch(self, query: Query) -> list[dict[str, Any]]:
         with self._conn.cursor() as cur:
-            cur.execute(query, params)  # pyright:ignore[reportArgumentType]
+            cur.execute(query.sql, query.params)  # pyright:ignore[reportArgumentType]
 
             if cur.description is None:
                 return []
@@ -154,20 +155,20 @@ class AsyncDb(AsyncDbBase):
         return self
 
     @override
-    async def execute(self, query: str, params: dict[str, Any]) -> None:
-        await self._conn.execute(query, params)  # pyright:ignore[reportArgumentType]
+    async def execute(self, query: Query) -> None:
+        await self._conn.execute(query.sql, query.params)  # pyright:ignore[reportArgumentType]
 
     @override
-    async def executemany(self, query: str, params: Sequence[dict[str, Any]]):
-        params = _jsonify_dicts(params)
+    async def executemany(self, query: Query):
+        params = _jsonify_dicts(query.many_params)
         async with self._conn.cursor() as cur:
-            await cur.executemany(query, params)  # pyright:ignore[reportArgumentType]
+            await cur.executemany(query.sql, params)  # pyright:ignore[reportArgumentType]
             await self._conn.commit()
 
     @override
-    async def fetch(self, query: str, params: dict[str, Any]) -> list[dict[str, Any]]:
+    async def fetch(self, query: Query) -> list[dict[str, Any]]:
         async with self._conn.cursor() as cur:
-            await cur.execute(query, params)  # pyright:ignore[reportArgumentType]
+            await cur.execute(query.sql, query.params)  # pyright:ignore[reportArgumentType]
 
             if cur.description is None:
                 return []

@@ -9,6 +9,7 @@ from embar.column.base import ColumnBase
 from embar.db.base import AllDbBase, AsyncDbBase, DbBase
 from embar.query.group_by import GroupBy
 from embar.query.join import CrossJoin, FullJoin, InnerJoin, JoinClause, LeftJoin, RightJoin
+from embar.query.query import Query
 from embar.query.selection import (
     SelectAll,
     Selection,
@@ -119,17 +120,17 @@ class SelectQueryReady[S: Selection, T: Table, Db: AllDbBase]:
 
         Results are currently (?) parsed with dacite.
         """
-        sql, params = self._build_sql()
+        query = self.sql()
         selection = self._get_selection()
         selection = cast(type[T] | type[S], selection)
 
         async def awaitable():
             db = self._db
             if isinstance(db, AsyncDbBase):
-                data = await db.fetch(sql, params)
+                data = await db.fetch(query)
             else:
                 db = cast(DbBase, self._db)
-                data = db.fetch(sql, params)
+                data = db.fetch(query)
             results = [from_dict(selection, d) for d in data]
             return results
 
@@ -144,10 +145,10 @@ class SelectQueryReady[S: Selection, T: Table, Db: AllDbBase]:
 
     def run(self) -> Sequence[S | T] | SelectQueryReady[S, T, Db]:
         if isinstance(self._db, DbBase):
-            sql, params = self._build_sql()
+            query = self.sql()
             selection = self._get_selection()
             selection = cast(type[T] | type[S], selection)
-            data = self._db.fetch(sql, params)
+            data = self._db.fetch(query)
             results = [from_dict(selection, d) for d in data]
             return results
         return self
@@ -186,7 +187,7 @@ class SelectQueryReady[S: Selection, T: Table, Db: AllDbBase]:
 
         return new_class
 
-    def _build_sql(self) -> tuple[str, dict[str, Any]]:
+    def sql(self) -> Query:
         """
         Combine all the components of the query and build the SQL and bind parameters (psycopg format).
         """
@@ -228,4 +229,4 @@ class SelectQueryReady[S: Selection, T: Table, Db: AllDbBase]:
 
         sql = sql.strip()
 
-        return sql, params
+        return Query(sql, params)

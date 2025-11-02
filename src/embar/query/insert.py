@@ -1,8 +1,9 @@
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any, cast
+from typing import cast
 
 from embar.db.base import AllDbBase, AsyncDbBase, DbBase
+from embar.query.query import Query
 from embar.table import Table
 
 
@@ -56,13 +57,13 @@ class InsertQueryReady[T: Table, Db: AllDbBase]:
 
         non-async users have the `run()` convenience method below.
         """
-        sql, params = self._build_sql()
+        query = self.sql()
         if isinstance(self._db, AsyncDbBase):
-            return self._db.executemany(sql, params).__await__()
+            return self._db.executemany(query).__await__()
 
         async def get_result():
             db = cast(DbBase, self._db)
-            return db.executemany(sql, params)
+            return db.executemany(query)
 
         return get_result().__await__()
 
@@ -74,11 +75,11 @@ class InsertQueryReady[T: Table, Db: AllDbBase]:
         But still works if awaited.
         """
         if isinstance(self._db, DbBase):
-            sql, params = self._build_sql()
-            return self._db.executemany(sql, params)
+            query = self.sql()
+            return self._db.executemany(query)
         return self
 
-    def _build_sql(self) -> tuple[str, list[dict[str, Any]]]:
+    def sql(self) -> Query:
         """
         Create the SQL query and binding parameters (psycopg format) for the query.
 
@@ -89,7 +90,8 @@ class InsertQueryReady[T: Table, Db: AllDbBase]:
         ...     my_col: Text = Text()
         >>> row = MyTable(my_col="foo")
         >>> insert = InsertQueryReady(db=None, table=MyTable, items=[row])
-        >>> insert._build_sql()
+        >>> query = insert.sql()
+        >>> (query.sql, query.many_params)
         ('INSERT INTO "my_table" ("my_col") VALUES (%(my_col)s)', [{'my_col': 'foo'}])
         """
         column_names = self.table.column_names().values()
@@ -99,4 +101,4 @@ class InsertQueryReady[T: Table, Db: AllDbBase]:
         placeholder_str = ", ".join(placeholders)
         sql = f"INSERT INTO {self.table.fqn()} ({columns}) VALUES ({placeholder_str})"
         values = [it.value_dict() for it in self.items]
-        return sql, values
+        return Query(sql, {}, many_params=values)

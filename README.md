@@ -122,6 +122,31 @@ users = (
 # )]
 ```
 
+### See the SQL
+Every query produces exactly one... query.
+And you can always see what's happening under the hood with the `.sql()` method:
+```python continuation
+users_query = (
+    db.select(UserHydrated)
+    .fromm(User)
+    .left_join(Message, Eq(User.id, Message.user_id))
+    .group_by(User.id)
+    .sql()
+)
+print(users_query.sql)
+# SELECT 
+#     "users"."user_email" AS "email",
+#     json_group_array(json_object(
+#         'id', "message"."id",
+#         'user_id', "message"."user_id",
+#         'content', "message"."content"
+#     )) AS "messages",
+#     CURRENT_TIMESTAMP AS "date"
+# FROM "users"
+# LEFT JOIN "message" ON "users"."id" = "message"."user_id"
+# GROUP BY "users"."id"
+```
+
 ### Update a row
 Unfortunately this requires another model to be defined, as Python doesn't have a `Partial[]` type.
 
@@ -173,12 +198,12 @@ alias poe="uv run poe"
 poe test
 ```
 
-## Other ORMs to co consider
+## Other ORMs to consider
 There seems to be a gap in the Python ORM market.
-- [SQLAlchemy](https://www.sqlalchemy.org/) (and, by extension, [SQLModel](https://sqlmodel.tiangolo.com/)) is too complicated
+- [SQLAlchemy](https://www.sqlalchemy.org/) (and, by extension, [SQLModel](https://sqlmodel.tiangolo.com/)) is probably great if you're familiar with it, but too complicated for people who don't live in it
 - [PonyORM](https://docs.ponyorm.org/) has no types
-- Same for [PugSQL](https://pugsql.org/)
+- [PugSQL](https://pugsql.org/) has no types
 - [TortoiseORM](https://github.com/tortoise/tortoise-orm) is probably appealing if you like [Django](https://www.djangoproject.com/)/[ActiveRecord](https://en.wikipedia.org/wiki/Active_record_pattern)
-- [Piccolo](https://github.com/piccolo-orm/piccolo) is cool but not type-safe
-- [ormar](https://github.com/collerek/ormar) is not very type-aware and still basedon SQLAlchemy
+- [Piccolo](https://github.com/piccolo-orm/piccolo) is cool but not very type-safe (functions accept Any, return dicts)
+- [ormar](https://github.com/collerek/ormar) is not very type-safe and still based on SQLAlchemy
 

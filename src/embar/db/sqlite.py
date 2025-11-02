@@ -13,6 +13,7 @@ from typing import (
 from embar._util import topological_sort_tables
 from embar.db.base import DbBase
 from embar.query.insert import InsertQuery
+from embar.query.query import Query
 from embar.query.select import SelectQuery
 from embar.query.selection import Selection
 from embar.query.update import UpdateQuery
@@ -57,26 +58,26 @@ class Db(DbBase):
         return self
 
     @override
-    def execute(self, query: str, params: dict[str, Any]) -> None:
-        query = _convert_params(query)
-        self._conn.execute(query, params)
+    def execute(self, query: Query) -> None:
+        sql = _convert_params(query.sql)
+        self._conn.execute(sql, query.params)
         self._conn.commit()
 
     @override
-    def executemany(self, query: str, params: Sequence[dict[str, Any]]):
-        query = _convert_params(query)
-        self._conn.executemany(query, params)
+    def executemany(self, query: Query):
+        sql = _convert_params(query.sql)
+        self._conn.executemany(sql, query.many_params)
         self._conn.commit()
 
     @override
-    def fetch(self, query: str, params: dict[str, Any]) -> list[dict[str, Any]]:
+    def fetch(self, query: Query) -> list[dict[str, Any]]:
         """
         Fetch all rows returned by a SELECT query.
 
         sqlite returns json/arrays as string, so need to parse them.
         """
-        query = _convert_params(query)
-        cur = self._conn.execute(query, params)
+        sql = _convert_params(query.sql)
+        cur = self._conn.execute(sql, query.params)
 
         if cur.description is None:
             return []
