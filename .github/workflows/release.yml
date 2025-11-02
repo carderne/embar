@@ -1,0 +1,23 @@
+name: release
+on:
+  release:
+    types: [published]
+jobs:
+  publish-all:
+    environment: release
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version-file: "pyproject.toml"
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.9.5"
+          enable-cache: true
+
+      - run: uv build
+      - uses: pypa/gh-action-pypi-publish@release/v1

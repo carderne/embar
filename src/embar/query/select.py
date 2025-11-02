@@ -127,7 +127,6 @@ class SelectQuery[S: Selection, T: Table, Db: AllDbBase]:
 
         Extra processing is done to check for nested children that are Tables themselves.
         """
-        # TODO does this work for doubly nested stuff? Probably not.
         selection = generate_selection_dataclass(self.table) if self.sel is SelectAll else self.sel
         selection.__init_subclass__()
 
