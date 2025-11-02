@@ -6,7 +6,7 @@ import pytest
 from embar.db.pg import Db as PgDb
 from embar.db.sqlite import Db as SqliteDb
 from embar.query.selection import Selection
-from embar.query.where import Eq, Like, Or
+from embar.query.where import Eq, Exists, Like, Or
 from embar.sql import Sql
 
 from ..schemas.schema import Message, User
@@ -93,3 +93,30 @@ def test_select_json(db_loaded: SqliteDb | PgDb):
     assert got.user.email == "john@foo.com"
     assert got.user.id == 1
     assert got.message == "Hello!"
+
+
+def test_select_subquery(db_loaded: SqliteDb | PgDb):
+    db = db_loaded
+
+    class MessageSel(Selection):
+        id: Annotated[int, Message.id]
+        contenet: Annotated[str, Message.content]
+
+    # fmt: off
+    inner_query = (
+        db.select(MessageSel)
+        .fromm(Message)
+        .where(Eq(Message.id, 100))
+    )
+    # fmt: on
+
+    # fmt: off
+    res = (
+        db.select(MessageSel)
+        .fromm(Message)
+        .where(Exists(inner_query))
+        .run()
+    )
+    # fmt: on
+
+    assert len(res) == 0

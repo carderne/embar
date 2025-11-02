@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Callable, override
+from typing import Any, Callable, Protocol, override
 
 from embar.column.base import ColumnInfo
 from embar.column.common import Column
@@ -352,7 +352,40 @@ class NotBetween[T: PyType](WhereClause):
 
 
 # Subquery operations
-# TODO support Exists and NotExists with subqueries
+class SqlAble(Protocol):
+    def sql(self) -> Query: ...
+
+
+class Exists(WhereClause):
+    """
+    Check if a subquery result exists.
+    """
+
+    query: SqlAble
+
+    def __init__(self, query: SqlAble):
+        self.query = query
+
+    @override
+    def sql(self, get_count: GetCount) -> Query:
+        query = self.query.sql()
+        return Query(f"EXISTS ({query.sql})", query.params)
+
+
+class NotExists(WhereClause):
+    """
+    Check if a subquery result does not exist.
+    """
+
+    query: SqlAble
+
+    def __init__(self, query: SqlAble):
+        self.query = query
+
+    @override
+    def sql(self, get_count: GetCount) -> Query:
+        query = self.query.sql()
+        return Query(f"NOT EXISTS ({query.sql})", query.params)
 
 
 # Logical operators
