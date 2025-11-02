@@ -3,7 +3,7 @@ import pytest
 from embar.db.pg import AsyncDb as AsyncPgDb
 from embar.db.pg import Db as PgDb
 from embar.db.sqlite import Db as SqliteDb
-from embar.query.select import SelectQuery
+from embar.query.select import SelectQueryReady
 
 from ..schemas.schema import User
 
@@ -36,7 +36,7 @@ def test_no_await_on_async_pg(async_pg_db: AsyncPgDb):
     res = db.select(User.all()).fromm(User)
 
     # nothing has been executed
-    assert isinstance(res, SelectQuery)
+    assert isinstance(res, SelectQueryReady)
 
 
 @pytest.mark.asyncio

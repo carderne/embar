@@ -13,8 +13,8 @@ from psycopg.types.json import Json
 from embar._util import topological_sort_tables
 from embar.column.pg import EmbarEnum, PgEnum
 from embar.db.base import AsyncDbBase, DbBase
-from embar.query.fromm import Fromm
 from embar.query.insert import InsertQuery
+from embar.query.select import SelectQuery
 from embar.query.selection import Selection
 from embar.query.update import UpdateQuery
 from embar.table import Table
@@ -32,8 +32,8 @@ class Db(DbBase):
         if self._conn:
             self._conn.close()
 
-    def select[S: Selection](self, sel: type[S]) -> Fromm[S, DbBase]:
-        return Fromm[S, DbBase](db=self, sel=sel)
+    def select[S: Selection](self, sel: type[S]) -> SelectQuery[S, DbBase]:
+        return SelectQuery[S, DbBase](db=self, sel=sel)
 
     def insert[T: Table](self, table: type[T]) -> InsertQuery[T, DbBase]:
         return InsertQuery[T, DbBase](table=table, db=self)
@@ -119,8 +119,8 @@ class AsyncDb(AsyncDbBase):
         if self._conn:
             await self._conn.close()
 
-    def select[S: Selection](self, sel: type[S]) -> Fromm[S, Self]:
-        return Fromm[S, Self](db=self, sel=sel)
+    def select[S: Selection](self, sel: type[S]) -> SelectQuery[S, Self]:
+        return SelectQuery[S, Self](db=self, sel=sel)
 
     def insert[T: Table](self, table: type[T]) -> InsertQuery[T, Self]:
         return InsertQuery[T, Self](table=table, db=self)
