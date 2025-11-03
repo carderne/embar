@@ -25,8 +25,8 @@ The Python ecosystem deserves something with similar DX.
 Embar supports three database clients:
 
 - SQLite 3 via the Python standard library
-- Postgres via psycopg3
-- Postgres via async psycopg3
+- Postgres via [psycopg3](https://www.psycopg.org/psycopg3/docs/index.html)
+- Postgres via [async psycopg3](https://www.psycopg.org/psycopg3/docs/advanced/async.html)
 
 The async psycopg3 client is recommended. The others are provided mostly for testing and experimenting locally.
 
@@ -36,6 +36,10 @@ The async psycopg3 client is recommended. The others are provided mostly for tes
 
 **Documentation: [embar.rdrn.me](https://embar.rdrn.me)**
 
+## Roadmap
+- Improve the story around updates. Requires codegen.
+- Create a drizzle-style `db.query.users.findMany({ where: ... })` alternative syntax. Requires codegen.
+- Create a migration diffing engine.
 
 ## Quickstart
 
