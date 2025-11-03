@@ -7,32 +7,37 @@ from pathlib import Path
 
 import mkdocs_gen_files
 
-nav = mkdocs_gen_files.Nav()  # pyright:ignore[reportPrivateImportUsage]
 
-root = Path(__file__).parent.parent
-src = root / "src"
+def main():
+    nav = mkdocs_gen_files.Nav()  # pyright:ignore[reportPrivateImportUsage]
 
-for path in sorted(src.rglob("*.py")):
-    module_path = path.relative_to(src).with_suffix("")
-    doc_path = path.relative_to(src).with_suffix(".md")
-    full_doc_path = Path("reference", doc_path)
+    root = Path(__file__).parent.parent
+    src = root / "src"
 
-    parts = tuple(module_path.parts)
+    for path in sorted(src.rglob("*.py")):
+        module_path = path.relative_to(src).with_suffix("")
+        doc_path = path.relative_to(src).with_suffix(".md")
+        full_doc_path = Path("reference", doc_path)
 
-    if parts[-1] == "__init__":
-        parts = parts[:-1]
-        doc_path = doc_path.with_name("index.md")
-        full_doc_path = full_doc_path.with_name("index.md")
-    elif parts[-1] == "__main__":
-        continue
+        parts = tuple(module_path.parts)
 
-    nav[parts] = doc_path.as_posix()
+        if parts[-1] == "__init__":
+            parts = parts[:-1]
+            doc_path = doc_path.with_name("index.md")
+            full_doc_path = full_doc_path.with_name("index.md")
+        elif parts[-1] == "__main__":
+            continue
 
-    with mkdocs_gen_files.open(full_doc_path, "w") as fd:
-        ident = ".".join(parts)
-        fd.write(f"::: {ident}")
+        nav[parts] = doc_path.as_posix()
 
-    mkdocs_gen_files.set_edit_path(full_doc_path, path.relative_to(root))
+        with mkdocs_gen_files.open(full_doc_path, "w") as fd:
+            ident = ".".join(parts)
+            fd.write(f"::: {ident}")
 
-with mkdocs_gen_files.open("reference/SUMMARY.md", "w") as nav_file:
-    nav_file.writelines(nav.build_literate_nav())
+        mkdocs_gen_files.set_edit_path(full_doc_path, path.relative_to(root))
+
+    with mkdocs_gen_files.open("reference/SUMMARY.md", "w") as nav_file:
+        nav_file.writelines(nav.build_literate_nav())
+
+
+main()

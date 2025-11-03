@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any, Callable, Literal
 
@@ -51,7 +52,7 @@ class ColumnInfo:
         """
         return f'"{self._table_name()}"."{self.name}"'
 
-    def ddl(self: "ColumnInfo") -> str:
+    def ddl(self) -> str:
         """
         Generate the DDL just for this column.
 
@@ -89,3 +90,11 @@ class ColumnBase:
     # These must always be assigned by children, type-checker won't catch it
     _sql_type: str  # pyright:ignore[reportUninitializedInstanceVariable]
     _py_type: Type  # pyright:ignore[reportUninitializedInstanceVariable]
+
+
+class EnumBase(ABC):
+    name: str
+
+    @classmethod
+    @abstractmethod
+    def ddl(cls) -> str: ...

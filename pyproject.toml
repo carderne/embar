@@ -45,6 +45,9 @@ dependencies = [
 homepage = "https://github.com/carderne/embar"
 repository = "https://github.com/carderne/embar"
 
+[project.scripts]
+embar = "embar.tools.migrate:main"
+
 [dependency-groups]
 dev = [
     "basedpyright>=1.31.7",

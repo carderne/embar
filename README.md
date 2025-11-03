@@ -39,6 +39,8 @@ The async psycopg3 client is recommended. The others are provided mostly for tes
 
 ## Quickstart
 
+The quickstart uses the non-async sqlite client to make an easy example.
+
 ### Install
 
 ```bash
@@ -50,22 +52,28 @@ uv add embar
 ```python
 # schema.py
 from embar.column.common import Integer, Text
-from embar.config import TableConfig
+from embar.config import EmbarConfig
 from embar.table import Table
 
 class User(Table):
-    embar_config = TableConfig(table_name="users")
+    # If you don't provide a table name, it is generated from your class name
+    embar_config = EmbarConfig(table_name="users")
 
     id: Integer = Integer(primary=True)
+    # Columns will also generate their own name if not provided
     email: Text = Text("user_email", default="text", not_null=True)
 
 class Message(Table):
     id: Integer = Integer()
+    # Foreign key constraints are easy to add
     user_id: Integer = Integer().fk(lambda: User.id)
     content: Text = Text()
 ```
 
 ### Create client and apply migrations
+
+In production, you would (probably) use the `embar` CLI to generate and run migrations.
+This example uses the utility function to do it all in code.
 
 ```{.python continuation}
 # main.py
@@ -74,7 +82,7 @@ from embar.db.sqlite import Db as SqliteDb
 
 conn = sqlite3.connect(":memory:")
 db = SqliteDb(conn)
-db.migrate([User, Message])
+db.migrate([User, Message]).run()
 ```
 
 ### Insert some data
@@ -195,7 +203,7 @@ class MessageUpdate(TypedDict, total=False):
 from embar.constraint import Index
 
 class Message(Table):
-    embar_config: TableConfig = TableConfig(
+    embar_config: EmbarConfig = EmbarConfig(
         constraints=[Index("message_idx").on(lambda: Message.user_id)]
     )
     user_id: Integer = Integer().fk(lambda: User.id)
@@ -220,6 +228,52 @@ res = (
 )
 # [UserId(id=1)]
 ```
+
+## Migrations
+
+Properly diffing migrations is not supported yet, but it's in the pipeline.
+
+In the meantime, you have two options:
+
+### Embar CLI (work in progress)
+
+This uses which uses an LLM (and your `ANTHROPIC_API_KEY`) to generate vibe-diffs.
+You should inspect these before running them.
+
+You can see a working example at [example/](https://github.com/carderne/embar/tree/main/example).
+
+First create a config file `embar.yml` in your app root:
+
+```yml
+dialect: postgresql
+db_url: postgresql://user:password@localhost:5432/db
+schema_path: app.schema
+migrations_dir: migrations   # optional
+```
+
+Then to generate migrations, run the following and follow the prompts:
+
+```bash
+embar migrate
+```
+
+Or to push directly to your db, run the following.
+You will be prompted before each change.
+
+```bash
+embar push
+```
+
+### Or use an external schema management tool
+Use the `migrate()` method shown in the quickstart to dump the current DDL to a `.sql` file.
+
+Then use a schema management tool to manage updates.
+Some options are:
+
+- [Atlas](https://github.com/ariga/atlas)
+- [sqldef](https://github.com/sqldef/sqldef)
+- [sqitch](https://sqitch.org/)
+
 
 ## Contributing
 

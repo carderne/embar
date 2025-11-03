@@ -1,10 +1,41 @@
 from collections import defaultdict, deque
 from collections.abc import Sequence
+from types import ModuleType
 
+from embar.column.base import EnumBase
+from embar.migration import Ddl, MigrationDefs
 from embar.table import Table
 
 
-def topological_sort_tables(tables: Sequence[type[Table]]) -> list[type[Table]]:
+def get_migration_defs(schema: ModuleType) -> MigrationDefs:
+    enums: list[type[EnumBase]] = []
+    tables: list[type[Table]] = []
+    for name in dir(schema):
+        obj = getattr(schema, name)
+        # Check if it's a class and inherits from Table
+        if isinstance(obj, type) and issubclass(obj, Table) and obj is not Table:
+            tables.append(obj)
+        if isinstance(obj, type) and issubclass(obj, EnumBase) and obj is not EnumBase:
+            enums.append(obj)
+    return MigrationDefs(enums=enums, tables=tables)
+
+
+def merge_ddls(defs: MigrationDefs) -> list[Ddl]:
+    queries: list[Ddl] = []
+    for enum in defs.enums:
+        queries.append(Ddl(name=enum.name, ddl=enum.ddl()))
+
+    tables = _topological_sort_tables(defs.tables)
+    for table in tables:
+        constraints: list[str] = []
+        for constraint in table.embar_config.constraints:
+            constraints.append(constraint.sql().merged())
+        queries.append(Ddl(name=table.get_name(), ddl=table.ddl(), constraints=constraints))
+
+    return queries
+
+
+def _topological_sort_tables(tables: Sequence[type[Table]]) -> list[type[Table]]:
     """
     Sort table classes by foreign key dependencies using Kahn's algorithm.
 
@@ -13,12 +44,12 @@ def topological_sort_tables(tables: Sequence[type[Table]]) -> list[type[Table]]:
     ```python
     from embar.column.common import Integer
     from embar.table import Table
-    from embar._util import topological_sort_tables
+    from embar.db._util import _topological_sort_tables
     class User(Table):
         id: Integer = Integer()
     class Message(Table):
         user_id: Integer = Integer().fk(lambda: User.id)
-    sorted = topological_sort_tables([Message, User])
+    sorted = _topological_sort_tables([Message, User])
     assert sorted[0] == User
     assert sorted[1] == Message
     ```

@@ -4,7 +4,7 @@ from embar.constraint_base import Constraint
 from embar.custom_types import Undefined
 
 
-class TableConfig:
+class EmbarConfig:
     table_name: str = Undefined
     constraints: list[Constraint]
 

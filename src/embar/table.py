@@ -8,7 +8,7 @@ from typing import Any, Self, dataclass_transform
 
 from embar.column.base import ColumnBase
 from embar.column.common import Column, Integer, Text
-from embar.config import TableConfig
+from embar.config import EmbarConfig
 from embar.custom_types import Undefined
 from embar.query.many import ManyTable
 from embar.query.selection import SelectAll
@@ -35,7 +35,7 @@ class Table(TableBase):
         cls._fields = {name: attr for name, attr in cls.__dict__.items() if isinstance(attr, ColumnBase)}  # pyright:ignore[reportUnannotatedClassAttribute]
 
         if cls.embar_config == Undefined:
-            cls.embar_config: TableConfig = TableConfig()
+            cls.embar_config: EmbarConfig = EmbarConfig()
             cls.embar_config.__set_name__(cls, "embar_config")
 
         super().__init_subclass__(**kwargs)

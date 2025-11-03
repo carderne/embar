@@ -26,11 +26,12 @@ theme:
 
 nav:
   - Home:
-    - Home:
+    - Overview:
       - About: index.md
       - Quickstart: quickstart.md
     - Integration:
-      - Types-checking: type-checking.md
+      - Migrations: migrations.md
+      - Type-checking: type-checking.md
     - Community:
       - Contributing: contributing.md
   - API Reference: reference/
@@ -43,7 +44,7 @@ plugins:
   - gen-files:
       scripts:
         - scripts/gen_ref_pages.py
-        - scripts/gen-index-quickstart.py
+        - scripts/gen_readme_docs.py
   - literate-nav:
       nav_file: SUMMARY.md
   - mkdocstrings

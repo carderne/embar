@@ -1,6 +1,7 @@
 # MkDocs
 site
 docs/reference
+docs/generated
 
 # Secrets
 .env

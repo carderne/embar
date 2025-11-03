@@ -1,0 +1,11 @@
+services:
+  postgres:
+    container_name: embar-postgres
+    image: postgres:18.0-alpine3.22
+    environment:
+      - POSTGRES_USER=pg
+      - POSTGRES_PASSWORD=pw
+      - POSTGRES_DB=db
+    ports:
+      - "3601:5432"
+    restart: always

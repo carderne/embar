@@ -5,7 +5,7 @@ import pytest
 from psycopg.errors import InvalidTextRepresentation
 
 from embar.column.pg import EmbarEnum, EnumCol, Jsonb, PgEnum, Text, Varchar
-from embar.config import TableConfig
+from embar.config import EmbarConfig
 from embar.constraint import Index
 from embar.db.pg import Db as PgDb
 from embar.query.selection import Selection
@@ -19,7 +19,7 @@ async def test_postgres_jsonb(pg_db: PgDb):
     class TableWithJsonB(Table):
         data: Jsonb = Jsonb()
 
-    db.migrate([TableWithJsonB])
+    db.migrate([TableWithJsonB]).run()
 
     name = "bob"
     data = TableWithJsonB(data={"name": name})
@@ -49,14 +49,14 @@ def test_postgres_index(pg_db: PgDb):
     table_name = "table_with_index"
 
     class TableWithIndex(Table):
-        embar_config: TableConfig = TableConfig(
+        embar_config: EmbarConfig = EmbarConfig(
             table_name=table_name, constraints=[Index("table_index").on(lambda: TableWithIndex.id)]
         )
 
         id: Text = Text()
 
     db = pg_db
-    db.migrate([TableWithIndex])
+    db.migrate([TableWithIndex]).run()
 
     class IndexResults(Selection):
         indexname: Annotated[str, str]
@@ -90,7 +90,7 @@ async def test_postgres_enum(pg_db: PgDb):
     class TableWithStatus(Table):
         status: EnumCol[StatusEnum] = EnumCol(StatusPgEnum)
 
-    db.migrate([TableWithStatus], enums=[StatusPgEnum])
+    db.migrate([TableWithStatus], enums=[StatusPgEnum]).run()
 
     good_row = TableWithStatus(status="DONE")
     await db.insert(TableWithStatus).values(good_row)

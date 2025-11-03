@@ -11,9 +11,10 @@ from typing import (
 from psycopg import AsyncConnection, Connection
 from psycopg.types.json import Json
 
-from embar._util import topological_sort_tables
-from embar.column.pg import EmbarEnum, PgEnum
+from embar.column.base import EnumBase
+from embar.db._util import get_migration_defs, merge_ddls
 from embar.db.base import AsyncDbBase, DbBase
+from embar.migration import Migration, MigrationDefs
 from embar.query.insert import InsertQuery
 from embar.query.query import Query
 from embar.query.select import SelectQuery
@@ -47,33 +48,13 @@ class Db(DbBase):
     def sql(self, template: Template) -> DbSql[Self]:
         return DbSql(template, self)
 
-    def migrate(self, tables: Sequence[type[Table]], enums: Sequence[type[PgEnum[Any]]] | None = None) -> Self:
-        if enums is not None:
-            for enum in enums:
-                ddl = enum.ddl()
-                self._conn.execute(ddl)  # pyright:ignore[reportArgumentType]
+    def migrate(self, tables: Sequence[type[Table]], enums: Sequence[type[EnumBase]] | None = None) -> Migration[Self]:
+        ddls = merge_ddls(MigrationDefs(tables, enums))
+        return Migration(ddls, self)
 
-        tables = topological_sort_tables(tables)
-        for table in tables:
-            self._conn.execute(table.ddl())  # pyright:ignore[reportArgumentType]
-            for constraint in table.embar_config.constraints:
-                query = constraint.sql()
-                self._conn.execute(query.sql, query.params)  # pyright:ignore[reportArgumentType]
-        self._conn.commit()
-        return self
-
-    def migrates(self, schema: types.ModuleType) -> Self:
-        enums: list[type[PgEnum[EmbarEnum]]] = []
-        tables: list[type[Table]] = []
-        for name in dir(schema):
-            obj = getattr(schema, name)
-            # Check if it's a class and inherits from Table
-            if isinstance(obj, type) and issubclass(obj, Table) and obj is not Table:
-                tables.append(obj)
-            if isinstance(obj, type) and issubclass(obj, PgEnum) and obj is not PgEnum:
-                enums.append(obj)  # pyright:ignore[reportUnknownArgumentType]
-        self.migrate(tables, enums)
-        return self
+    def migrates(self, schema: types.ModuleType) -> Migration[Self]:
+        defs = get_migration_defs(schema)
+        return self.migrate(defs.tables, defs.enums)
 
     @override
     def execute(self, query: Query) -> None:
@@ -140,36 +121,13 @@ class AsyncDb(AsyncDbBase):
     def sql(self, template: Template) -> DbSql[Self]:
         return DbSql(template, self)
 
-    async def migrate(
-        self, tables: Sequence[type[Table]], enums: Sequence[type[PgEnum[EmbarEnum]]] | None = None
-    ) -> Self:
-        if enums is not None:
-            for enum in enums:
-                ddl = enum.ddl()
-                await self._conn.execute(ddl)  # pyright:ignore[reportArgumentType]
+    def migrate(self, tables: Sequence[type[Table]], enums: Sequence[type[EnumBase]] | None = None) -> Migration[Self]:
+        ddls = merge_ddls(MigrationDefs(tables, enums))
+        return Migration(ddls, self)
 
-        tables = topological_sort_tables(tables)
-        for table in tables:
-            ddl = table.ddl()
-            await self._conn.execute(ddl)  # pyright:ignore[reportArgumentType]
-            for constraint in table.embar_config.constraints:
-                query = constraint.sql()
-                await self._conn.execute(query.sql, query.params)  # pyright:ignore[reportArgumentType]
-        await self._conn.commit()
-        return self
-
-    async def migrates(self, schema: types.ModuleType) -> Self:
-        enums: list[type[PgEnum[EmbarEnum]]] = []
-        tables: list[type[Table]] = []
-        for name in dir(schema):
-            obj = getattr(schema, name)
-            # Check if it's a class and inherits from Table
-            if isinstance(obj, type) and issubclass(obj, Table) and obj is not Table:
-                tables.append(obj)
-            if isinstance(obj, type) and issubclass(obj, PgEnum) and obj is not PgEnum:
-                enums.append(obj)  # pyright:ignore[reportUnknownArgumentType]
-        await self.migrate(tables)
-        return self
+    def migrates(self, schema: types.ModuleType) -> Migration[Self]:
+        defs = get_migration_defs(schema)
+        return self.migrate(defs.tables, defs.enums)
 
     @override
     async def execute(self, query: Query) -> None:

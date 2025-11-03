@@ -11,8 +11,10 @@ from typing import (
     override,
 )
 
-from embar._util import topological_sort_tables
+from embar.column.base import EnumBase
+from embar.db._util import get_migration_defs, merge_ddls
 from embar.db.base import DbBase
+from embar.migration import Migration, MigrationDefs
 from embar.query.insert import InsertQuery
 from embar.query.query import Query
 from embar.query.select import SelectQuery
@@ -46,25 +48,13 @@ class Db(DbBase):
     def sql(self, template: Template) -> DbSql[Self]:
         return DbSql(template, self)
 
-    def migrate(self, tables: Sequence[type[Table]]) -> Self:
-        tables = topological_sort_tables(tables)
-        for table in tables:
-            self._conn.execute(table.ddl())
-            for constraint in table.embar_config.constraints:
-                query = constraint.sql()
-                sql = _convert_params(query.sql)
-                self._conn.execute(sql, query.params)
-        self._conn.commit()
-        return self
+    def migrate(self, tables: Sequence[type[Table]], enums: Sequence[type[EnumBase]] | None = None) -> Migration[Self]:
+        ddls = merge_ddls(MigrationDefs(tables, enums))
+        return Migration(ddls, self)
 
-    def migrates(self, schema: types.ModuleType) -> Self:
-        tables: list[type[Table]] = []
-        for name in dir(schema):
-            obj = getattr(schema, name)
-            if isinstance(obj, type) and issubclass(obj, Table) and obj is not Table:
-                tables.append(obj)
-        self.migrate(tables)
-        return self
+    def migrates(self, schema: types.ModuleType) -> Migration[Self]:
+        defs = get_migration_defs(schema)
+        return self.migrate(defs.tables, defs.enums)
 
     @override
     def execute(self, query: Query) -> None:

@@ -44,7 +44,7 @@ def db(request: pytest.FixtureRequest, sqlite_db: SqliteDb, pg_db: PgDb) -> Sqli
         case _:
             raise Exception(f"Unsupported db {request.param}")
 
-    db.migrates(schema)
+    db.migrates(schema).run()
     return db
 
 

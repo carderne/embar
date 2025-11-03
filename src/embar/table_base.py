@@ -1,7 +1,7 @@
 from typing import ClassVar
 
 from embar.column.base import ColumnBase
-from embar.config import TableConfig
+from embar.config import EmbarConfig
 from embar.custom_types import Undefined
 
 
@@ -13,7 +13,7 @@ class TableBase:
     dictated by preventing circular imports.
     """
 
-    embar_config: TableConfig = Undefined
+    embar_config: EmbarConfig = Undefined
     _fields: ClassVar[dict[str, ColumnBase]]
 
     @classmethod

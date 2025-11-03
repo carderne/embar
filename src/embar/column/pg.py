@@ -3,6 +3,7 @@ from decimal import Decimal
 from enum import Enum
 from typing import Any, override
 
+from embar.column.base import EnumBase
 from embar.column.common import Column, Float, Integer, Text
 from embar.custom_types import Type
 
@@ -206,7 +207,7 @@ class EmbarEnum(str, Enum):
         return name
 
 
-class PgEnum[E: EmbarEnum]:
+class PgEnum[E: EmbarEnum](EnumBase):
     """
     `PgEnum is used to create Postgres enum types.
 
@@ -227,14 +228,15 @@ class PgEnum[E: EmbarEnum]:
     ```
     """
 
-    name: str  # pyright:ignore[reportUninitializedInstanceVariable]
-    enum: type[E]  # pyright:ignore[reportUninitializedInstanceVariable]
+    name: str
+    enum: type[E]
 
+    @override
     @classmethod
     def ddl(cls) -> str:
         quoted = [f"'{e.name}'" for e in cls.enum]
         values = ", ".join(quoted)
-        sql = f"CREATE TYPE {cls.name} AS ENUM ({values})"
+        sql = f"CREATE TYPE {cls.name} AS ENUM ({values});"
         return sql
 
 

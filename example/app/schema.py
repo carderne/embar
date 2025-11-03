@@ -10,11 +10,15 @@ class User(Table):
 
     id: Integer = Integer(primary=True)
     email: Text = Text("user_email", not_null=True)
+    username: Text = Text()  # NEW: Adding username column
+    created_at: Text = Text(default="now()")  # NEW: Adding created_at with default
 
 
 class UserUpdate(TypedDict, total=False):
     id: int
     email: str
+    username: str
+    created_at: str
 
 
 class Message(Table):
