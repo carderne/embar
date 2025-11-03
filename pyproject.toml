@@ -18,7 +18,7 @@ all = [ {ref="fmt"}, {ref="lint"}, {ref="check"}, {ref="test"} ]
 
 [project]
 name = "embar"
-version = "0.1.0"
+dynamic = ["version"]
 description = "A SQL-y and well-typed ORM for Python"
 readme = "README.md"
 authors = [
@@ -66,8 +66,11 @@ dev = [
 ]
 
 [build-system]
-requires = ["uv_build>=0.8.24,<0.9.0"]
-build-backend = "uv_build"
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
 
 [tool.ruff]
 target-version = "py314"
