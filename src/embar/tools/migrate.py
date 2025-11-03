@@ -566,11 +566,173 @@ def cmd_generate(config_path: str | None = None):
     print(f"\n{_green(f'✓ Migration saved to: {filepath}')}")
 
 
-def cmd_migrate(_config_path: str | None = None):
-    """Apply migrations from migration files (not yet implemented)."""
-    print(_red_bold("Error: 'embar migrate' is not yet implemented."))
-    print("This command will apply migrations from the migrations directory.")
-    sys.exit(1)
+def _ensure_migrations_table(conn: psycopg.Connection) -> None:
+    """Create _embar_migrations table if it doesn't exist."""
+    with conn.cursor() as cur:
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS _embar_migrations (
+                migration_name TEXT PRIMARY KEY,
+                started_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                finished_at TIMESTAMP
+            )
+        """)
+    conn.commit()
+
+
+def _check_migration_state(conn: psycopg.Connection) -> None:
+    """Check if any migrations are in an invalid state (started but not finished)."""
+    with conn.cursor() as cur:
+        cur.execute("""
+            SELECT migration_name, started_at
+            FROM _embar_migrations
+            WHERE started_at IS NOT NULL AND finished_at IS NULL
+            ORDER BY started_at
+        """)
+        incomplete = cur.fetchall()
+
+    if incomplete:
+        print(_red_bold("Error: Database is in an invalid state!"))
+        print("The following migrations were started but not completed:")
+        for name, started_at in incomplete:
+            print(f"  - {name} (started at {started_at})")
+        print("\nPlease resolve this manually before running new migrations.")
+        sys.exit(1)
+
+
+def _get_applied_migrations(conn: psycopg.Connection) -> set[str]:
+    """Get set of migration names that have been successfully applied."""
+    with conn.cursor() as cur:
+        cur.execute("""
+            SELECT migration_name
+            FROM _embar_migrations
+            WHERE finished_at IS NOT NULL
+            ORDER BY finished_at
+        """)
+        return {row[0] for row in cur.fetchall()}
+
+
+def _get_migration_files(migrations_dir: str) -> list[tuple[str, str]]:
+    """Get list of migration files sorted by timestamp. Returns (filename, filepath) tuples."""
+    if not os.path.exists(migrations_dir):
+        return []
+
+    files: list[tuple[str, str]] = []
+    for filename in sorted(os.listdir(migrations_dir)):
+        if filename.endswith(".sql"):
+            filepath = os.path.join(migrations_dir, filename)
+            # Extract migration name (remove .sql extension)
+            migration_name = filename[:-4]
+            files.append((migration_name, filepath))
+
+    return files
+
+
+def _apply_migration_file(conn: psycopg.Connection, db: PgDb, migration_name: str, filepath: str) -> None:
+    """Apply a single migration file."""
+    # Read the SQL file
+    with open(filepath, "r") as f:
+        sql_content = f.read()
+
+    # Extract SQL statements (skip comment lines starting with --)
+    current_statement: list[str] = []
+    for line in sql_content.split("\n"):
+        stripped = line.strip()
+        # Skip comment lines and empty lines
+        if stripped.startswith("--") or not stripped:
+            continue
+        current_statement.append(line)
+
+    # Join all non-comment lines
+    full_sql = "\n".join(current_statement).strip()
+
+    if not full_sql:
+        print(f"  {_yellow('⊘ No SQL to execute (comments only)')}")
+        return
+
+    # Record migration start
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO _embar_migrations (migration_name, started_at)
+            VALUES (%s, NOW())
+        """,
+            (migration_name,),
+        )
+    conn.commit()
+
+    try:
+        # Execute the SQL
+        db.execute(Query(full_sql))
+
+        # Record migration completion
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE _embar_migrations
+                SET finished_at = NOW()
+                WHERE migration_name = %s
+            """,
+                (migration_name,),
+            )
+        conn.commit()
+
+        print(f"  {_green('✓ Applied successfully')}")
+
+    except Exception as e:
+        print(f"  {_red_bold(f'✗ Error: {e}')}")
+        conn.rollback()
+        raise
+
+
+def cmd_migrate(config_path: str | None = None):
+    """Apply migrations from migration files."""
+    config = _load_config(config_path)
+
+    if not config.migrations_dir:
+        print(_red_bold("Error: 'migrations_dir' must be set in config to use 'embar migrate'"))
+        sys.exit(1)
+
+    if not os.path.exists(config.migrations_dir):
+        print(_red_bold(f"Error: Migrations directory '{config.migrations_dir}' not found"))
+        sys.exit(1)
+
+    print(f"Connecting to database: {config.db_url}")
+    conn = psycopg.connect(config.db_url)
+    db = PgDb(conn)
+
+    # Ensure migrations table exists
+    _ensure_migrations_table(conn)
+
+    # Check for incomplete migrations
+    _check_migration_state(conn)
+
+    # Get applied and pending migrations
+    applied = _get_applied_migrations(conn)
+    all_migrations = _get_migration_files(config.migrations_dir)
+
+    pending = [(name, path) for name, path in all_migrations if name not in applied]
+
+    if not pending:
+        print(_green("✓ No pending migrations to apply"))
+        return
+
+    print(f"\nFound {len(pending)} pending migration(s):")
+    for name, _ in pending:
+        print(f"  - {name}")
+    print()
+
+    # Apply each pending migration
+    for i, (migration_name, filepath) in enumerate(pending, 1):
+        print(f"[{i}/{len(pending)}] Applying {migration_name}...")
+
+        try:
+            _apply_migration_file(conn, db, migration_name, filepath)
+        except Exception:
+            print(_red_bold(f"\n✗ Migration failed: {migration_name}"))
+            print("Database state has been rolled back for this migration.")
+            sys.exit(1)
+
+    print(f"\n{_green('✓ All migrations applied successfully!')}")
 
 
 def cmd_push(config_path: str | None = None):
@@ -583,27 +745,39 @@ def cmd_push(config_path: str | None = None):
         print("No migrations needed.")
         return
 
-    # Optionally save to file if migrations_dir is set
-    if config.migrations_dir:
-        migration_name = input("Enter migration name: ").strip()
-        if not migration_name:
-            print("Error: Migration name is required when using migrations_dir.")
-            sys.exit(1)
-
-        filepath = _save_migration_to_file(diffs, config.migrations_dir, migration_name)
-        print(f"\n{_green(f'✓ Migration saved to: {filepath}')}")
-
     # Execute migrations with confirmation
     conn = psycopg.connect(config.db_url)
     db = PgDb(conn)
     _execute_migrations(diffs, db)
 
 
-def cmd_pull(_config_path: str | None = None):
-    """Pull schema from database and generate models (not yet implemented)."""
-    print(_red_bold("Error: 'embar pull' is not yet implemented."))
-    print("This command will generate Python models from the database schema.")
-    sys.exit(1)
+def cmd_pull(config_path: str | None = None):
+    """Pull schema from database and print DDL."""
+    config = _load_config(config_path)
+
+    print(f"Connecting to database: {config.db_url}")
+    print("Extracting schema...\n")
+
+    conn = psycopg.connect(config.db_url)
+    schema = _get_schema_from_db(conn)
+
+    if not schema:
+        print("No tables or enums found in database.")
+        return
+
+    print("-- Database Schema")
+    print("-- " + "=" * 78)
+    print()
+
+    for ddl in schema:
+        print(f"-- {ddl.name}")
+        print(ddl.ddl)
+        if ddl.constraints:
+            print()
+            for constraint in ddl.constraints:
+                print(constraint)
+        print()
+        print()
 
 
 def main():

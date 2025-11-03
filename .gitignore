@@ -1,7 +1,9 @@
 # MkDocs
 site
 docs/reference
-docs/generated
+docs/index.md
+docs/migrations.md
+docs/quickstart.md
 
 # Secrets
 .env

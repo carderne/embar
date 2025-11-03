@@ -30,4 +30,3 @@ class Message(Table):
 class MessageUpdate(TypedDict, total=False):
     id: int
     user_id: int
-    content: str
