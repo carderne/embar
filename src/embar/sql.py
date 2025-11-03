@@ -9,14 +9,16 @@ class Sql:
     """
     Used to run raw SQL queries.
 
-    On creation, nothing actually happens. Only later inside the [`Selection`][embar.selection.Selection]
+    On creation, nothing actually happens. Only later inside the [`Selection`][embar.query.selection.Selection]
     class is the `execute()` method called.
 
-    Example:
-    >>> from embar.table import Table
-    >>> class MyTable(Table): ...
-    >>> Sql(t"DELETE FROM {MyTable}").execute()
-    'DELETE FROM "my_table"'
+    ```python
+    from embar.table import Table
+    from embar.sql import Sql
+    class MyTable(Table): ...
+    sql = Sql(t"DELETE FROM {MyTable}").execute()
+    assert sql == 'DELETE FROM "my_table"'
+    ```
     """
 
     template_obj: Template

@@ -10,15 +10,18 @@ def topological_sort_tables(tables: Sequence[type[Table]]) -> list[type[Table]]:
 
     Tables are returned in the order they should be created.
 
-    Example:
-    >>> from embar.column.common import Integer
-    >>> from embar.table import Table
-    >>> class User(Table):
-    ...     id: Integer = Integer()
-    >>> class Message(Table):
-    ...     user_id: Integer = Integer().fk(lambda: User.id)
-    >>> topological_sort_tables([Message, User])
-    [<class 'embar._util.User'>, <class 'embar._util.Message'>]
+    ```python
+    from embar.column.common import Integer
+    from embar.table import Table
+    from embar._util import topological_sort_tables
+    class User(Table):
+        id: Integer = Integer()
+    class Message(Table):
+        user_id: Integer = Integer().fk(lambda: User.id)
+    sorted = topological_sort_tables([Message, User])
+    assert sorted[0] == User
+    assert sorted[1] == Message
+    ```
     """
 
     # Build dependency graph

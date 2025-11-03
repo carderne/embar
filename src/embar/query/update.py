@@ -14,11 +14,13 @@ class UpdateQuery[T: Table, Db: AllDbBase]:
     It is never used directly, but always created from a Db.
     It returns an `UpdateQueryReady` instance once `set()` has been called.
 
-    Example:
-    >>> from embar.db.pg import Db
-    >>> db = Db(None)
-    >>> update = db.update(None)
-    >>> assert isinstance(update, UpdateQuery)
+    ```python
+    from embar.db.pg import Db
+    from embar.query.update import UpdateQuery
+    db = Db(None)
+    update = db.update(None)
+    assert isinstance(update, UpdateQuery)
+    ```
     """
 
     table: type[T]

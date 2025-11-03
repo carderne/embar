@@ -1,3 +1,7 @@
+# MkDocs
+site
+docs/reference
+
 # Secrets
 .env
 

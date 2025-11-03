@@ -50,12 +50,15 @@ class Column[T: PyType](ColumnBase):
         This allows this class to be typed as itself in Table definitions
         but as `T` in object instances. The overloads ensure this works for typechecking too.
 
-        >>> from embar.table import Table
-        >>> class MyTable(Table):
-        ...     my_col: Text = Text()      # typechecked as `Text`
-        >>> my_row = MyTable(my_col="foo") # typechecked as `str`
-        >>> assert isinstance(MyTable.my_col, Text)
-        >>> assert isinstance(my_row.my_col, str)
+        ```python
+        from embar.table import Table
+        from embar.column.common import Text
+        class MyTable(Table):
+            my_col: Text = Text()      # typechecked as `Text`
+        my_row = MyTable(my_col="foo") # typechecked as `str`
+        assert isinstance(MyTable.my_col, Text)
+        assert isinstance(my_row.my_col, str)
+        ```
         """
         if obj is None:
             return self  # Class access returns descriptor

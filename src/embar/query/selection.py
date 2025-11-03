@@ -22,15 +22,18 @@ from embar.table_base import TableBase
 @dataclass_transform(kw_only_default=True)
 class Selection:
     """
-    `Selection` is the base class for [`Select`][embar.query.select.Select] queries.
+    `Selection` is the base class for [`SelectQuery`][embar.query.select.SelectQuery] queries.
 
-    Example:
-    >>> from embar.column.common import Text
-    >>> from embar.table import Table
-    >>> class MyTable(Table):
-    ...     my_col: Text = Text()
-    >>> class MySelection(Selection):
-    ...     my_col: Annotated[str, MyTable.my_col]
+    ```python
+    from typing import Annotated
+    from embar.column.common import Text
+    from embar.table import Table
+    from embar.query.selection import Selection
+    class MyTable(Table):
+        my_col: Text = Text()
+    class MySelection(Selection):
+        my_col: Annotated[str, MyTable.my_col]
+    ```
     """
 
     _fields: ClassVar[dict[str, type]]
@@ -153,16 +156,17 @@ def _convert_annotation(
 
     Only used by `embar.query.Select` but more at home here with the `Selection` context where it's used.
 
-    Example:
-    >>> from embar.column.common import Text
-    >>> from embar.table import Table
-    >>> class MyTable(Table):
-    ...     my_col: Text = Text()
-    >>> class MySelection(Selection):
-    ...     my_col: Annotated[str, MyTable.my_col]
-    >>> field = MySelection._fields["my_col"]
-    >>> _convert_annotation(field)
-    False
+    ```python
+    from typing import Annotated
+    from embar.column.common import Text
+    from embar.table import Table
+    from embar.query.selection import Selection, _convert_annotation
+    class MyTable(Table):
+        my_col: Text = Text()
+    class MySelection(Selection):
+        my_col: Annotated[str, MyTable.my_col]
+    field = MySelection._fields["my_col"]
+    assert _convert_annotation(field) == False
     """
     if get_origin(field_type) is Annotated:
         annotations = get_args(field_type)
@@ -187,11 +191,12 @@ def generate_selection_dataclass(cls: type[TableBase]) -> type[Selection]:
 
     Note the new table has the same exact name, maybe something to revisit.
 
-    Example:
-    >>> from embar.table import Table
-    >>> class MyTable(Table): ...
-    >>> generate_selection_dataclass(MyTable)
-    <class 'embar.query.selection.MyTable'>
+    ```python
+    from embar.table import Table
+    from embar.query.selection import generate_selection_dataclass
+    class MyTable(Table): ...
+    generate_selection_dataclass(MyTable)
+    ```
     """
     fields: list[tuple[str, Annotated[Any, Any], Any]] = []
     for field_name, column in cls._fields.items():  # pyright:ignore[reportPrivateUsage]

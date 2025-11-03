@@ -40,17 +40,19 @@ class SelectQuery[S: Selection, Db: AllDbBase]:
 
 class SelectQueryReady[S: Selection, T: Table, Db: AllDbBase]:
     """
-    `InsertQuery` is used to insert data into a table.
+    `SelectQueryReady` is used to insert data into a table.
 
     It is generic over the `Selection` made, `Table` being inserted into, and the database being used.
 
-    `SelectQuery` is never used directly, but always returned by a [`Fromm`][embar.fromm.Fromm] instance.
+    `SelectQueryReady` is returned by [`fromm`][embar.query.select.SelectQuery.fromm].
 
-    Example:
-    >>> from embar.db.pg import Db
-    >>> db = Db(None)
-    >>> select = db.select(None).fromm(None)
-    >>> assert isinstance(select, SelectQueryReady)
+    ```python
+    from embar.db.pg import Db
+    from embar.query.select import SelectQueryReady
+    db = Db(None)
+    select = db.select(None).fromm(None)
+    assert isinstance(select, SelectQueryReady)
+    ```
     """
 
     sel: type[S]

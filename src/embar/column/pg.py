@@ -191,11 +191,13 @@ class EmbarEnum(str, Enum):
     """
     `EmbarEnum` is just a regular Enum but without having to set the right side.
 
-    Example:
-    >>> from enum import auto
-    >>> class StatusEnum(EmbarEnum):
-    ...    PENDING = auto()
-    ...    DONE = auto()
+    ```python
+    from enum import auto
+    from embar.column.pg import EmbarEnum
+    class StatusEnum(EmbarEnum):
+       PENDING = auto()
+       DONE = auto()
+    ```
     """
 
     @staticmethod
@@ -210,17 +212,19 @@ class PgEnum[E: EmbarEnum]:
 
     Subclasses must always assign values to the two class variables!
 
-    Example:
-    >>> from enum import auto
-    >>> from embar.table import Table
-    >>> class StatusEnum(EmbarEnum):
-    ...    PENDING = auto()
-    ...    DONE = auto()
-    >>> class StatusPgEnum(PgEnum[StatusEnum]):
-    ...     name: str = "status_enum"
-    ...     enum: type[StatusEnum] = StatusEnum
-    >>> class TableWithStatus(Table):
-    ...     status: EnumCol[StatusEnum] = EnumCol(StatusPgEnum)
+    ```python
+    from enum import auto
+    from embar.table import Table
+    from embar.column.pg import EmbarEnum, EnumCol, PgEnum
+    class StatusEnum(EmbarEnum):
+       PENDING = auto()
+       DONE = auto()
+    class StatusPgEnum(PgEnum[StatusEnum]):
+        name: str = "status_enum"
+        enum: type[StatusEnum] = StatusEnum
+    class TableWithStatus(Table):
+        status: EnumCol[StatusEnum] = EnumCol(StatusPgEnum)
+    ```
     """
 
     name: str  # pyright:ignore[reportUninitializedInstanceVariable]

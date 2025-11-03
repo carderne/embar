@@ -40,12 +40,14 @@ class ColumnInfo:
         """
         Return the Fully Qualified Name (table and column both in quotes).
 
-        Example:
-        >>> col = ColumnInfo(
-        ...    _table_name=lambda: "foo", name="bar", col_type="TEXT", py_type=str, primary=False, not_null=False
-        ... )
-        >>> col.fqn()
-        '"foo"."bar"'
+        ```python
+        from embar.column.base import ColumnInfo
+        col = ColumnInfo(
+           _table_name=lambda: "foo", name="bar", col_type="TEXT", py_type=str, primary=False, not_null=False
+        )
+        fqn = col.fqn()
+        assert fqn == '"foo"."bar"'
+        ```
         """
         return f'"{self._table_name()}"."{self.name}"'
 
@@ -55,12 +57,14 @@ class ColumnInfo:
 
         Used by the [`Table.ddl()`][embar.table.Table.ddl] method to generate the full DDL.
 
-        Example:
-        >>> col = ColumnInfo(
-        ...    _table_name=lambda: "foo", name="bar", col_type="TEXT", py_type=str, primary=True, not_null=True
-        ... )
-        >>> col.ddl()
-        '"bar" TEXT NOT NULL PRIMARY KEY'
+        ```python
+        from embar.column.base import ColumnInfo
+        col = ColumnInfo(
+           _table_name=lambda: "foo", name="bar", col_type="TEXT", py_type=str, primary=True, not_null=True
+        )
+        ddl = col.ddl()
+        assert ddl == '"bar" TEXT NOT NULL PRIMARY KEY'
+        ```
         """
         args = self.args if self.args is not None else ""
         default = f"DEFAULT '{self.default}'" if self.default is not None else ""
@@ -75,7 +79,7 @@ class ColumnInfo:
 
 class ColumnBase:
     """
-    Base class for all [`Column`][embar.column.common.column] classes.
+    Base class for all [`Column`][embar.column.common.Column] classes.
 
     Mostly here to avoid circular dependencies with modules that need to know about the fields below.
     """

@@ -66,14 +66,16 @@ class Table(TableBase):
     @classmethod
     def many(cls) -> ManyTable[type[Self]]:
         """
-        Used to nest many of another table in a column in a [`Selection`][embar.selection.Selection].
+        Used to nest many of another table in a column in a [`Selection`][embar.query.selection.Selection].
 
-        Example:
-        >>> from typing import Annotated
-        >>> from embar.query.selection import Selection
-        >>> class MyTable(Table): ...
-        >>> class MySelectQuery(Selection):
-        ...     messages: Annotated[list[MyTable], MyTable.many()]
+        ```python
+        from typing import Annotated
+        from embar.query.selection import Selection
+        from embar.table import Table
+        class MyTable(Table): ...
+        class MySelectQuery(Selection):
+            messages: Annotated[list[MyTable], MyTable.many()]
+        ```
         """
         return ManyTable[type[Self]](cls)
 
@@ -96,10 +98,13 @@ class Table(TableBase):
         """
         Generate a Select query `Selection` that returns all the table's fields.
 
-        Example:
-        >>> class MyTable(Table): ...
-        >>> selection = MyTable.all()
-        >>> assert selection == SelectAll
+        ```python
+        from embar.query.selection import SelectAll
+        from embar.table import Table
+        class MyTable(Table): ...
+        selection = MyTable.all()
+        assert selection == SelectAll
+        ```
         """
         return SelectAll
 

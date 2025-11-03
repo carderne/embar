@@ -15,11 +15,13 @@ class InsertQuery[T: Table, Db: AllDbBase]:
     `InsertQuery` is never used directly, but always returned by a Db instance.
     It returns an `InsertQueryReady` instance once `values()` has been called.
 
-    Example:
-    >>> from embar.db.pg import Db
-    >>> db = Db(None)
-    >>> insert = db.insert(None)
-    >>> assert isinstance(insert, InsertQuery)
+    ```python
+    from embar.db.pg import Db
+    from embar.query.insert import InsertQuery
+    db = Db(None)
+    insert = db.insert(None)
+    assert isinstance(insert, InsertQuery)
+    ```
     """
 
     _db: Db
@@ -83,16 +85,18 @@ class InsertQueryReady[T: Table, Db: AllDbBase]:
         """
         Create the SQL query and binding parameters (psycopg format) for the query.
 
-        Example:
-        >>> from embar.column.common import Text
-        >>> from embar.table import Table
-        >>> class MyTable(Table):
-        ...     my_col: Text = Text()
-        >>> row = MyTable(my_col="foo")
-        >>> insert = InsertQueryReady(db=None, table=MyTable, items=[row])
-        >>> query = insert.sql()
-        >>> (query.sql, query.many_params)
-        ('INSERT INTO "my_table" ("my_col") VALUES (%(my_col)s)', [{'my_col': 'foo'}])
+        ```python
+        from embar.column.common import Text
+        from embar.table import Table
+        from embar.query.insert import InsertQueryReady
+        class MyTable(Table):
+            my_col: Text = Text()
+        row = MyTable(my_col="foo")
+        insert = InsertQueryReady(db=None, table=MyTable, items=[row])
+        query = insert.sql()
+        assert query.sql == 'INSERT INTO "my_table" ("my_col") VALUES (%(my_col)s)'
+        assert query.many_params == [{'my_col': 'foo'}]
+        ```
         """
         column_names = self.table.column_names().values()
         column_names_quoted = [f'"{c}"' for c in column_names]
