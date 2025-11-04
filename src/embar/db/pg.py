@@ -25,7 +25,7 @@ from embar.table import Table
 
 
 @final
-class Db(DbBase):
+class PgDb(DbBase):
     db_type = "postgres"
     _conn: Connection
 
@@ -98,7 +98,7 @@ class Db(DbBase):
 
 
 @final
-class AsyncDb(AsyncDbBase):
+class AsyncPgDb(AsyncDbBase):
     db_type = "postgres"
     _conn: AsyncConnection
 

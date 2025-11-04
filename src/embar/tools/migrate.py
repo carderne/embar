@@ -12,7 +12,7 @@ from urllib.request import Request, urlopen
 import psycopg
 import yaml
 
-from embar.db.pg import Db as PgDb
+from embar.db.pg import PgDb
 from embar.migration import Ddl
 from embar.query.query import Query
 

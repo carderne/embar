@@ -16,9 +16,9 @@ class InsertQuery[T: Table, Db: AllDbBase]:
     It returns an `InsertQueryReady` instance once `values()` has been called.
 
     ```python
-    from embar.db.pg import Db
+    from embar.db.pg import PgDb
     from embar.query.insert import InsertQuery
-    db = Db(None)
+    db = PgDb(None)
     insert = db.insert(None)
     assert isinstance(insert, InsertQuery)
     ```

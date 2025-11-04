@@ -4,9 +4,8 @@ import psycopg
 import pytest
 import pytest_asyncio
 
-from embar.db.pg import AsyncDb as AsyncPgDb
-from embar.db.pg import Db as PgDb
-from embar.db.sqlite import Db as SqliteDb
+from embar.db.pg import AsyncPgDb, PgDb
+from embar.db.sqlite import SqliteDb
 
 from ..schemas import schema
 from ..schemas.schema import Message, User

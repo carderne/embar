@@ -3,8 +3,8 @@ from typing import Annotated
 
 import pytest
 
-from embar.db.pg import Db as PgDb
-from embar.db.sqlite import Db as SqliteDb
+from embar.db.pg import PgDb
+from embar.db.sqlite import SqliteDb
 from embar.query.selection import Selection
 from embar.query.where import Eq, Exists, Like, Or
 from embar.sql import Sql

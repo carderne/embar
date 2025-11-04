@@ -14,6 +14,8 @@ def main():
     with open(readme_path, "r") as f:
         content = f.read()
 
+    content = content.replace("```python continuation", "```python")
+
     # Find the positions of the section markers
     quickstart_match = re.search(r"^## Quickstart$", content, re.MULTILINE)
     migrations_match = re.search(r"^## Migrations$", content, re.MULTILINE)

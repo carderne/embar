@@ -7,7 +7,7 @@ from psycopg.errors import InvalidTextRepresentation
 from embar.column.pg import EmbarEnum, EnumCol, Jsonb, PgEnum, Text, Varchar
 from embar.config import EmbarConfig
 from embar.constraint import Index
-from embar.db.pg import Db as PgDb
+from embar.db.pg import PgDb
 from embar.query.selection import Selection
 from embar.table import Table
 

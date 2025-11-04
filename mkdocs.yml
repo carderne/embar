@@ -29,9 +29,10 @@ nav:
     - Overview:
       - About: index.md
       - Quickstart: quickstart.md
+      - Postgres Quickstart: postgres-quickstart.md
     - Integration:
       - Migrations: migrations.md
-      - Type-checking: type-checking.md
+      - Types: types.md
     - Community:
       - Contributing: contributing.md
   - API Reference: reference/

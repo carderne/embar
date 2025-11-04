@@ -15,8 +15,8 @@ So that you have your own copy.
 ## Clone the repository
 
 ```bash
-# replace 'cardene' with your own username if you made a fork
-git clone git@github.com:caderne/embar.git
+# replace 'carderne' with your own username if you made a fork
+git clone git@github.com:carderne/embar.git
 cd embar
 git checkout -b add-my-contribution
 ```

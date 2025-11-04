@@ -45,6 +45,8 @@ The async psycopg3 client is recommended. The others are provided mostly for tes
 
 The quickstart uses the non-async sqlite client to make an easy example.
 
+If you want to see a fully worked Postgres example, check out the [Postgres Quickstart](https://embar.rdrn.me/postgres-quickstart).
+
 ### Install
 
 ```bash
@@ -61,7 +63,7 @@ from embar.table import Table
 
 class User(Table):
     # If you don't provide a table name, it is generated from your class name
-    embar_config = EmbarConfig(table_name="users")
+    embar_config: EmbarConfig = EmbarConfig(table_name="users")
 
     id: Integer = Integer(primary=True)
     # Columns will also generate their own name if not provided
@@ -79,10 +81,10 @@ class Message(Table):
 In production, you would (probably) use the `embar` CLI to generate and run migrations.
 This example uses the utility function to do it all in code.
 
-```{.python continuation}
+```python continuation
 # main.py
 import sqlite3
-from embar.db.sqlite import Db as SqliteDb
+from embar.db.sqlite import SqliteDb
 
 conn = sqlite3.connect(":memory:")
 db = SqliteDb(conn)
@@ -91,7 +93,7 @@ db.migrate([User, Message]).run()
 
 ### Insert some data
 
-```{.python continuation}
+```python continuation
 user = User(id=1, email="foo@bar.com")
 message = Message(id=1, user_id=user.id, content="Hello!")
 
@@ -103,7 +105,7 @@ db.insert(Message).values(message).run()
 
 With join, where and group by.
 
-```{.python continuation}
+```python continuation
 from typing import Annotated
 from embar.query.selection import Selection
 from embar.query.where import Eq, Like, Or
@@ -130,7 +132,7 @@ users = (
 
 This time with fully nested child tables, and some raw SQL.
 
-```{.python continuation}
+```python continuation
 from datetime import datetime
 from embar.sql import Sql
 
@@ -159,7 +161,7 @@ users = (
 Every query produces exactly one... query.
 And you can always see what's happening under the hood with the `.sql()` method:
 
-```{.python continuation}
+```python continuation
 users_query = (
     db.select(UserHydrated)
     .fromm(User)
@@ -185,7 +187,7 @@ users_query.sql
 
 Unfortunately this requires another model to be defined, as Python doesn't have a `Partial[]` type.
 
-```{.python continuation}
+```python continuation
 from typing import TypedDict
 
 class MessageUpdate(TypedDict, total=False):
@@ -203,25 +205,25 @@ class MessageUpdate(TypedDict, total=False):
 
 ### Add indexes
 
-```{.python continuation}
+```python continuation
 from embar.constraint import Index
 
-class Message(Table):
+class MessageIndexed(Table):
     embar_config: EmbarConfig = EmbarConfig(
-        constraints=[Index("message_idx").on(lambda: Message.user_id)]
+        constraints=[Index("message_idx").on(lambda: MessageIndexed.user_id)]
     )
     user_id: Integer = Integer().fk(lambda: User.id)
 ```
 
 ### Run raw SQL
 
-```{.python continuation}
+```python continuation
 db.sql(t"DELETE FROM {Message}").run()
 ```
 
 Or with a return:
 
-```{.python continuation}
+```python continuation
 class UserId(Selection):
     id: Annotated[int, int]
 

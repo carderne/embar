@@ -15,9 +15,9 @@ class UpdateQuery[T: Table, Db: AllDbBase]:
     It returns an `UpdateQueryReady` instance once `set()` has been called.
 
     ```python
-    from embar.db.pg import Db
+    from embar.db.pg import PgDb
     from embar.query.update import UpdateQuery
-    db = Db(None)
+    db = PgDb(None)
     update = db.update(None)
     assert isinstance(update, UpdateQuery)
     ```

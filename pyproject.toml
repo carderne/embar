@@ -97,3 +97,6 @@ reportAny = false
 
 [tool.pytest.ini_options]
 addopts = "--doctest-modules --doctest-glob='*.py' --markdown-docs --markdown-docs-syntax=superfences"
+pythonpath = "."
+testpaths = ["."]
+norecursedirs = ["example", "examples"]

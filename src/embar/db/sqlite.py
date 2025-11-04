@@ -25,7 +25,7 @@ from embar.table import Table
 
 
 @final
-class Db(DbBase):
+class SqliteDb(DbBase):
     db_type = "sqlite"
 
     def __init__(self, connection: sqlite3.Connection):

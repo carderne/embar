@@ -70,6 +70,7 @@ class DbSqlReturning[S: Selection, Db: AllDbBase]:
     def __await__(self) -> Generator[Any, None, Sequence[S]]:
         sql = self.sql.execute()
         query = Query(sql)
+        selection = self._get_selection()
 
         async def awaitable():
             db = self._db
@@ -79,7 +80,7 @@ class DbSqlReturning[S: Selection, Db: AllDbBase]:
             else:
                 db = cast(DbBase, self._db)
                 data = db.fetch(query)
-            results = [from_dict(self.sel, d) for d in data]
+            results = [from_dict(selection, d) for d in data]
             return results
 
         return awaitable().__await__()

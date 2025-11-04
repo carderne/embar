@@ -1,7 +1,7 @@
 from typing import Annotated
 
-from embar.db.pg import Db as PgDb
-from embar.db.sqlite import Db as SqliteDb
+from embar.db.pg import PgDb
+from embar.db.sqlite import SqliteDb
 from embar.query.selection import Selection
 from embar.query.where import Eq
 

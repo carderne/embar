@@ -1,8 +1,7 @@
 import pytest
 
-from embar.db.pg import AsyncDb as AsyncPgDb
-from embar.db.pg import Db as PgDb
-from embar.db.sqlite import Db as SqliteDb
+from embar.db.pg import AsyncPgDb, PgDb
+from embar.db.sqlite import SqliteDb
 from embar.query.select import SelectQueryReady
 
 from ..schemas.schema import User

@@ -47,9 +47,9 @@ class SelectQueryReady[S: Selection, T: Table, Db: AllDbBase]:
     `SelectQueryReady` is returned by [`fromm`][embar.query.select.SelectQuery.fromm].
 
     ```python
-    from embar.db.pg import Db
+    from embar.db.pg import PgDb
     from embar.query.select import SelectQueryReady
-    db = Db(None)
+    db = PgDb(None)
     select = db.select(None).fromm(None)
     assert isinstance(select, SelectQueryReady)
     ```
