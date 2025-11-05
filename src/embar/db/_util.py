@@ -1,3 +1,5 @@
+"""Utilities for database migrations."""
+
 from collections import defaultdict, deque
 from collections.abc import Sequence
 from types import ModuleType
@@ -8,6 +10,9 @@ from embar.table import Table
 
 
 def get_migration_defs(schema: ModuleType) -> MigrationDefs:
+    """
+    Extract all table and enum definitions from a schema module.
+    """
     enums: list[type[EnumBase]] = []
     tables: list[type[Table]] = []
     for name in dir(schema):
@@ -21,6 +26,9 @@ def get_migration_defs(schema: ModuleType) -> MigrationDefs:
 
 
 def merge_ddls(defs: MigrationDefs) -> list[Ddl]:
+    """
+    Convert migration definitions to DDL statements in dependency order.
+    """
     queries: list[Ddl] = []
     for enum in defs.enums:
         queries.append(Ddl(name=enum.name, ddl=enum.ddl()))

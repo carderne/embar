@@ -1,3 +1,5 @@
+"""Types for nesting arrays in Selection queries."""
+
 from dataclasses import dataclass
 
 from embar.column.base import ColumnBase

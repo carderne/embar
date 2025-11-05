@@ -1,3 +1,5 @@
+"""Where clauses for filtering queries."""
+
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Protocol, override
 
@@ -21,7 +23,11 @@ class WhereClause(ABC):
     """
 
     @abstractmethod
-    def sql(self, get_count: GetCount) -> Query: ...
+    def sql(self, get_count: GetCount) -> Query:
+        """
+        Generate the SQL for this where clause.
+        """
+        ...
 
 
 # Comparison operators

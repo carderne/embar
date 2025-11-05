@@ -37,6 +37,7 @@ The async psycopg3 client is recommended. The others are provided mostly for tes
 **Documentation: [embar.rdrn.me](https://embar.rdrn.me)**
 
 ## Roadmap
+- Use pydantic instead of dacite for validation?
 - Improve the story around updates. Requires codegen.
 - Create a drizzle-style `db.query.users.findMany({ where: ... })` alternative syntax. Requires codegen.
 - Create a migration diffing engine.

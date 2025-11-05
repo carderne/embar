@@ -1,3 +1,5 @@
+"""Common column types like Text, Integer, and Float."""
+
 from typing import Any, Callable, Self, overload
 
 from embar.column.base import ColumnBase, ColumnInfo, OnDelete
@@ -33,6 +35,9 @@ class Column[T: PyType](ColumnBase):
         primary: bool = False,
         not_null: bool = False,
     ):
+        """
+        Create a new Column instance.
+        """
         self._name = name
         # if no _explicit_name, one is created automatically (see __set_name__)
         self._explicit_name = name
@@ -110,19 +115,45 @@ class Column[T: PyType](ColumnBase):
         return self
 
     def many(self) -> ManyColumn[Self]:
+        """
+        Used to nest many values of this column in a [`Selection`][embar.query.selection.Selection].
+
+        ```python
+        from typing import Annotated
+        from embar.column.common import Text
+        from embar.query.selection import Selection
+        from embar.table import Table
+        class MyTable(Table):
+            my_col: Text = Text()
+        class MySelection(Selection):
+            values: Annotated[list[str], MyTable.my_col.many()]
+        ```
+        """
         return ManyColumn[Self](self)
 
 
 class Text(Column[str]):
+    """
+    A text column type.
+    """
+
     _sql_type: str = "TEXT"
     _py_type: Type = str
 
 
 class Integer(Column[int]):
+    """
+    An integer column type.
+    """
+
     _sql_type: str = "INTEGER"
     _py_type: Type = int
 
 
 class Float(Column[float]):
+    """
+    A floating point column type.
+    """
+
     _sql_type: str = "REAL"
     _py_type: Type = float

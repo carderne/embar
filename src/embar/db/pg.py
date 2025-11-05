@@ -1,3 +1,5 @@
+"""Postgres database clients for sync and async operations."""
+
 import types
 from collections.abc import Sequence
 from string.templatelib import Template
@@ -26,43 +28,77 @@ from embar.table import Table
 
 @final
 class PgDb(DbBase):
+    """
+    Postgres database client for synchronous operations.
+    """
+
     db_type = "postgres"
     _conn: Connection
 
     def __init__(self, connection: Connection):
+        """
+        Create a new PgDb instance.
+        """
         self._conn = connection
 
     def close(self):
+        """
+        Close the database connection.
+        """
         if self._conn:
             self._conn.close()
 
     def select[S: Selection](self, sel: type[S]) -> SelectQuery[S, DbBase]:
+        """
+        Create a SELECT query.
+        """
         return SelectQuery[S, DbBase](db=self, sel=sel)
 
     def insert[T: Table](self, table: type[T]) -> InsertQuery[T, DbBase]:
+        """
+        Create an INSERT query.
+        """
         return InsertQuery[T, DbBase](table=table, db=self)
 
     def update[T: Table](self, table: type[T]) -> UpdateQuery[T, Self]:
+        """
+        Create an UPDATE query.
+        """
         return UpdateQuery[T, Self](table=table, db=self)
 
     def sql(self, template: Template) -> DbSql[Self]:
+        """
+        Execute a raw SQL query using template strings.
+        """
         return DbSql(template, self)
 
     def migrate(self, tables: Sequence[type[Table]], enums: Sequence[type[EnumBase]] | None = None) -> Migration[Self]:
+        """
+        Create a migration from a list of tables.
+        """
         ddls = merge_ddls(MigrationDefs(tables, enums))
         return Migration(ddls, self)
 
     def migrates(self, schema: types.ModuleType) -> Migration[Self]:
+        """
+        Create a migration from a schema module.
+        """
         defs = get_migration_defs(schema)
         return self.migrate(defs.tables, defs.enums)
 
     @override
     def execute(self, query: Query) -> None:
+        """
+        Execute a query without returning results.
+        """
         self._conn.execute(query.sql, query.params)  # pyright:ignore[reportArgumentType]
         self._conn.commit()
 
     @override
     def executemany(self, query: Query):
+        """
+        Execute a query with multiple parameter sets.
+        """
         params = _jsonify_dicts(query.many_params)
         with self._conn.cursor() as cur:
             cur.executemany(query.sql, params)  # pyright:ignore[reportArgumentType]
@@ -70,6 +106,9 @@ class PgDb(DbBase):
 
     @override
     def fetch(self, query: Query) -> list[dict[str, Any]]:
+        """
+        Execute a query and return results as a list of dicts.
+        """
         with self._conn.cursor() as cur:
             cur.execute(query.sql, query.params)  # pyright:ignore[reportArgumentType]
 
@@ -85,6 +124,9 @@ class PgDb(DbBase):
 
     @override
     def truncate(self, schema: str | None = None):
+        """
+        Truncate all tables in the schema.
+        """
         schema = schema if schema is not None else "public"
         with self._conn.cursor() as cursor:
             # Get all table names from public schema
@@ -99,42 +141,76 @@ class PgDb(DbBase):
 
 @final
 class AsyncPgDb(AsyncDbBase):
+    """
+    Postgres database client for async operations.
+    """
+
     db_type = "postgres"
     _conn: AsyncConnection
 
     def __init__(self, connection: AsyncConnection):
+        """
+        Create a new AsyncPgDb instance.
+        """
         self._conn = connection
 
     async def close(self):
+        """
+        Close the database connection.
+        """
         if self._conn:
             await self._conn.close()
 
     def select[S: Selection](self, sel: type[S]) -> SelectQuery[S, Self]:
+        """
+        Create a SELECT query.
+        """
         return SelectQuery[S, Self](db=self, sel=sel)
 
     def insert[T: Table](self, table: type[T]) -> InsertQuery[T, Self]:
+        """
+        Create an INSERT query.
+        """
         return InsertQuery[T, Self](table=table, db=self)
 
     def update[T: Table](self, table: type[T]) -> UpdateQuery[T, Self]:
+        """
+        Create an UPDATE query.
+        """
         return UpdateQuery[T, Self](table=table, db=self)
 
     def sql(self, template: Template) -> DbSql[Self]:
+        """
+        Execute a raw SQL query using template strings.
+        """
         return DbSql(template, self)
 
     def migrate(self, tables: Sequence[type[Table]], enums: Sequence[type[EnumBase]] | None = None) -> Migration[Self]:
+        """
+        Create a migration from a list of tables.
+        """
         ddls = merge_ddls(MigrationDefs(tables, enums))
         return Migration(ddls, self)
 
     def migrates(self, schema: types.ModuleType) -> Migration[Self]:
+        """
+        Create a migration from a schema module.
+        """
         defs = get_migration_defs(schema)
         return self.migrate(defs.tables, defs.enums)
 
     @override
     async def execute(self, query: Query) -> None:
+        """
+        Execute a query without returning results.
+        """
         await self._conn.execute(query.sql, query.params)  # pyright:ignore[reportArgumentType]
 
     @override
     async def executemany(self, query: Query):
+        """
+        Execute a query with multiple parameter sets.
+        """
         params = _jsonify_dicts(query.many_params)
         async with self._conn.cursor() as cur:
             await cur.executemany(query.sql, params)  # pyright:ignore[reportArgumentType]
@@ -142,6 +218,9 @@ class AsyncPgDb(AsyncDbBase):
 
     @override
     async def fetch(self, query: Query) -> list[dict[str, Any]]:
+        """
+        Execute a query and return results as a list of dicts.
+        """
         async with self._conn.cursor() as cur:
             await cur.execute(query.sql, query.params)  # pyright:ignore[reportArgumentType]
 
@@ -157,6 +236,9 @@ class AsyncPgDb(AsyncDbBase):
 
     @override
     async def truncate(self, schema: str | None = None):
+        """
+        Truncate all tables in the schema.
+        """
         schema = schema if schema is not None else "public"
         async with self._conn.cursor() as cursor:
             # Get all table names from public schema

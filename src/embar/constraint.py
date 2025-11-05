@@ -1,3 +1,5 @@
+"""Table constraints like indexes and unique constraints."""
+
 from collections.abc import Callable
 from typing import Self, override
 
@@ -9,42 +11,87 @@ from embar.query.where import WhereClause
 
 
 class Index:
+    """
+    Creates a database index on one or more columns.
+
+    ```python
+    from embar.column.common import Integer
+    from embar.config import EmbarConfig
+    from embar.constraint import Index
+    from embar.table import Table
+    class MyTable(Table):
+        embar_config: EmbarConfig = EmbarConfig(
+            constraints=[Index("my_idx").on(lambda: MyTable.id)]
+        )
+        id: Integer = Integer()
+    ```
+    """
+
     name: str
 
     def __init__(self, name: str, *columns: ColumnInfo):
+        """
+        Create a new Index instance.
+        """
         self.name = name
 
     def on(self, *columns: Callable[[], ColumnBase]) -> IndexReady:
+        """
+        Specify the columns this index should be created on.
+        """
         return IndexReady(self.name, False, *columns)
 
 
 class UniqueIndex:
+    """
+    Creates a unique database index on one or more columns.
+    """
+
     name: str
 
     def __init__(self, name: str, *columns: ColumnInfo):
+        """
+        Create a new UniqueIndex instance.
+        """
         self.name = name
 
     def on(self, *columns: Callable[[], ColumnBase]) -> IndexReady:
+        """
+        Specify the columns this unique index should be created on.
+        """
         return IndexReady(self.name, True, *columns)
 
 
 class IndexReady(Constraint):
+    """
+    A fully configured index ready to generate SQL.
+    """
+
     unique: bool
     name: str
     columns: tuple[Callable[[], ColumnBase], ...]
     _where_clause: WhereClause | None = None
 
     def __init__(self, name: str, unique: bool, *columns: Callable[[], ColumnBase]):
+        """
+        Create a new IndexReady instance.
+        """
         self.name = name
         self.unique = unique
         self.columns = columns
 
     def where(self, where_clause: WhereClause) -> Self:
+        """
+        Add a WHERE clause to create a partial index.
+        """
         self._where_clause = where_clause
         return self
 
     @override
     def sql(self) -> Query:
+        """
+        Generate the CREATE INDEX SQL statement.
+        """
         # Not so sure about this, seems a bit brittle to just get the name as a string?
         table_names = [c().info.table_name for c in self.columns]
         if len(set(table_names)) > 1:

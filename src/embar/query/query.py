@@ -1,3 +1,5 @@
+"""Query class for SQL queries with parameterized values."""
+
 import re
 from collections.abc import Sequence
 from typing import Any
@@ -6,6 +8,10 @@ from embar.custom_types import PyType
 
 
 class Query:
+    """
+    Represents an SQL query with parameterized values.
+    """
+
     sql: str
     params: dict[str, PyType]
     many_params: Sequence[dict[str, PyType]]
@@ -13,6 +19,9 @@ class Query:
     def __init__(
         self, sql: str, params: dict[str, Any] | None = None, many_params: Sequence[dict[str, Any]] | None = None
     ):
+        """
+        Create a new Query instance.
+        """
         self.sql = sql
         self.params = params if params is not None else {}
         self.many_params = many_params if many_params is not None else []

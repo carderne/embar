@@ -1,3 +1,5 @@
+"""Insert query builder."""
+
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import cast
@@ -28,6 +30,9 @@ class InsertQuery[T: Table, Db: AllDbBase]:
     table: type[T]
 
     def __init__(self, table: type[T], db: Db):
+        """
+        Create a new InsertQuery instance.
+        """
         self.table = table
         self._db = db
 
@@ -49,6 +54,9 @@ class InsertQueryReady[T: Table, Db: AllDbBase]:
     items: Sequence[T]
 
     def __init__(self, table: type[T], db: Db, items: Sequence[T]):
+        """
+        Create a new InsertQueryReady instance.
+        """
         self.table = table
         self._db = db
         self.items = items

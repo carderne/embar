@@ -1,3 +1,5 @@
+"""SQLite database client."""
+
 import json
 import sqlite3
 import types
@@ -26,44 +28,78 @@ from embar.table import Table
 
 @final
 class SqliteDb(DbBase):
+    """
+    SQLite database client for synchronous operations.
+    """
+
     db_type = "sqlite"
 
     def __init__(self, connection: sqlite3.Connection):
+        """
+        Create a new SqliteDb instance.
+        """
         self._conn = connection
         self._conn.row_factory = sqlite3.Row
 
     def close(self):
+        """
+        Close the database connection.
+        """
         if self._conn:
             self._conn.close()
 
     def select[S: Selection](self, sel: type[S]) -> SelectQuery[S, DbBase]:
+        """
+        Create a SELECT query.
+        """
         return SelectQuery[S, DbBase](db=self, sel=sel)
 
     def insert[T: Table](self, table: type[T]) -> InsertQuery[T, DbBase]:
+        """
+        Create an INSERT query.
+        """
         return InsertQuery[T, DbBase](table=table, db=self)
 
     def update[T: Table](self, table: type[T]) -> UpdateQuery[T, DbBase]:
+        """
+        Create an UPDATE query.
+        """
         return UpdateQuery[T, DbBase](table=table, db=self)
 
     def sql(self, template: Template) -> DbSql[Self]:
+        """
+        Execute a raw SQL query using template strings.
+        """
         return DbSql(template, self)
 
     def migrate(self, tables: Sequence[type[Table]], enums: Sequence[type[EnumBase]] | None = None) -> Migration[Self]:
+        """
+        Create a migration from a list of tables.
+        """
         ddls = merge_ddls(MigrationDefs(tables, enums))
         return Migration(ddls, self)
 
     def migrates(self, schema: types.ModuleType) -> Migration[Self]:
+        """
+        Create a migration from a schema module.
+        """
         defs = get_migration_defs(schema)
         return self.migrate(defs.tables, defs.enums)
 
     @override
     def execute(self, query: Query) -> None:
+        """
+        Execute a query without returning results.
+        """
         sql = _convert_params(query.sql)
         self._conn.execute(sql, query.params)
         self._conn.commit()
 
     @override
     def executemany(self, query: Query):
+        """
+        Execute a query with multiple parameter sets.
+        """
         sql = _convert_params(query.sql)
         self._conn.executemany(sql, query.many_params)
         self._conn.commit()
@@ -98,6 +134,9 @@ class SqliteDb(DbBase):
 
     @override
     def truncate(self, schema: str | None = None):
+        """
+        Truncate all tables in the database.
+        """
         cursor = self._conn.cursor()
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
         tables = cursor.fetchall()

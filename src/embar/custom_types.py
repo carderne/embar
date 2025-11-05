@@ -1,3 +1,5 @@
+"""Custom types used throughout embar."""
+
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from typing import Any, TypeAliasType

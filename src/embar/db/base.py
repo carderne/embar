@@ -1,3 +1,5 @@
+"""Base classes for database clients."""
+
 from abc import ABC, abstractmethod
 from typing import Any, Literal
 
@@ -21,13 +23,32 @@ class DbBase(ABC, AllDbBase):
     """
 
     @abstractmethod
-    def execute(self, query: Query): ...
+    def execute(self, query: Query):
+        """
+        Execute a query without returning results.
+        """
+        ...
+
     @abstractmethod
-    def executemany(self, query: Query): ...
+    def executemany(self, query: Query):
+        """
+        Execute a query with multiple parameter sets.
+        """
+        ...
+
     @abstractmethod
-    def fetch(self, query: Query) -> list[dict[str, Any]]: ...
+    def fetch(self, query: Query) -> list[dict[str, Any]]:
+        """
+        Execute a query and return results as a list of dicts.
+        """
+        ...
+
     @abstractmethod
-    def truncate(self, schema: str | None = None) -> None: ...
+    def truncate(self, schema: str | None = None) -> None:
+        """
+        Truncate all tables in the schema.
+        """
+        ...
 
 
 class AsyncDbBase(ABC, AllDbBase):
@@ -36,10 +57,29 @@ class AsyncDbBase(ABC, AllDbBase):
     """
 
     @abstractmethod
-    async def execute(self, query: Query): ...
+    async def execute(self, query: Query):
+        """
+        Execute a query without returning results.
+        """
+        ...
+
     @abstractmethod
-    async def executemany(self, query: Query): ...
+    async def executemany(self, query: Query):
+        """
+        Execute a query with multiple parameter sets.
+        """
+        ...
+
     @abstractmethod
-    async def fetch(self, query: Query) -> list[dict[str, Any]]: ...
+    async def fetch(self, query: Query) -> list[dict[str, Any]]:
+        """
+        Execute a query and return results as a list of dicts.
+        """
+        ...
+
     @abstractmethod
-    async def truncate(self, schema: str | None = None) -> None: ...
+    async def truncate(self, schema: str | None = None) -> None:
+        """
+        Truncate all tables in the schema.
+        """
+        ...

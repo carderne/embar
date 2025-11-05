@@ -1,3 +1,5 @@
+"""Select query builder."""
+
 from collections.abc import Generator, Sequence
 from textwrap import dedent
 from typing import Any, Self, cast, overload
@@ -28,6 +30,9 @@ class SelectQuery[S: Selection, Db: AllDbBase]:
     sel: type[S]
 
     def __init__(self, sel: type[S], db: Db):
+        """
+        Create a new SelectQuery instance.
+        """
         self.sel = sel
         self._db = db
 
@@ -65,40 +70,67 @@ class SelectQueryReady[S: Selection, T: Table, Db: AllDbBase]:
     _limit_value: int | None = None
 
     def __init__(self, sel: type[S], table: type[T], db: Db):
+        """
+        Create a new SelectQueryReady instance.
+        """
         self.sel = sel
         self.table = table
         self._db = db
         self._joins = []
 
     def left_join(self, table: type[Table], on: WhereClause) -> Self:
+        """
+        Add a LEFT JOIN clause to the query.
+        """
         self._joins.append(LeftJoin(table, on))
         return self
 
     def right_join(self, table: type[Table], on: WhereClause) -> Self:
+        """
+        Add a RIGHT JOIN clause to the query.
+        """
         self._joins.append(RightJoin(table, on))
         return self
 
     def inner_join(self, table: type[Table], on: WhereClause) -> Self:
+        """
+        Add an INNER JOIN clause to the query.
+        """
         self._joins.append(InnerJoin(table, on))
         return self
 
     def full_join(self, table: type[Table], on: WhereClause) -> Self:
+        """
+        Add a FULL OUTER JOIN clause to the query.
+        """
         self._joins.append(FullJoin(table, on))
         return self
 
     def cross_join(self, table: type[Table]) -> Self:
+        """
+        Add a CROSS JOIN clause to the query.
+        """
         self._joins.append(CrossJoin(table))
         return self
 
     def where(self, where_clause: WhereClause) -> Self:
+        """
+        Add a WHERE clause to the query.
+        """
         self._where_clause = where_clause
         return self
 
     def group_by(self, *cols: ColumnBase) -> Self:
+        """
+        Add a GROUP BY clause to the query.
+        """
         self._group_clause = GroupBy(cols)
         return self
 
     def limit(self, n: int) -> Self:
+        """
+        Add a LIMIT clause to the query.
+        """
         self._limit_value = n
         return self
 
@@ -145,6 +177,12 @@ class SelectQueryReady[S: Selection, T: Table, Db: AllDbBase]:
     def run(self: SelectQueryReady[S, T, AsyncDbBase]) -> SelectQueryReady[S, T, Db]: ...
 
     def run(self) -> Sequence[S | T] | SelectQueryReady[S, T, Db]:
+        """
+        Run the query against the underlying DB.
+
+        Convenience method for those not using async.
+        But still works if awaited.
+        """
         if isinstance(self._db, DbBase):
             query = self.sql()
             selection = self._get_selection()

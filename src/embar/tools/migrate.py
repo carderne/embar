@@ -1,3 +1,5 @@
+"""Migration tool for generating and applying database migrations using LLMs."""
+
 import importlib
 import json
 import os
@@ -19,6 +21,10 @@ from embar.query.query import Query
 
 @dataclass
 class MigrateConfig:
+    """
+    Configuration for the migration tool.
+    """
+
     dialect: Literal["postgresql"]
     db_url: str
     schema_path: str
@@ -27,6 +33,10 @@ class MigrateConfig:
 
 @dataclass
 class TableMatch:
+    """
+    Represents a match between old and new table definitions.
+    """
+
     old_name: str | None
     new_name: str | None
     old_ddl: Ddl | None
@@ -37,6 +47,10 @@ class TableMatch:
 
 @dataclass
 class MigrationDiff:
+    """
+    Represents a migration diff with compatibility information.
+    """
+
     table_name: str
     old_table_name: str | None
     new_table_name: str | None

@@ -1,3 +1,5 @@
+"""Raw SQL query execution with optional result parsing."""
+
 from collections.abc import Generator, Sequence
 from string.templatelib import Template
 from typing import Any, cast, overload
@@ -19,13 +21,22 @@ class DbSql[Db: AllDbBase]:
     _db: Db
 
     def __init__(self, template: Template, db: Db):
+        """
+        Create a new DbSql instance.
+        """
         self.sql = Sql(template)
         self._db = db
 
     def model[S: Selection](self, sel: type[S]) -> DbSqlReturning[S, Db]:
+        """
+        Specify a Selection model for parsing results.
+        """
         return DbSqlReturning(self.sql, sel, self._db)
 
     def __await__(self):
+        """
+        Run the query asynchronously without returning results.
+        """
         sql = self.sql.execute()
         query = Query(sql)
 
@@ -46,6 +57,9 @@ class DbSql[Db: AllDbBase]:
     def run(self: DbSql[AsyncDbBase]) -> DbSql[Db]: ...
 
     def run(self) -> None | DbSql[Db]:
+        """
+        Run the query synchronously without returning results.
+        """
         if isinstance(self._db, DbBase):
             sql = self.sql.execute()
             query = Query(sql)
@@ -63,11 +77,17 @@ class DbSqlReturning[S: Selection, Db: AllDbBase]:
     _db: Db
 
     def __init__(self, sql: Sql, sel: type[S], db: Db):
+        """
+        Create a new DbSqlReturning instance.
+        """
         self.sql = sql
         self.sel = sel
         self._db = db
 
     def __await__(self) -> Generator[Any, None, Sequence[S]]:
+        """
+        Run the query asynchronously and return parsed results.
+        """
         sql = self.sql.execute()
         query = Query(sql)
         selection = self._get_selection()
@@ -91,6 +111,9 @@ class DbSqlReturning[S: Selection, Db: AllDbBase]:
     def run(self: DbSqlReturning[S, AsyncDbBase]) -> DbSqlReturning[S, Db]: ...
 
     def run(self) -> Sequence[S] | DbSqlReturning[S, Db]:
+        """
+        Run the query synchronously and return parsed results.
+        """
         if isinstance(self._db, DbBase):
             sql = self.sql.execute()
             query = Query(sql)

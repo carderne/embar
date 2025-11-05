@@ -1,3 +1,5 @@
+"""Join clauses for queries."""
+
 from abc import ABC, abstractmethod
 from typing import override
 
@@ -7,20 +9,38 @@ from embar.table import Table
 
 
 class JoinClause(ABC):
+    """
+    Base class for all join clauses.
+    """
+
     @abstractmethod
-    def get(self, get_count: GetCount) -> Query: ...
+    def get(self, get_count: GetCount) -> Query:
+        """
+        Generate the SQL for this join clause.
+        """
+        ...
 
 
 class LeftJoin(JoinClause):
+    """
+    LEFT JOIN clause.
+    """
+
     table: type[Table]
     on: WhereClause
 
     def __init__(self, table: type[Table], on: WhereClause):
+        """
+        Create a new LeftJoin instance.
+        """
         self.table = table
         self.on = on
 
     @override
     def get(self, get_count: GetCount) -> Query:
+        """
+        Generate the LEFT JOIN SQL.
+        """
         on = self.on.sql(get_count)
 
         sql = f"LEFT JOIN {self.table.fqn()} ON {on.sql}"
@@ -28,15 +48,25 @@ class LeftJoin(JoinClause):
 
 
 class RightJoin(JoinClause):
+    """
+    RIGHT JOIN clause.
+    """
+
     table: type[Table]
     on: WhereClause
 
     def __init__(self, table: type[Table], on: WhereClause):
+        """
+        Create a new RightJoin instance.
+        """
         self.table = table
         self.on = on
 
     @override
     def get(self, get_count: GetCount) -> Query:
+        """
+        Generate the RIGHT JOIN SQL.
+        """
         on = self.on.sql(get_count)
 
         sql = f"RIGHT JOIN {self.table.fqn()} ON {on.sql}"
@@ -44,15 +74,25 @@ class RightJoin(JoinClause):
 
 
 class InnerJoin(JoinClause):
+    """
+    INNER JOIN clause.
+    """
+
     table: type[Table]
     on: WhereClause
 
     def __init__(self, table: type[Table], on: WhereClause):
+        """
+        Create a new InnerJoin instance.
+        """
         self.table = table
         self.on = on
 
     @override
     def get(self, get_count: GetCount) -> Query:
+        """
+        Generate the INNER JOIN SQL.
+        """
         on = self.on.sql(get_count)
 
         sql = f"INNER JOIN {self.table.fqn()} ON {on.sql}"
@@ -60,15 +100,25 @@ class InnerJoin(JoinClause):
 
 
 class FullJoin(JoinClause):
+    """
+    FULL OUTER JOIN clause.
+    """
+
     table: type[Table]
     on: WhereClause
 
     def __init__(self, table: type[Table], on: WhereClause):
+        """
+        Create a new FullJoin instance.
+        """
         self.table = table
         self.on = on
 
     @override
     def get(self, get_count: GetCount) -> Query:
+        """
+        Generate the FULL OUTER JOIN SQL.
+        """
         on = self.on.sql(get_count)
 
         sql = f"FULL OUTER JOIN {self.table.fqn()} ON {on.sql}"
@@ -76,12 +126,22 @@ class FullJoin(JoinClause):
 
 
 class CrossJoin(JoinClause):
+    """
+    CROSS JOIN clause.
+    """
+
     table: type[Table]
 
     def __init__(self, table: type[Table]):
+        """
+        Create a new CrossJoin instance.
+        """
         self.table = table
 
     @override
     def get(self, get_count: GetCount) -> Query:
+        """
+        Generate the CROSS JOIN SQL.
+        """
         sql = f"CROSS JOIN {self.table.fqn()}"
         return Query(sql=sql)

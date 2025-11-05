@@ -1,3 +1,5 @@
+"""Update query builder."""
+
 from collections.abc import Mapping
 from typing import Any, Self, cast
 
@@ -27,10 +29,16 @@ class UpdateQuery[T: Table, Db: AllDbBase]:
     _db: Db
 
     def __init__(self, table: type[T], db: Db):
+        """
+        Create a new UpdateQuery instance.
+        """
         self.table = table
         self._db = db
 
     def set(self, data: Mapping[str, Any]) -> UpdateQueryReady[T, Db]:
+        """
+        Set the values to be updated.
+        """
         return UpdateQueryReady(table=self.table, db=self._db, data=data)
 
 
@@ -45,11 +53,17 @@ class UpdateQueryReady[T: Table, Db: AllDbBase]:
     _where_clause: WhereClause | None = None
 
     def __init__(self, table: type[T], db: Db, data: Mapping[str, Any]):
+        """
+        Create a new UpdateQueryReady instance.
+        """
         self.table = table
         self._db = db
         self.data = data
 
     def where(self, where_clause: WhereClause) -> Self:
+        """
+        Add a WHERE clause to limit which rows are updated.
+        """
         self._where_clause = where_clause
         return self
 

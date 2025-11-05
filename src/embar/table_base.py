@@ -1,3 +1,5 @@
+"""Base class for table definitions."""
+
 from typing import ClassVar
 
 from embar.column.base import ColumnBase
