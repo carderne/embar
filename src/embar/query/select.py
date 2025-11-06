@@ -9,7 +9,9 @@ from dacite import from_dict
 from embar.column.base import ColumnBase
 from embar.db.base import AllDbBase, AsyncDbBase, DbBase
 from embar.query.group_by import GroupBy
+from embar.query.having import Having
 from embar.query.join import CrossJoin, FullJoin, InnerJoin, JoinClause, LeftJoin, RightJoin
+from embar.query.order_by import Asc, BareColumn, Desc, OrderBy, OrderByClause, RawSqlOrder
 from embar.query.query import Query
 from embar.query.selection import (
     SelectAll,
@@ -18,6 +20,7 @@ from embar.query.selection import (
     selection_to_dataclass,
 )
 from embar.query.where import WhereClause
+from embar.sql import Sql
 from embar.table import Table
 
 
@@ -67,7 +70,10 @@ class SelectQueryReady[S: Selection, T: Table, Db: AllDbBase]:
     _joins: list[JoinClause]
     _where_clause: WhereClause | None = None
     _group_clause: GroupBy | None = None
+    _having_clause: Having | None = None
+    _order_clause: OrderBy | None = None
     _limit_value: int | None = None
+    _offset_value: int | None = None
 
     def __init__(self, sel: type[S], table: type[T], db: Db):
         """
@@ -127,11 +133,131 @@ class SelectQueryReady[S: Selection, T: Table, Db: AllDbBase]:
         self._group_clause = GroupBy(cols)
         return self
 
+    def having(self, clause: WhereClause) -> Self:
+        """
+        Add a HAVING clause to filter grouped/aggregated results.
+
+        HAVING clauses work like WHERE clauses but operate on grouped data.
+        They are typically used with GROUP BY to filter groups based on aggregate conditions.
+
+        ```python
+        from embar.db.pg import PgDb
+        from embar.table import Table
+        from embar.column.common import Integer, Text
+        from embar.query.where import Gt
+        from embar.query.selection import SelectAll
+
+        class User(Table):
+            id: Integer = Integer(primary=True)
+            age: Integer = Integer()
+            name: Text = Text()
+
+        db = PgDb(None)
+
+        # SELECT * FROM users GROUP BY age HAVING COUNT(*) > 5
+        query = db.select(SelectAll).fromm(User).group_by(User.age).having(Gt(User.age, 18))
+        sql_result = query.sql()
+        assert "HAVING" in sql_result.sql
+        ```
+        """
+        self._having_clause = Having(clause)
+        return self
+
+    def order_by(self, *clauses: ColumnBase | Asc | Desc | Sql) -> Self:
+        """
+        Add an ORDER BY clause to sort query results.
+
+        Accepts multiple ordering clauses:
+        - Bare column references (defaults to ASC): `User.id`
+        - `Asc(User.id)` or `Asc(User.id, nulls="last")`
+        - `Desc(User.id)` or `Desc(User.id, nulls="first")`
+        - Raw SQL: `Sql(t"{User.id} DESC")`
+
+        Can be called multiple times to add more sort columns.
+
+        ```python
+        from embar.db.pg import PgDb
+        from embar.table import Table
+        from embar.column.common import Integer, Text
+        from embar.query.selection import SelectAll
+        from embar.query.order_by import Asc, Desc
+        from embar.sql import Sql
+
+        class User(Table):
+            id: Integer = Integer(primary=True)
+            age: Integer = Integer()
+            name: Text = Text()
+
+        db = PgDb(None)
+
+        # Multiple ways to specify ORDER BY
+        query = db.select(SelectAll).fromm(User).order_by(User.age, Desc(User.name))
+        sql_result = query.sql()
+        assert "ORDER BY" in sql_result.sql
+
+        # With nulls handling
+        query2 = db.select(SelectAll).fromm(User).order_by(Asc(User.age, nulls="last"))
+        sql_result2 = query2.sql()
+        assert "NULLS LAST" in sql_result2.sql
+
+        # With raw SQL
+        query3 = db.select(SelectAll).fromm(User).order_by(Sql(t"{User.id} DESC"))
+        sql_result3 = query3.sql()
+        assert "ORDER BY" in sql_result3.sql
+        ```
+        """
+        # Convert each clause to an OrderByClause
+        order_clauses: list[OrderByClause] = []
+        for clause in clauses:
+            if isinstance(clause, (Asc, Desc)):
+                order_clauses.append(clause)
+            elif isinstance(clause, Sql):
+                order_clauses.append(RawSqlOrder(clause))
+            else:
+                order_clauses.append(BareColumn(clause))
+
+        if self._order_clause is None:
+            self._order_clause = OrderBy(tuple(order_clauses))
+        else:
+            # Add to existing ORDER BY clauses
+            self._order_clause = OrderBy((*self._order_clause.clauses, *order_clauses))
+
+        return self
+
     def limit(self, n: int) -> Self:
         """
         Add a LIMIT clause to the query.
         """
         self._limit_value = n
+        return self
+
+    def offset(self, n: int) -> Self:
+        """
+        Add an OFFSET clause to skip a number of rows.
+
+        Typically used with LIMIT for pagination.
+
+        ```python
+        from embar.db.pg import PgDb
+        from embar.table import Table
+        from embar.column.common import Integer, Text
+        from embar.query.selection import SelectAll
+
+        class User(Table):
+            id: Integer = Integer(primary=True)
+            age: Integer = Integer()
+            name: Text = Text()
+
+        db = PgDb(None)
+
+        # SELECT * FROM users LIMIT 10 OFFSET 20
+        query = db.select(SelectAll).fromm(User).limit(10).offset(20)
+        sql_result = query.sql()
+        assert "LIMIT 10" in sql_result.sql
+        assert "OFFSET 20" in sql_result.sql
+        ```
+        """
+        self._offset_value = n
         return self
 
     @overload
@@ -242,8 +368,20 @@ class SelectQueryReady[S: Selection, T: Table, Db: AllDbBase]:
             group_by_col = ", ".join(col_names)
             sql += f"\nGROUP BY {group_by_col}"
 
+        if self._having_clause is not None:
+            having_data = self._having_clause.clause.sql(get_count)
+            sql += f"\nHAVING {having_data.sql}"
+            params = {**params, **having_data.params}
+
+        if self._order_clause is not None:
+            order_by_sql = self._order_clause.sql()
+            sql += f"\nORDER BY {order_by_sql}"
+
         if self._limit_value is not None:
             sql += f"\nLIMIT {self._limit_value}"
+
+        if self._offset_value is not None:
+            sql += f"\nOFFSET {self._offset_value}"
 
         sql = sql.strip()
 
