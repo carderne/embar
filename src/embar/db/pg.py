@@ -19,7 +19,7 @@ from embar.db.base import AsyncDbBase, DbBase
 from embar.migration import Migration, MigrationDefs
 from embar.query.insert import InsertQuery
 from embar.query.query import Query
-from embar.query.select import SelectQuery
+from embar.query.select import SelectDistinctQuery, SelectQuery
 from embar.query.selection import Selection
 from embar.query.update import UpdateQuery
 from embar.sql_db import DbSql
@@ -48,17 +48,23 @@ class PgDb(DbBase):
         if self._conn:
             self._conn.close()
 
-    def select[S: Selection](self, sel: type[S]) -> SelectQuery[S, DbBase]:
+    def select[S: Selection](self, sel: type[S]) -> SelectQuery[S, Self]:
         """
         Create a SELECT query.
         """
-        return SelectQuery[S, DbBase](db=self, sel=sel)
+        return SelectQuery[S, Self](db=self, sel=sel)
 
-    def insert[T: Table](self, table: type[T]) -> InsertQuery[T, DbBase]:
+    def select_distinct[S: Selection](self, sel: type[S]) -> SelectDistinctQuery[S, Self]:
+        """
+        Create a SELECT query.
+        """
+        return SelectDistinctQuery[S, Self](db=self, sel=sel)
+
+    def insert[T: Table](self, table: type[T]) -> InsertQuery[T, Self]:
         """
         Create an INSERT query.
         """
-        return InsertQuery[T, DbBase](table=table, db=self)
+        return InsertQuery[T, Self](table=table, db=self)
 
     def update[T: Table](self, table: type[T]) -> UpdateQuery[T, Self]:
         """
@@ -166,6 +172,12 @@ class AsyncPgDb(AsyncDbBase):
         Create a SELECT query.
         """
         return SelectQuery[S, Self](db=self, sel=sel)
+
+    def select_distinct[S: Selection](self, sel: type[S]) -> SelectDistinctQuery[S, Self]:
+        """
+        Create a SELECT query.
+        """
+        return SelectDistinctQuery[S, Self](db=self, sel=sel)
 
     def insert[T: Table](self, table: type[T]) -> InsertQuery[T, Self]:
         """

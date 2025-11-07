@@ -43,7 +43,31 @@ class SelectQuery[S: Selection, Db: AllDbBase]:
         """
         The silly name is because `from` is a reserved keyword.
         """
-        return SelectQueryReady[S, T, Db](sel=self.sel, table=table, db=self._db)
+        return SelectQueryReady[S, T, Db](sel=self.sel, table=table, db=self._db, distinct=False)
+
+
+class SelectDistinctQuery[S: Selection, Db: AllDbBase]:
+    """
+    `SelectDistinctQuery` is returned by Db.select and exposes one method that produced the `SelectQueryReady`.
+
+    The only difference is that `distinct=True` is passed.
+    """
+
+    _db: Db
+    sel: type[S]
+
+    def __init__(self, sel: type[S], db: Db):
+        """
+        Create a new SelectQuery instance.
+        """
+        self.sel = sel
+        self._db = db
+
+    def fromm[T: Table](self, table: type[T]) -> SelectQueryReady[S, T, Db]:
+        """
+        The silly name is because `from` is a reserved keyword.
+        """
+        return SelectQueryReady[S, T, Db](sel=self.sel, table=table, db=self._db, distinct=True)
 
 
 class SelectQueryReady[S: Selection, T: Table, Db: AllDbBase]:
@@ -67,6 +91,7 @@ class SelectQueryReady[S: Selection, T: Table, Db: AllDbBase]:
     table: type[T]
     _db: Db
 
+    _distinct: bool
     _joins: list[JoinClause]
     _where_clause: WhereClause | None = None
     _group_clause: GroupBy | None = None
@@ -75,13 +100,14 @@ class SelectQueryReady[S: Selection, T: Table, Db: AllDbBase]:
     _limit_value: int | None = None
     _offset_value: int | None = None
 
-    def __init__(self, sel: type[S], table: type[T], db: Db):
+    def __init__(self, sel: type[S], table: type[T], db: Db, distinct: bool):
         """
         Create a new SelectQueryReady instance.
         """
         self.sel = sel
         self.table = table
         self._db = db
+        self._distinct = distinct
         self._joins = []
 
     def left_join(self, table: type[Table], on: WhereClause) -> Self:
@@ -338,8 +364,10 @@ class SelectQueryReady[S: Selection, T: Table, Db: AllDbBase]:
         data_class = self._get_selection()
         selection = data_class.to_sql_columns(self._db.db_type)
 
+        distinct = "DISTINCT" if self._distinct else ""
+
         sql = f"""
-        SELECT {selection}
+        SELECT {distinct} {selection}
         FROM {self.table.fqn()}
         """
         sql = dedent(sql).strip()
