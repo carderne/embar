@@ -13,6 +13,8 @@ from typing import (
     override,
 )
 
+from pydantic import BaseModel
+
 from embar.column.base import EnumBase
 from embar.db._util import get_migration_defs, merge_ddls
 from embar.db.base import DbBase
@@ -20,7 +22,6 @@ from embar.migration import Migration, MigrationDefs
 from embar.query.insert import InsertQuery
 from embar.query.query import Query
 from embar.query.select import SelectDistinctQuery, SelectQuery
-from embar.query.selection import Selection
 from embar.query.update import UpdateQuery
 from embar.sql_db import DbSql
 from embar.table import Table
@@ -48,17 +49,17 @@ class SqliteDb(DbBase):
         if self._conn:
             self._conn.close()
 
-    def select[S: Selection](self, sel: type[S]) -> SelectQuery[S, Self]:
+    def select[M: BaseModel](self, model: type[M]) -> SelectQuery[M, Self]:
         """
         Create a SELECT query.
         """
-        return SelectQuery[S, Self](db=self, sel=sel)
+        return SelectQuery[M, Self](db=self, model=model)
 
-    def select_distinct[S: Selection](self, sel: type[S]) -> SelectDistinctQuery[S, Self]:
+    def select_distinct[M: BaseModel](self, model: type[M]) -> SelectDistinctQuery[M, Self]:
         """
         Create a SELECT query.
         """
-        return SelectDistinctQuery[S, Self](db=self, sel=sel)
+        return SelectDistinctQuery[M, Self](db=self, model=model)
 
     def insert[T: Table](self, table: type[T]) -> InsertQuery[T, Self]:
         """

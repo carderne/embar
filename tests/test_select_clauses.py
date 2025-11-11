@@ -2,9 +2,11 @@
 
 from typing import Annotated
 
+from pydantic import BaseModel
+
 from embar.db.pg import PgDb
+from embar.model import SelectAll
 from embar.query.order_by import Asc, Desc
-from embar.query.selection import SelectAll, Selection
 from embar.query.where import Gt
 from embar.sql import Sql
 
@@ -15,7 +17,7 @@ def test_order_by_bare_column(db_dummy: PgDb):
     """Test ORDER BY with bare column reference (defaults to ASC)."""
     db = db_dummy
 
-    class UserSel(Selection):
+    class UserSel(BaseModel):
         id: Annotated[int, User.id]
         email: Annotated[str, User.email]
 
@@ -36,7 +38,7 @@ def test_order_by_asc(db_dummy: PgDb):
     """Test ORDER BY with Asc()."""
     db = db_dummy
 
-    class UserSel(Selection):
+    class UserSel(BaseModel):
         id: Annotated[int, User.id]
         email: Annotated[str, User.email]
 
@@ -58,7 +60,7 @@ def test_order_by_desc(db_dummy: PgDb):
     """Test ORDER BY with Desc()."""
     db = db_dummy
 
-    class UserSel(Selection):
+    class UserSel(BaseModel):
         id: Annotated[int, User.id]
         email: Annotated[str, User.email]
 
@@ -80,7 +82,7 @@ def test_order_by_multiple(db_dummy: PgDb):
     """Test ORDER BY with multiple columns in one call."""
     db = db_dummy
 
-    class UserSel(Selection):
+    class UserSel(BaseModel):
         id: Annotated[int, User.id]
         email: Annotated[str, User.email]
 
@@ -103,7 +105,7 @@ def test_order_by_chained(db_dummy: PgDb):
     """Test ORDER BY with multiple chained calls."""
     db = db_dummy
 
-    class UserSel(Selection):
+    class UserSel(BaseModel):
         id: Annotated[int, User.id]
         email: Annotated[str, User.email]
 
@@ -126,7 +128,7 @@ def test_order_by_with_nulls_first(db_dummy: PgDb):
     """Test ORDER BY with NULLS FIRST."""
     db = db_dummy
 
-    class MessageSel(Selection):
+    class MessageSel(BaseModel):
         id: Annotated[int, Message.id]
         content: Annotated[str, Message.content]
 
@@ -147,7 +149,7 @@ def test_order_by_with_nulls_last(db_dummy: PgDb):
     """Test ORDER BY with NULLS LAST."""
     db = db_dummy
 
-    class MessageSel(Selection):
+    class MessageSel(BaseModel):
         id: Annotated[int, Message.id]
         content: Annotated[str, Message.content]
 
@@ -168,7 +170,7 @@ def test_order_by_raw_sql(db_dummy: PgDb):
     """Test ORDER BY with raw SQL."""
     db = db_dummy
 
-    class UserSel(Selection):
+    class UserSel(BaseModel):
         id: Annotated[int, User.id]
         email: Annotated[str, User.email]
 
@@ -207,7 +209,7 @@ def test_having_clause(db_dummy: PgDb):
     """Test HAVING clause with GROUP BY."""
     db = db_dummy
 
-    class UserSel(Selection):
+    class UserSel(BaseModel):
         id: Annotated[int, User.id]
         email: Annotated[str, User.email]
 
@@ -230,7 +232,7 @@ def test_full_query_with_many_clauses(db_dummy: PgDb):
     """Test a query with HAVING, ORDER BY, and OFFSET together."""
     db = db_dummy
 
-    class UserSel(Selection):
+    class UserSel(BaseModel):
         id: Annotated[int, User.id]
         email: Annotated[str, User.email]
 

@@ -1,8 +1,9 @@
 from typing import Annotated
 
+from pydantic import BaseModel
+
 from embar.db.pg import PgDb
 from embar.db.sqlite import SqliteDb
-from embar.query.selection import Selection
 from embar.query.where import Eq
 
 from ..schemas.schema import Message, MessageUpdate
@@ -21,7 +22,7 @@ def test_update_row(db_loaded: SqliteDb | PgDb):
     )
     # fmt: on
 
-    class MessageSel(Selection):
+    class MessageSel(BaseModel):
         content: Annotated[str, Message.content]
 
     res = (

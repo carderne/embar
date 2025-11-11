@@ -37,7 +37,6 @@ The async psycopg3 client is recommended. The others are provided mostly for tes
 **Documentation: [embar.rdrn.me](https://embar.rdrn.me)**
 
 ## Roadmap
-- Use pydantic instead of dacite for validation?
 - Improve the story around updates. Requires codegen.
 - Create a drizzle-style `db.query.users.findMany({ where: ... })` alternative syntax. Requires codegen.
 - Create a migration diffing engine.
@@ -108,10 +107,10 @@ With join, where and group by.
 
 ```python continuation
 from typing import Annotated
-from embar.query.selection import Selection
+from pydantic import BaseModel
 from embar.query.where import Eq, Like, Or
 
-class UserSel(Selection):
+class UserSel(BaseModel):
     id: Annotated[int, User.id]
     messages: Annotated[list[str], Message.content.many()]
 
@@ -137,7 +136,7 @@ This time with fully nested child tables, and some raw SQL.
 from datetime import datetime
 from embar.sql import Sql
 
-class UserHydrated(Selection):
+class UserHydrated(BaseModel):
     email: Annotated[str, User.email]
     messages: Annotated[list[Message], Message.many()]
     date: Annotated[datetime, Sql(t"CURRENT_TIMESTAMP")]
@@ -225,7 +224,7 @@ db.sql(t"DELETE FROM {Message}").run()
 Or with a return:
 
 ```python continuation
-class UserId(Selection):
+class UserId(BaseModel):
     id: Annotated[int, int]
 
 res = (

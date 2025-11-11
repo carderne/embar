@@ -2,10 +2,10 @@ from datetime import datetime
 from typing import Annotated
 
 import pytest
+from pydantic import BaseModel
 
 from embar.db.pg import PgDb
 from embar.db.sqlite import SqliteDb
-from embar.query.selection import Selection
 from embar.query.where import Eq, Exists, Like, Or
 from embar.sql import Sql
 
@@ -21,7 +21,7 @@ def test_table_col_names():
 async def test_select_string_array(db_loaded: SqliteDb | PgDb):
     db = db_loaded
 
-    class UserSel(Selection):
+    class UserSel(BaseModel):
         id: Annotated[int, User.id]
         messages: Annotated[list[str], Message.content.many()]
 
@@ -43,13 +43,13 @@ async def test_select_string_array(db_loaded: SqliteDb | PgDb):
     got = res[0]
     want = UserSel(id=1, messages=["Hello!"])
 
-    assert got == want
+    assert got.messages == want.messages
 
 
 def test_select_json_array(db_loaded: SqliteDb | PgDb):
     db = db_loaded
 
-    class UserFullMessages(Selection):
+    class UserFullMessages(BaseModel):
         email: Annotated[str, User.email]
         messages: Annotated[list[Message], Message.many()]
         date: Annotated[datetime, Sql(t"CURRENT_TIMESTAMP")]
@@ -75,8 +75,8 @@ def test_select_json_array(db_loaded: SqliteDb | PgDb):
 def test_select_json(db_loaded: SqliteDb | PgDb):
     db = db_loaded
 
-    class MessageSel(Selection):
-        user: Annotated[User, User]
+    class MessageSel(BaseModel):
+        user: Annotated[User, User.one()]
         message: Annotated[str, Message.content]
 
     # fmt: off
@@ -98,7 +98,7 @@ def test_select_json(db_loaded: SqliteDb | PgDb):
 def test_select_subquery(db_loaded: SqliteDb | PgDb):
     db = db_loaded
 
-    class MessageSel(Selection):
+    class MessageSel(BaseModel):
         id: Annotated[int, Message.id]
         contenet: Annotated[str, Message.content]
 

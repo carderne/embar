@@ -3,12 +3,12 @@ from typing import Annotated
 
 import pytest
 from psycopg.errors import InvalidTextRepresentation
+from pydantic import BaseModel
 
 from embar.column.pg import EmbarEnum, EnumCol, Jsonb, PgEnum, Text, Varchar
 from embar.config import EmbarConfig
 from embar.constraint import Index
 from embar.db.pg import PgDb
-from embar.query.selection import Selection
 from embar.table import Table
 
 
@@ -58,10 +58,9 @@ def test_postgres_index(pg_db: PgDb):
     db = pg_db
     db.migrate([TableWithIndex]).run()
 
-    class IndexResults(Selection):
+    class IndexResults(BaseModel):
         indexname: Annotated[str, str]
 
-    # breakpoint()
     # fmt: off
     res = (
         # this is a rare instance where we don't want to interpolate {TableWithIndex} because that will

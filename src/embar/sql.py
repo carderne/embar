@@ -9,7 +9,7 @@ class Sql:
     """
     Used to run raw SQL queries.
 
-    On creation, nothing actually happens. Only later inside the [`Selection`][embar.query.selection.Selection]
+    On creation, nothing actually happens. Only later inside the select query
     class is the `execute()` method called.
 
     ```python

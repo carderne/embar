@@ -6,12 +6,14 @@ to import table_base.py without triggering table.py, causing a circular loop by 
 
 from typing import Any, Self, dataclass_transform
 
+from pydantic_core import core_schema
+
 from embar.column.base import ColumnBase
 from embar.column.common import Column, Integer, Text
 from embar.config import EmbarConfig
 from embar.custom_types import Undefined
-from embar.query.many import ManyTable
-from embar.query.selection import SelectAll
+from embar.model import SelectAll
+from embar.query.many import ManyTable, OneTable
 from embar.table_base import TableBase
 
 
@@ -24,8 +26,6 @@ class Table(TableBase):
     - Tables/schemas are created as `class MyTable(Table): ...`
     - Table references (in where clauses, joins, FKs) refer to these types
     - New rows to insert into a table are created as objects
-    - Values returned from Select queries are based on dynamically generated classes or
-      `Selection` classes, never directly instances of `Table`
     """
 
     def __init_subclass__(cls, **kwargs: Any):
@@ -64,20 +64,35 @@ class Table(TableBase):
             raise TypeError(f"Missing required fields: {missing}")
 
     @classmethod
+    def __get_pydantic_core_schema__(
+        cls,
+        source_type: Any,
+        handler: Any,
+    ) -> core_schema.CoreSchema:
+        return core_schema.any_schema()
+
+    @classmethod
     def many(cls) -> ManyTable[type[Self]]:
         """
-        Used to nest many of another table in a column in a [`Selection`][embar.query.selection.Selection].
+        Used to nest many of another table in a column in a model
 
         ```python
         from typing import Annotated
-        from embar.query.selection import Selection
+        from pydantic import BaseModel
         from embar.table import Table
         class MyTable(Table): ...
-        class MySelectQuery(Selection):
+        class MyModel(BaseModel):
             messages: Annotated[list[MyTable], MyTable.many()]
         ```
         """
         return ManyTable[type[Self]](cls)
+
+    @classmethod
+    def one(cls) -> OneTable[type[Self]]:
+        """
+        Used to nest one of another table in a column in a model
+        """
+        return OneTable[type[Self]](cls)
 
     @classmethod
     def ddl(cls) -> str:
@@ -96,14 +111,14 @@ class Table(TableBase):
     @classmethod
     def all(cls) -> type[SelectAll]:
         """
-        Generate a Select query `Selection` that returns all the table's fields.
+        Generate a Select query model that returns all the table's fields.
 
         ```python
-        from embar.query.selection import SelectAll
+        from embar.model import SelectAll
         from embar.table import Table
         class MyTable(Table): ...
-        selection = MyTable.all()
-        assert selection == SelectAll
+        model = MyTable.all()
+        assert model == SelectAll
         ```
         """
         return SelectAll

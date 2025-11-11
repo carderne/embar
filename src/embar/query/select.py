@@ -4,49 +4,49 @@ from collections.abc import Generator, Sequence
 from textwrap import dedent
 from typing import Any, Self, cast, overload
 
-from dacite import from_dict
+from pydantic import BaseModel, TypeAdapter
 
 from embar.column.base import ColumnBase
 from embar.db.base import AllDbBase, AsyncDbBase, DbBase
+from embar.model import (
+    SelectAll,
+    generate_model,
+    to_sql_columns,
+    upgrade_model_nested_fields,
+)
 from embar.query.group_by import GroupBy
 from embar.query.having import Having
 from embar.query.join import CrossJoin, FullJoin, InnerJoin, JoinClause, LeftJoin, RightJoin
 from embar.query.order_by import Asc, BareColumn, Desc, OrderBy, OrderByClause, RawSqlOrder
 from embar.query.query import Query
-from embar.query.selection import (
-    SelectAll,
-    Selection,
-    generate_selection_dataclass,
-    selection_to_dataclass,
-)
 from embar.query.where import WhereClause
 from embar.sql import Sql
 from embar.table import Table
 
 
-class SelectQuery[S: Selection, Db: AllDbBase]:
+class SelectQuery[M: BaseModel, Db: AllDbBase]:
     """
     `SelectQuery` is returned by Db.select and exposes one method that produced the `SelectQueryReady`.
     """
 
     _db: Db
-    sel: type[S]
+    model: type[M]
 
-    def __init__(self, sel: type[S], db: Db):
+    def __init__(self, model: type[M], db: Db):
         """
         Create a new SelectQuery instance.
         """
-        self.sel = sel
+        self.model = model
         self._db = db
 
-    def fromm[T: Table](self, table: type[T]) -> SelectQueryReady[S, T, Db]:
+    def fromm[T: Table](self, table: type[T]) -> SelectQueryReady[M, T, Db]:
         """
         The silly name is because `from` is a reserved keyword.
         """
-        return SelectQueryReady[S, T, Db](sel=self.sel, table=table, db=self._db, distinct=False)
+        return SelectQueryReady[M, T, Db](model=self.model, table=table, db=self._db, distinct=False)
 
 
-class SelectDistinctQuery[S: Selection, Db: AllDbBase]:
+class SelectDistinctQuery[M: BaseModel, Db: AllDbBase]:
     """
     `SelectDistinctQuery` is returned by Db.select and exposes one method that produced the `SelectQueryReady`.
 
@@ -54,27 +54,27 @@ class SelectDistinctQuery[S: Selection, Db: AllDbBase]:
     """
 
     _db: Db
-    sel: type[S]
+    model: type[M]
 
-    def __init__(self, sel: type[S], db: Db):
+    def __init__(self, model: type[M], db: Db):
         """
         Create a new SelectQuery instance.
         """
-        self.sel = sel
+        self.model = model
         self._db = db
 
-    def fromm[T: Table](self, table: type[T]) -> SelectQueryReady[S, T, Db]:
+    def fromm[T: Table](self, table: type[T]) -> SelectQueryReady[M, T, Db]:
         """
         The silly name is because `from` is a reserved keyword.
         """
-        return SelectQueryReady[S, T, Db](sel=self.sel, table=table, db=self._db, distinct=True)
+        return SelectQueryReady[M, T, Db](model=self.model, table=table, db=self._db, distinct=True)
 
 
-class SelectQueryReady[S: Selection, T: Table, Db: AllDbBase]:
+class SelectQueryReady[M: BaseModel, T: Table, Db: AllDbBase]:
     """
     `SelectQueryReady` is used to insert data into a table.
 
-    It is generic over the `Selection` made, `Table` being inserted into, and the database being used.
+    It is generic over the `Model` made, `Table` being inserted into, and the database being used.
 
     `SelectQueryReady` is returned by [`fromm`][embar.query.select.SelectQuery.fromm].
 
@@ -87,7 +87,7 @@ class SelectQueryReady[S: Selection, T: Table, Db: AllDbBase]:
     ```
     """
 
-    sel: type[S]
+    model: type[M]
     table: type[T]
     _db: Db
 
@@ -100,11 +100,11 @@ class SelectQueryReady[S: Selection, T: Table, Db: AllDbBase]:
     _limit_value: int | None = None
     _offset_value: int | None = None
 
-    def __init__(self, sel: type[S], table: type[T], db: Db, distinct: bool):
+    def __init__(self, model: type[M], table: type[T], db: Db, distinct: bool):
         """
         Create a new SelectQueryReady instance.
         """
-        self.sel = sel
+        self.model = model
         self.table = table
         self._db = db
         self._distinct = distinct
@@ -171,7 +171,7 @@ class SelectQueryReady[S: Selection, T: Table, Db: AllDbBase]:
         from embar.table import Table
         from embar.column.common import Integer, Text
         from embar.query.where import Gt
-        from embar.query.selection import SelectAll
+        from embar.model import SelectAll
 
         class User(Table):
             id: Integer = Integer(primary=True)
@@ -205,7 +205,7 @@ class SelectQueryReady[S: Selection, T: Table, Db: AllDbBase]:
         from embar.db.pg import PgDb
         from embar.table import Table
         from embar.column.common import Integer, Text
-        from embar.query.selection import SelectAll
+        from embar.model import SelectAll
         from embar.query.order_by import Asc, Desc
         from embar.sql import Sql
 
@@ -267,7 +267,7 @@ class SelectQueryReady[S: Selection, T: Table, Db: AllDbBase]:
         from embar.db.pg import PgDb
         from embar.table import Table
         from embar.column.common import Integer, Text
-        from embar.query.selection import SelectAll
+        from embar.model import SelectAll
 
         class User(Table):
             id: Integer = Integer(primary=True)
@@ -289,9 +289,9 @@ class SelectQueryReady[S: Selection, T: Table, Db: AllDbBase]:
     @overload
     def __await__(self: SelectQueryReady[SelectAll, T, Db]) -> Generator[Any, None, Sequence[T]]: ...
     @overload
-    def __await__(self: SelectQueryReady[S, T, Db]) -> Generator[Any, None, Sequence[S]]: ...
+    def __await__(self: SelectQueryReady[M, T, Db]) -> Generator[Any, None, Sequence[M]]: ...
 
-    def __await__(self) -> Generator[Any, None, Sequence[T | S]]:
+    def __await__(self) -> Generator[Any, None, Sequence[T | M]]:
         """
         Async users should construct their query and await it.
 
@@ -299,15 +299,14 @@ class SelectQueryReady[S: Selection, T: Table, Db: AllDbBase]:
         But this method will still work if called in an async context against a non-async db.
 
         The overrides provide for a few different cases:
-        - A subclass of `Selection` was passed, in which case that's the return type
+        - A Model was passed, in which case that's the return type
         - `SelectAll` was passed, in which case the return type is the `Table`
         - This is called with an async db, in which case an error is returned.
-
-        Results are currently (?) parsed with dacite.
         """
         query = self.sql()
-        selection = self._get_selection()
-        selection = cast(type[T] | type[S], selection)
+        model = self._get_model()
+        model = cast(type[T] | type[M], model)
+        adapter = TypeAdapter(list[model])
 
         async def awaitable():
             db = self._db
@@ -316,7 +315,7 @@ class SelectQueryReady[S: Selection, T: Table, Db: AllDbBase]:
             else:
                 db = cast(DbBase, self._db)
                 data = db.fetch(query)
-            results = [from_dict(selection, d) for d in data]
+            results = adapter.validate_python(data)
             return results
 
         return awaitable().__await__()
@@ -324,11 +323,11 @@ class SelectQueryReady[S: Selection, T: Table, Db: AllDbBase]:
     @overload
     def run(self: SelectQueryReady[SelectAll, T, DbBase]) -> Sequence[T]: ...
     @overload
-    def run(self: SelectQueryReady[S, T, DbBase]) -> Sequence[S]: ...
+    def run(self: SelectQueryReady[M, T, DbBase]) -> Sequence[M]: ...
     @overload
-    def run(self: SelectQueryReady[S, T, AsyncDbBase]) -> SelectQueryReady[S, T, Db]: ...
+    def run(self: SelectQueryReady[M, T, AsyncDbBase]) -> SelectQueryReady[M, T, Db]: ...
 
-    def run(self) -> Sequence[S | T] | SelectQueryReady[S, T, Db]:
+    def run(self) -> Sequence[M | T] | SelectQueryReady[M, T, Db]:
         """
         Run the query against the underlying DB.
 
@@ -337,37 +336,40 @@ class SelectQueryReady[S: Selection, T: Table, Db: AllDbBase]:
         """
         if isinstance(self._db, DbBase):
             query = self.sql()
-            selection = self._get_selection()
-            selection = cast(type[T] | type[S], selection)
+            model = self._get_model()
+            model = cast(type[T] | type[M], model)
+            adapter = TypeAdapter(list[model])
             data = self._db.fetch(query)
-            results = [from_dict(selection, d) for d in data]
+            results = adapter.validate_python(data)
             return results
         return self
 
-    def _get_selection(self) -> type[Selection] | type[S]:
+    def _get_model(self) -> type[BaseModel] | type[M]:
         """
         Generate the dataclass that will be used to deserialize (and validate) the query results.
 
-        If Selection is `SelectAll`, we generate a dataclass based on the `Table`,
-        otherwise the `Seletion` (already a dataclass)
+        If the model is `SelectAll`, we generate a dataclass based on the `Table`,
+        otherwise the model itself
         is used.
 
         Extra processing is done to check for nested children that are Tables themselves.
         """
-        selection = generate_selection_dataclass(self.table) if self.sel is SelectAll else self.sel
-        return selection_to_dataclass(selection)
+        model = generate_model(self.table) if self.model is SelectAll else self.model
+        upgraded = upgrade_model_nested_fields(model)
+        return upgraded
 
     def sql(self) -> Query:
         """
         Combine all the components of the query and build the SQL and bind parameters (psycopg format).
         """
-        data_class = self._get_selection()
-        selection = data_class.to_sql_columns(self._db.db_type)
+        data_class = self._get_model()
+
+        columns = to_sql_columns(data_class, self._db.db_type)
 
         distinct = "DISTINCT" if self._distinct else ""
 
         sql = f"""
-        SELECT {distinct} {selection}
+        SELECT {distinct} {columns}
         FROM {self.table.fqn()}
         """
         sql = dedent(sql).strip()

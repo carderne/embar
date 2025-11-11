@@ -65,8 +65,9 @@ This whole section has been merged into a single code block to make the async-aw
 from datetime import datetime
 from typing import Annotated, TypedDict
 
+from pydantic import BaseModel
+
 from embar.constraint import Index
-from embar.query.selection import Selection
 from embar.query.where import Eq, Like, Or
 from embar.sql import Sql
 
@@ -82,7 +83,7 @@ async def app():
 
     # Query some data
     # With join, where and group by.
-    class UserSel(Selection):
+    class UserSel(BaseModel):
         id: Annotated[int, User.id]
         messages: Annotated[list[str], Message.content.many()]
 
@@ -98,7 +99,7 @@ async def app():
 
     # Query some more data
     # This time with fully nested child tables, and some raw SQL.
-    class UserHydrated(Selection):
+    class UserHydrated(BaseModel):
         email: Annotated[str, User.email]
         messages: Annotated[list[Message], Message.many()]
         date: Annotated[datetime, Sql(t"CURRENT_TIMESTAMP")]
@@ -166,7 +167,7 @@ async def app():
     await db.sql(t"DELETE FROM {Message}")
 
     # Or with a return:
-    class UserId(Selection):
+    class UserId(BaseModel):
         id: Annotated[int, int]
 
     res = await db.sql(t"SELECT * FROM {User}").model(UserId)

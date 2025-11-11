@@ -4,11 +4,11 @@ from collections.abc import Generator, Sequence
 from string.templatelib import Template
 from typing import Any, cast, overload
 
-from dacite import from_dict
+from pydantic import BaseModel, TypeAdapter
 
 from embar.db.base import AllDbBase, AsyncDbBase, DbBase
+from embar.model import upgrade_model_nested_fields
 from embar.query.query import Query
-from embar.query.selection import Selection, selection_to_dataclass
 from embar.sql import Sql
 
 
@@ -27,11 +27,11 @@ class DbSql[Db: AllDbBase]:
         self.sql = Sql(template)
         self._db = db
 
-    def model[S: Selection](self, sel: type[S]) -> DbSqlReturning[S, Db]:
+    def model[M: BaseModel](self, model: type[M]) -> DbSqlReturning[M, Db]:
         """
-        Specify a Selection model for parsing results.
+        Specify a model for parsing results.
         """
-        return DbSqlReturning(self.sql, sel, self._db)
+        return DbSqlReturning(self.sql, model, self._db)
 
     def __await__(self):
         """
@@ -67,30 +67,31 @@ class DbSql[Db: AllDbBase]:
         return self
 
 
-class DbSqlReturning[S: Selection, Db: AllDbBase]:
+class DbSqlReturning[M: BaseModel, Db: AllDbBase]:
     """
     Used to run raw SQL queries and return a value.
     """
 
     sql: Sql
-    sel: type[S]
+    model: type[M]
     _db: Db
 
-    def __init__(self, sql: Sql, sel: type[S], db: Db):
+    def __init__(self, sql: Sql, model: type[M], db: Db):
         """
         Create a new DbSqlReturning instance.
         """
         self.sql = sql
-        self.sel = sel
+        self.model = model
         self._db = db
 
-    def __await__(self) -> Generator[Any, None, Sequence[S]]:
+    def __await__(self) -> Generator[Any, None, Sequence[M]]:
         """
         Run the query asynchronously and return parsed results.
         """
         sql = self.sql.execute()
         query = Query(sql)
-        selection = self._get_selection()
+        model = self._get_model()
+        adapter = TypeAdapter(list[model])
 
         async def awaitable():
             db = self._db
@@ -100,17 +101,17 @@ class DbSqlReturning[S: Selection, Db: AllDbBase]:
             else:
                 db = cast(DbBase, self._db)
                 data = db.fetch(query)
-            results = [from_dict(selection, d) for d in data]
+            results = adapter.validate_python(data)
             return results
 
         return awaitable().__await__()
 
     @overload
-    def run(self: DbSqlReturning[S, DbBase]) -> Sequence[S]: ...
+    def run(self: DbSqlReturning[M, DbBase]) -> Sequence[M]: ...
     @overload
-    def run(self: DbSqlReturning[S, AsyncDbBase]) -> DbSqlReturning[S, Db]: ...
+    def run(self: DbSqlReturning[M, AsyncDbBase]) -> DbSqlReturning[M, Db]: ...
 
-    def run(self) -> Sequence[S] | DbSqlReturning[S, Db]:
+    def run(self) -> Sequence[M] | DbSqlReturning[M, Db]:
         """
         Run the query synchronously and return parsed results.
         """
@@ -118,14 +119,15 @@ class DbSqlReturning[S: Selection, Db: AllDbBase]:
             sql = self.sql.execute()
             query = Query(sql)
             data = self._db.fetch(query)
-            selection = self._get_selection()
-            self.sel.__init_subclass__()
-            results = [from_dict(selection, d) for d in data]
+            model = self._get_model()
+            adapter = TypeAdapter(list[model])
+            self.model.__init_subclass__()
+            results = adapter.validate_python(data)
             return results
         return self
 
-    def _get_selection(self) -> type[S]:
+    def _get_model(self) -> type[M]:
         """
         Generate the dataclass that will be used to deserialize (and validate) the query results.
         """
-        return selection_to_dataclass(self.sel)
+        return upgrade_model_nested_fields(self.model)

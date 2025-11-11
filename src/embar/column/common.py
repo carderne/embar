@@ -116,16 +116,16 @@ class Column[T: PyType](ColumnBase):
 
     def many(self) -> ManyColumn[Self]:
         """
-        Used to nest many values of this column in a [`Selection`][embar.query.selection.Selection].
+        Used to nest many values of this column in a model.
 
         ```python
         from typing import Annotated
+        from pydantic import BaseModel
         from embar.column.common import Text
-        from embar.query.selection import Selection
         from embar.table import Table
         class MyTable(Table):
             my_col: Text = Text()
-        class MySelection(Selection):
+        class MyModel(BaseModel):
             values: Annotated[list[str], MyTable.my_col.many()]
         ```
         """
