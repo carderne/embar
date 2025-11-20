@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Literal
 
 from embar.custom_types import Undefined
-from embar.query.query import Query
+from embar.query.query import QueryMany, QuerySingle
 
 DbType = Literal["sqlite"] | Literal["postgres"]
 
@@ -23,21 +23,21 @@ class DbBase(ABC, AllDbBase):
     """
 
     @abstractmethod
-    def execute(self, query: Query):
+    def execute(self, query: QuerySingle):
         """
         Execute a query without returning results.
         """
         ...
 
     @abstractmethod
-    def executemany(self, query: Query):
+    def executemany(self, query: QueryMany):
         """
         Execute a query with multiple parameter sets.
         """
         ...
 
     @abstractmethod
-    def fetch(self, query: Query) -> list[dict[str, Any]]:
+    def fetch(self, query: QuerySingle | QueryMany) -> list[dict[str, Any]]:
         """
         Execute a query and return results as a list of dicts.
         """
@@ -57,21 +57,21 @@ class AsyncDbBase(ABC, AllDbBase):
     """
 
     @abstractmethod
-    async def execute(self, query: Query):
+    async def execute(self, query: QuerySingle):
         """
         Execute a query without returning results.
         """
         ...
 
     @abstractmethod
-    async def executemany(self, query: Query):
+    async def executemany(self, query: QueryMany):
         """
         Execute a query with multiple parameter sets.
         """
         ...
 
     @abstractmethod
-    async def fetch(self, query: Query) -> list[dict[str, Any]]:
+    async def fetch(self, query: QuerySingle | QueryMany) -> list[dict[str, Any]]:
         """
         Execute a query and return results as a list of dicts.
         """

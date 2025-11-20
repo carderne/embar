@@ -20,7 +20,7 @@ from embar.db._util import get_migration_defs, merge_ddls
 from embar.db.base import DbBase
 from embar.migration import Migration, MigrationDefs
 from embar.query.insert import InsertQuery
-from embar.query.query import Query
+from embar.query.query import QueryMany, QuerySingle
 from embar.query.select import SelectDistinctQuery, SelectQuery
 from embar.query.update import UpdateQuery
 from embar.sql_db import DbSql
@@ -94,7 +94,7 @@ class SqliteDb(DbBase):
         return self.migrate(defs.tables, defs.enums)
 
     @override
-    def execute(self, query: Query) -> None:
+    def execute(self, query: QuerySingle) -> None:
         """
         Execute a query without returning results.
         """
@@ -103,7 +103,7 @@ class SqliteDb(DbBase):
         self._conn.commit()
 
     @override
-    def executemany(self, query: Query):
+    def executemany(self, query: QueryMany):
         """
         Execute a query with multiple parameter sets.
         """
@@ -112,14 +112,17 @@ class SqliteDb(DbBase):
         self._conn.commit()
 
     @override
-    def fetch(self, query: Query) -> list[dict[str, Any]]:
+    def fetch(self, query: QuerySingle | QueryMany) -> list[dict[str, Any]]:
         """
         Fetch all rows returned by a SELECT query.
 
         sqlite returns json/arrays as string, so need to parse them.
         """
         sql = _convert_params(query.sql)
-        cur = self._conn.execute(sql, query.params)
+        if isinstance(query, QuerySingle):
+            cur = self._conn.execute(sql, query.params)
+        else:
+            cur = self._conn.executemany(sql, query.many_params)
 
         if cur.description is None:
             return []

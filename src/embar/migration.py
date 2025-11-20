@@ -5,7 +5,7 @@ from typing import Any, cast, overload
 
 from embar.column.base import EnumBase
 from embar.db.base import AllDbBase, AsyncDbBase, DbBase
-from embar.query.query import Query
+from embar.query.query import QuerySingle
 from embar.table import Table
 
 
@@ -80,16 +80,16 @@ class Migration[Db: AllDbBase]:
             db = self._db
             if isinstance(db, AsyncDbBase):
                 for ddl in self.ddls:
-                    await db.execute(Query(ddl.ddl))
+                    await db.execute(QuerySingle(ddl.ddl))
                     for constraint in ddl.constraints:
-                        await db.execute(Query(constraint))
+                        await db.execute(QuerySingle(constraint))
 
             else:
                 db = cast(DbBase, self._db)
                 for ddl in self.ddls:
-                    db.execute(Query(ddl.ddl))
+                    db.execute(QuerySingle(ddl.ddl))
                     for constraint in ddl.constraints:
-                        db.execute(Query(constraint))
+                        db.execute(QuerySingle(constraint))
 
         return awaitable().__await__()
 
@@ -103,8 +103,8 @@ class Migration[Db: AllDbBase]:
         """
         if isinstance(self._db, DbBase):
             for ddl in self.ddls:
-                self._db.execute(Query(ddl.ddl))
+                self._db.execute(QuerySingle(ddl.ddl))
                 for constraint in ddl.constraints:
-                    self._db.execute(Query(constraint))
+                    self._db.execute(QuerySingle(constraint))
             return
         return self

@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 
-from embar.query.query import Query
+from embar.query.query import QuerySingle
 
 
 class Constraint(ABC):
@@ -11,4 +11,4 @@ class Constraint(ABC):
     """
 
     @abstractmethod
-    def sql(self) -> Query: ...
+    def sql(self) -> QuerySingle: ...

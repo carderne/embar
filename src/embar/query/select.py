@@ -18,7 +18,7 @@ from embar.query.group_by import GroupBy
 from embar.query.having import Having
 from embar.query.join import CrossJoin, FullJoin, InnerJoin, JoinClause, LeftJoin, RightJoin
 from embar.query.order_by import Asc, BareColumn, Desc, OrderBy, OrderByClause, RawSqlOrder
-from embar.query.query import Query
+from embar.query.query import QuerySingle
 from embar.query.where import WhereClause
 from embar.sql import Sql
 from embar.table import Table
@@ -358,7 +358,7 @@ class SelectQueryReady[M: BaseModel, T: Table, Db: AllDbBase]:
         upgraded = upgrade_model_nested_fields(model)
         return upgraded
 
-    def sql(self) -> Query:
+    def sql(self) -> QuerySingle:
         """
         Combine all the components of the query and build the SQL and bind parameters (psycopg format).
         """
@@ -415,4 +415,4 @@ class SelectQueryReady[M: BaseModel, T: Table, Db: AllDbBase]:
 
         sql = sql.strip()
 
-        return Query(sql, params)
+        return QuerySingle(sql, params=params)

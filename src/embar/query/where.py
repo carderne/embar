@@ -6,7 +6,7 @@ from typing import Any, Callable, Protocol, override
 from embar.column.base import ColumnInfo
 from embar.column.common import Column
 from embar.custom_types import PyType
-from embar.query.query import Query
+from embar.query.query import QuerySingle
 
 # Where clauses get passed a get_count() function that returns a monotonically
 # increasing integer. This allows each SQL binding parameter to get a unique
@@ -23,7 +23,7 @@ class WhereClause(ABC):
     """
 
     @abstractmethod
-    def sql(self, get_count: GetCount) -> Query:
+    def sql(self, get_count: GetCount) -> QuerySingle:
         """
         Generate the SQL for this where clause.
         """
@@ -46,14 +46,14 @@ class Eq[T: PyType](WhereClause):
         self.right = right.info if isinstance(right, Column) else right
 
     @override
-    def sql(self, get_count: GetCount) -> Query:
+    def sql(self, get_count: GetCount) -> QuerySingle:
         count = get_count()
         name = f"eq_{self.left.name}_{count}"
 
         if isinstance(self.right, ColumnInfo):
-            return Query(sql=f"{self.left.fqn()} = {self.right.fqn()}")
+            return QuerySingle(sql=f"{self.left.fqn()} = {self.right.fqn()}")
 
-        return Query(sql=f"{self.left.fqn()} = %({name})s", params={name: self.right})
+        return QuerySingle(sql=f"{self.left.fqn()} = %({name})s", params={name: self.right})
 
 
 class Ne[T: PyType](WhereClause):
@@ -69,14 +69,14 @@ class Ne[T: PyType](WhereClause):
         self.right = right.info if isinstance(right, Column) else right
 
     @override
-    def sql(self, get_count: GetCount) -> Query:
+    def sql(self, get_count: GetCount) -> QuerySingle:
         count = get_count()
         name = f"ne_{self.left.name}_{count}"
 
         if isinstance(self.right, ColumnInfo):
-            return Query(sql=f"{self.left.fqn()} != {self.right.fqn()}")
+            return QuerySingle(sql=f"{self.left.fqn()} != {self.right.fqn()}")
 
-        return Query(sql=f"{self.left.fqn()} != %({name})s", params={name: self.right})
+        return QuerySingle(sql=f"{self.left.fqn()} != %({name})s", params={name: self.right})
 
 
 class Gt[T: PyType](WhereClause):
@@ -92,14 +92,14 @@ class Gt[T: PyType](WhereClause):
         self.right = right.info if isinstance(right, Column) else right
 
     @override
-    def sql(self, get_count: GetCount) -> Query:
+    def sql(self, get_count: GetCount) -> QuerySingle:
         count = get_count()
         name = f"gt_{self.left.name}_{count}"
 
         if isinstance(self.right, ColumnInfo):
-            return Query(sql=f"{self.left.fqn()} > {self.right.fqn()}")
+            return QuerySingle(sql=f"{self.left.fqn()} > {self.right.fqn()}")
 
-        return Query(sql=f"{self.left.fqn()} > %({name})s", params={name: self.right})
+        return QuerySingle(sql=f"{self.left.fqn()} > %({name})s", params={name: self.right})
 
 
 class Gte[T: PyType](WhereClause):
@@ -115,14 +115,14 @@ class Gte[T: PyType](WhereClause):
         self.right = right.info if isinstance(right, Column) else right
 
     @override
-    def sql(self, get_count: GetCount) -> Query:
+    def sql(self, get_count: GetCount) -> QuerySingle:
         count = get_count()
         name = f"gte_{self.left.name}_{count}"
 
         if isinstance(self.right, ColumnInfo):
-            return Query(sql=f"{self.left.fqn()} >= {self.right.fqn()}")
+            return QuerySingle(sql=f"{self.left.fqn()} >= {self.right.fqn()}")
 
-        return Query(sql=f"{self.left.fqn()} >= %({name})s", params={name: self.right})
+        return QuerySingle(sql=f"{self.left.fqn()} >= %({name})s", params={name: self.right})
 
 
 class Lt[T: PyType](WhereClause):
@@ -138,14 +138,14 @@ class Lt[T: PyType](WhereClause):
         self.right = right.info if isinstance(right, Column) else right
 
     @override
-    def sql(self, get_count: GetCount) -> Query:
+    def sql(self, get_count: GetCount) -> QuerySingle:
         count = get_count()
         name = f"lt_{self.left.name}_{count}"
 
         if isinstance(self.right, ColumnInfo):
-            return Query(sql=f"{self.left.fqn()} < {self.right.fqn()}")
+            return QuerySingle(sql=f"{self.left.fqn()} < {self.right.fqn()}")
 
-        return Query(sql=f"{self.left.fqn()} < %({name})s", params={name: self.right})
+        return QuerySingle(sql=f"{self.left.fqn()} < %({name})s", params={name: self.right})
 
 
 class Lte[T: PyType](WhereClause):
@@ -161,14 +161,14 @@ class Lte[T: PyType](WhereClause):
         self.right = right.info if isinstance(right, Column) else right
 
     @override
-    def sql(self, get_count: GetCount) -> Query:
+    def sql(self, get_count: GetCount) -> QuerySingle:
         count = get_count()
         name = f"lte_{self.left.name}_{count}"
 
         if isinstance(self.right, ColumnInfo):
-            return Query(sql=f"{self.left.fqn()} <= {self.right.fqn()}")
+            return QuerySingle(sql=f"{self.left.fqn()} <= {self.right.fqn()}")
 
-        return Query(sql=f"{self.left.fqn()} <= %({name})s", params={name: self.right})
+        return QuerySingle(sql=f"{self.left.fqn()} <= %({name})s", params={name: self.right})
 
 
 # String matching operators
@@ -181,13 +181,13 @@ class Like[T: PyType](WhereClause):
         self.right = right.info if isinstance(right, Column) else right
 
     @override
-    def sql(self, get_count: GetCount) -> Query:
+    def sql(self, get_count: GetCount) -> QuerySingle:
         count = get_count()
         name = f"like_{self.left.name}_{count}"
         if isinstance(self.right, ColumnInfo):
-            return Query(sql=f"{self.left.fqn()} = {self.right.fqn()}")
+            return QuerySingle(sql=f"{self.left.fqn()} = {self.right.fqn()}")
 
-        return Query(sql=f"{self.left.fqn()} LIKE %({name})s", params={name: self.right})
+        return QuerySingle(sql=f"{self.left.fqn()} LIKE %({name})s", params={name: self.right})
 
 
 class Ilike[T: PyType](WhereClause):
@@ -203,13 +203,13 @@ class Ilike[T: PyType](WhereClause):
         self.right = right.info if isinstance(right, Column) else right
 
     @override
-    def sql(self, get_count: GetCount) -> Query:
+    def sql(self, get_count: GetCount) -> QuerySingle:
         count = get_count()
         name = f"ilike_{self.left.name}_{count}"
         if isinstance(self.right, ColumnInfo):
-            return Query(sql=f"{self.left.fqn()} ILIKE {self.right.fqn()}")
+            return QuerySingle(sql=f"{self.left.fqn()} ILIKE {self.right.fqn()}")
 
-        return Query(sql=f"{self.left.fqn()} ILIKE %({name})s", params={name: self.right})
+        return QuerySingle(sql=f"{self.left.fqn()} ILIKE %({name})s", params={name: self.right})
 
 
 class NotLike[T: PyType](WhereClause):
@@ -225,13 +225,13 @@ class NotLike[T: PyType](WhereClause):
         self.right = right.info if isinstance(right, Column) else right
 
     @override
-    def sql(self, get_count: GetCount) -> Query:
+    def sql(self, get_count: GetCount) -> QuerySingle:
         count = get_count()
         name = f"notlike_{self.left.name}_{count}"
         if isinstance(self.right, ColumnInfo):
-            return Query(sql=f"{self.left.fqn()} NOT LIKE {self.right.fqn()}")
+            return QuerySingle(sql=f"{self.left.fqn()} NOT LIKE {self.right.fqn()}")
 
-        return Query(sql=f"{self.left.fqn()} NOT LIKE %({name})s", params={name: self.right})
+        return QuerySingle(sql=f"{self.left.fqn()} NOT LIKE %({name})s", params={name: self.right})
 
 
 # Null checks
@@ -246,8 +246,8 @@ class IsNull(WhereClause):
         self.column = column.info
 
     @override
-    def sql(self, get_count: GetCount) -> Query:
-        return Query(sql=f"{self.column.fqn()} IS NULL")
+    def sql(self, get_count: GetCount) -> QuerySingle:
+        return QuerySingle(sql=f"{self.column.fqn()} IS NULL")
 
 
 class IsNotNull(WhereClause):
@@ -261,8 +261,8 @@ class IsNotNull(WhereClause):
         self.column = column.info
 
     @override
-    def sql(self, get_count: GetCount) -> Query:
-        return Query(sql=f"{self.column.fqn()} IS NOT NULL")
+    def sql(self, get_count: GetCount) -> QuerySingle:
+        return QuerySingle(sql=f"{self.column.fqn()} IS NOT NULL")
 
 
 # Array/list operations
@@ -279,10 +279,10 @@ class InArray[T: PyType](WhereClause):
         self.values = values
 
     @override
-    def sql(self, get_count: GetCount) -> Query:
+    def sql(self, get_count: GetCount) -> QuerySingle:
         count = get_count()
         name = f"in_{self.column.name}_{count}"
-        return Query(sql=f"{self.column.fqn()} = ANY(%({name})s)", params={name: self.values})
+        return QuerySingle(sql=f"{self.column.fqn()} = ANY(%({name})s)", params={name: self.values})
 
 
 class NotInArray[T: PyType](WhereClause):
@@ -298,10 +298,10 @@ class NotInArray[T: PyType](WhereClause):
         self.values = values
 
     @override
-    def sql(self, get_count: GetCount) -> Query:
+    def sql(self, get_count: GetCount) -> QuerySingle:
         count = get_count()
         name = f"notin_{self.column.name}_{count}"
-        return Query(sql=f"{self.column.fqn()} != ALL(%({name})s)", params={name: self.values})
+        return QuerySingle(sql=f"{self.column.fqn()} != ALL(%({name})s)", params={name: self.values})
 
 
 # Range operations
@@ -322,11 +322,11 @@ class Between[T: PyType](WhereClause):
         self.upper = upper
 
     @override
-    def sql(self, get_count: GetCount) -> Query:
+    def sql(self, get_count: GetCount) -> QuerySingle:
         count = get_count()
         lower_name = f"between_lower_{self.column.name}_{count}"
         upper_name = f"between_upper_{self.column.name}_{count}"
-        return Query(
+        return QuerySingle(
             sql=f"{self.column.fqn()} BETWEEN %({lower_name})s AND %({upper_name})s",
             params={lower_name: self.lower, upper_name: self.upper},
         )
@@ -347,11 +347,11 @@ class NotBetween[T: PyType](WhereClause):
         self.upper = upper
 
     @override
-    def sql(self, get_count: GetCount) -> Query:
+    def sql(self, get_count: GetCount) -> QuerySingle:
         count = get_count()
         lower_name = f"notbetween_lower_{self.column.name}_{count}"
         upper_name = f"notbetween_upper_{self.column.name}_{count}"
-        return Query(
+        return QuerySingle(
             sql=f"{self.column.fqn()} NOT BETWEEN %({lower_name})s AND %({upper_name})s",
             params={lower_name: self.lower, upper_name: self.upper},
         )
@@ -359,7 +359,7 @@ class NotBetween[T: PyType](WhereClause):
 
 # Subquery operations
 class SqlAble(Protocol):
-    def sql(self) -> Query: ...
+    def sql(self) -> QuerySingle: ...
 
 
 class Exists(WhereClause):
@@ -373,9 +373,9 @@ class Exists(WhereClause):
         self.query = query
 
     @override
-    def sql(self, get_count: GetCount) -> Query:
+    def sql(self, get_count: GetCount) -> QuerySingle:
         query = self.query.sql()
-        return Query(f"EXISTS ({query.sql})", query.params)
+        return QuerySingle(f"EXISTS ({query.sql})", query.params)
 
 
 class NotExists(WhereClause):
@@ -389,9 +389,9 @@ class NotExists(WhereClause):
         self.query = query
 
     @override
-    def sql(self, get_count: GetCount) -> Query:
+    def sql(self, get_count: GetCount) -> QuerySingle:
         query = self.query.sql()
-        return Query(f"NOT EXISTS ({query.sql})", query.params)
+        return QuerySingle(f"NOT EXISTS ({query.sql})", query.params)
 
 
 # Logical operators
@@ -406,9 +406,9 @@ class Not(WhereClause):
         self.clause = clause
 
     @override
-    def sql(self, get_count: GetCount) -> Query:
+    def sql(self, get_count: GetCount) -> QuerySingle:
         inner = self.clause.sql(get_count)
-        return Query(sql=f"NOT ({inner.sql})", params=inner.params)
+        return QuerySingle(sql=f"NOT ({inner.sql})", params=inner.params)
 
 
 class And(WhereClause):
@@ -420,12 +420,12 @@ class And(WhereClause):
         self.right = right
 
     @override
-    def sql(self, get_count: GetCount) -> Query:
+    def sql(self, get_count: GetCount) -> QuerySingle:
         left = self.left.sql(get_count)
         right = self.right.sql(get_count)
         params = {**left.params, **right.params}
         sql = f"{left.sql} AND {right.sql}"
-        return Query(sql=sql, params=params)
+        return QuerySingle(sql=sql, params=params)
 
 
 class Or(WhereClause):
@@ -437,9 +437,9 @@ class Or(WhereClause):
         self.right = right
 
     @override
-    def sql(self, get_count: GetCount) -> Query:
+    def sql(self, get_count: GetCount) -> QuerySingle:
         left = self.left.sql(get_count)
         right = self.right.sql(get_count)
         params = {**left.params, **right.params}
         sql = f"{left.sql} OR {right.sql}"
-        return Query(sql=sql, params=params)
+        return QuerySingle(sql=sql, params=params)

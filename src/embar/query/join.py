@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 from typing import override
 
-from embar.query.query import Query
+from embar.query.query import QuerySingle
 from embar.query.where import GetCount, WhereClause
 from embar.table import Table
 
@@ -14,7 +14,7 @@ class JoinClause(ABC):
     """
 
     @abstractmethod
-    def get(self, get_count: GetCount) -> Query:
+    def get(self, get_count: GetCount) -> QuerySingle:
         """
         Generate the SQL for this join clause.
         """
@@ -37,14 +37,14 @@ class LeftJoin(JoinClause):
         self.on = on
 
     @override
-    def get(self, get_count: GetCount) -> Query:
+    def get(self, get_count: GetCount) -> QuerySingle:
         """
         Generate the LEFT JOIN SQL.
         """
         on = self.on.sql(get_count)
 
         sql = f"LEFT JOIN {self.table.fqn()} ON {on.sql}"
-        return Query(sql=sql, params=on.params)
+        return QuerySingle(sql=sql, params=on.params)
 
 
 class RightJoin(JoinClause):
@@ -63,14 +63,14 @@ class RightJoin(JoinClause):
         self.on = on
 
     @override
-    def get(self, get_count: GetCount) -> Query:
+    def get(self, get_count: GetCount) -> QuerySingle:
         """
         Generate the RIGHT JOIN SQL.
         """
         on = self.on.sql(get_count)
 
         sql = f"RIGHT JOIN {self.table.fqn()} ON {on.sql}"
-        return Query(sql=sql, params=on.params)
+        return QuerySingle(sql=sql, params=on.params)
 
 
 class InnerJoin(JoinClause):
@@ -89,14 +89,14 @@ class InnerJoin(JoinClause):
         self.on = on
 
     @override
-    def get(self, get_count: GetCount) -> Query:
+    def get(self, get_count: GetCount) -> QuerySingle:
         """
         Generate the INNER JOIN SQL.
         """
         on = self.on.sql(get_count)
 
         sql = f"INNER JOIN {self.table.fqn()} ON {on.sql}"
-        return Query(sql=sql, params=on.params)
+        return QuerySingle(sql=sql, params=on.params)
 
 
 class FullJoin(JoinClause):
@@ -115,14 +115,14 @@ class FullJoin(JoinClause):
         self.on = on
 
     @override
-    def get(self, get_count: GetCount) -> Query:
+    def get(self, get_count: GetCount) -> QuerySingle:
         """
         Generate the FULL OUTER JOIN SQL.
         """
         on = self.on.sql(get_count)
 
         sql = f"FULL OUTER JOIN {self.table.fqn()} ON {on.sql}"
-        return Query(sql=sql, params=on.params)
+        return QuerySingle(sql=sql, params=on.params)
 
 
 class CrossJoin(JoinClause):
@@ -139,9 +139,9 @@ class CrossJoin(JoinClause):
         self.table = table
 
     @override
-    def get(self, get_count: GetCount) -> Query:
+    def get(self, get_count: GetCount) -> QuerySingle:
         """
         Generate the CROSS JOIN SQL.
         """
         sql = f"CROSS JOIN {self.table.fqn()}"
-        return Query(sql=sql)
+        return QuerySingle(sql=sql)

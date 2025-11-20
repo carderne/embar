@@ -7,24 +7,20 @@ from typing import Any
 from embar.custom_types import PyType
 
 
-class Query:
+class QuerySingle:
     """
     Represents an SQL query with parameterized values.
     """
 
     sql: str
     params: dict[str, PyType]
-    many_params: Sequence[dict[str, PyType]]
 
-    def __init__(
-        self, sql: str, params: dict[str, Any] | None = None, many_params: Sequence[dict[str, Any]] | None = None
-    ):
+    def __init__(self, sql: str, params: dict[str, Any] | None = None):
         """
-        Create a new Query instance.
+        Create a new QuerySingle instance.
         """
         self.sql = sql
         self.params = params if params is not None else {}
-        self.many_params = many_params if many_params is not None else []
 
     def merged(self) -> str:
         """
@@ -34,8 +30,8 @@ class Query:
         able to print the DDL to a text file.
 
         ```python
-        from embar.query.query import Query
-        query = Query(
+        from embar.query.query import QuerySingle
+        query = QuerySingle(
             sql="SELECT * FROM a WHERE id = %(my_var_name)s",
             params={"my_var_name": 100},
         )
@@ -55,3 +51,19 @@ class Query:
                 return str(value)
 
         return re.sub(r"%\((\w+)\)s", replace_param, self.sql)
+
+
+class QueryMany:
+    """
+    Represents an SQL query with a sequence parameterized values.
+    """
+
+    sql: str
+    many_params: Sequence[dict[str, PyType]]
+
+    def __init__(self, sql: str, many_params: Sequence[dict[str, Any]] | None = None):
+        """
+        Create a new QueryMany instance.
+        """
+        self.sql = sql
+        self.many_params = many_params if many_params is not None else []

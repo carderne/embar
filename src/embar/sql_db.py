@@ -8,7 +8,7 @@ from pydantic import BaseModel, TypeAdapter
 
 from embar.db.base import AllDbBase, AsyncDbBase, DbBase
 from embar.model import upgrade_model_nested_fields
-from embar.query.query import Query
+from embar.query.query import QuerySingle
 from embar.sql import Sql
 
 
@@ -38,7 +38,7 @@ class DbSql[Db: AllDbBase]:
         Run the query asynchronously without returning results.
         """
         sql = self.sql.execute()
-        query = Query(sql)
+        query = QuerySingle(sql)
 
         async def awaitable():
             db = self._db
@@ -62,7 +62,7 @@ class DbSql[Db: AllDbBase]:
         """
         if isinstance(self._db, DbBase):
             sql = self.sql.execute()
-            query = Query(sql)
+            query = QuerySingle(sql)
             self._db.execute(query)
         return self
 
@@ -89,7 +89,7 @@ class DbSqlReturning[M: BaseModel, Db: AllDbBase]:
         Run the query asynchronously and return parsed results.
         """
         sql = self.sql.execute()
-        query = Query(sql)
+        query = QuerySingle(sql)
         model = self._get_model()
         adapter = TypeAdapter(list[model])
 
@@ -117,7 +117,7 @@ class DbSqlReturning[M: BaseModel, Db: AllDbBase]:
         """
         if isinstance(self._db, DbBase):
             sql = self.sql.execute()
-            query = Query(sql)
+            query = QuerySingle(sql)
             data = self._db.fetch(query)
             model = self._get_model()
             adapter = TypeAdapter(list[model])

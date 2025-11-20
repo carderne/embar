@@ -19,7 +19,7 @@ from embar.db._util import get_migration_defs, merge_ddls
 from embar.db.base import AsyncDbBase, DbBase
 from embar.migration import Migration, MigrationDefs
 from embar.query.insert import InsertQuery
-from embar.query.query import Query
+from embar.query.query import QueryMany, QuerySingle
 from embar.query.select import SelectDistinctQuery, SelectQuery
 from embar.query.update import UpdateQuery
 from embar.sql_db import DbSql
@@ -93,7 +93,7 @@ class PgDb(DbBase):
         return self.migrate(defs.tables, defs.enums)
 
     @override
-    def execute(self, query: Query) -> None:
+    def execute(self, query: QuerySingle) -> None:
         """
         Execute a query without returning results.
         """
@@ -101,7 +101,7 @@ class PgDb(DbBase):
         self._conn.commit()
 
     @override
-    def executemany(self, query: Query):
+    def executemany(self, query: QueryMany):
         """
         Execute a query with multiple parameter sets.
         """
@@ -111,12 +111,15 @@ class PgDb(DbBase):
         self._conn.commit()
 
     @override
-    def fetch(self, query: Query) -> list[dict[str, Any]]:
+    def fetch(self, query: QuerySingle | QueryMany) -> list[dict[str, Any]]:
         """
         Execute a query and return results as a list of dicts.
         """
         with self._conn.cursor() as cur:
-            cur.execute(query.sql, query.params)  # pyright:ignore[reportArgumentType]
+            if isinstance(query, QuerySingle):
+                cur.execute(query.sql, query.params)  # pyright:ignore[reportArgumentType]
+            else:
+                cur.execute(query.sql, query.many_params)  # pyright:ignore[reportArgumentType]
 
             if cur.description is None:
                 return []
@@ -212,14 +215,14 @@ class AsyncPgDb(AsyncDbBase):
         return self.migrate(defs.tables, defs.enums)
 
     @override
-    async def execute(self, query: Query) -> None:
+    async def execute(self, query: QuerySingle) -> None:
         """
         Execute a query without returning results.
         """
         await self._conn.execute(query.sql, query.params)  # pyright:ignore[reportArgumentType]
 
     @override
-    async def executemany(self, query: Query):
+    async def executemany(self, query: QueryMany):
         """
         Execute a query with multiple parameter sets.
         """
@@ -229,12 +232,15 @@ class AsyncPgDb(AsyncDbBase):
             await self._conn.commit()
 
     @override
-    async def fetch(self, query: Query) -> list[dict[str, Any]]:
+    async def fetch(self, query: QuerySingle | QueryMany) -> list[dict[str, Any]]:
         """
         Execute a query and return results as a list of dicts.
         """
         async with self._conn.cursor() as cur:
-            await cur.execute(query.sql, query.params)  # pyright:ignore[reportArgumentType]
+            if isinstance(query, QuerySingle):
+                await cur.execute(query.sql, query.params)  # pyright:ignore[reportArgumentType]
+            else:
+                await cur.executemany(query.sql, query.many_params)  # pyright:ignore[reportArgumentType]
 
             if cur.description is None:
                 return []

@@ -6,7 +6,7 @@ from typing import Self, override
 from embar.column.base import ColumnBase, ColumnInfo
 from embar.constraint_base import Constraint
 from embar.custom_types import PyType
-from embar.query.query import Query
+from embar.query.query import QuerySingle
 from embar.query.where import WhereClause
 
 
@@ -88,7 +88,7 @@ class IndexReady(Constraint):
         return self
 
     @override
-    def sql(self) -> Query:
+    def sql(self) -> QuerySingle:
         """
         Generate the CREATE INDEX SQL statement.
         """
@@ -117,4 +117,4 @@ class IndexReady(Constraint):
 
         query = f'CREATE {unique} INDEX "{self.name}" ON "{table_name}"({cols}){where_sql};'
 
-        return Query(query, params)
+        return QuerySingle(query, params)

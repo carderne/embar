@@ -16,7 +16,7 @@ import yaml
 
 from embar.db.pg import PgDb
 from embar.migration import Ddl
-from embar.query.query import Query
+from embar.query.query import QuerySingle
 
 
 @dataclass
@@ -482,7 +482,7 @@ def _execute_migrations(diffs: list[MigrationDiff], db: PgDb) -> None:
         # Execute the migration
         print("Executing...")
         try:
-            db.execute(Query(diff.sql))
+            db.execute(QuerySingle(diff.sql))
             print(_green("✓ Migration executed successfully"))
         except Exception as e:
             print(_red_bold(f"✗ Error executing migration: {e}"))
@@ -676,7 +676,7 @@ def _apply_migration_file(conn: psycopg.Connection, db: PgDb, migration_name: st
 
     try:
         # Execute the SQL
-        db.execute(Query(full_sql))
+        db.execute(QuerySingle(full_sql))
 
         # Record migration completion
         with conn.cursor() as cur:

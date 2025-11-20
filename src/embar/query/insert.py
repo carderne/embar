@@ -1,11 +1,13 @@
 """Insert query builder."""
 
-from collections.abc import Sequence
-from dataclasses import dataclass
-from typing import cast
+from collections.abc import Generator, Sequence
+from typing import Any, cast
+
+from pydantic import BaseModel, TypeAdapter
 
 from embar.db.base import AllDbBase, AsyncDbBase, DbBase
-from embar.query.query import Query
+from embar.model import generate_model
+from embar.query.query import QueryMany
 from embar.table import Table
 
 
@@ -43,7 +45,6 @@ class InsertQuery[T: Table, Db: AllDbBase]:
         return InsertQueryReady(table=self.table, db=self._db, items=items)
 
 
-@dataclass
 class InsertQueryReady[T: Table, Db: AllDbBase]:
     """
     `InsertQueryReady` is an insert query that is ready to be awaited or run.
@@ -61,6 +62,9 @@ class InsertQueryReady[T: Table, Db: AllDbBase]:
         self._db = db
         self.items = items
 
+    def returning(self) -> InsertQueryReturning[T, Db]:
+        return InsertQueryReturning(self.table, self._db, self.items)
+
     def __await__(self):
         """
         async users should construct their query and await it.
@@ -68,14 +72,16 @@ class InsertQueryReady[T: Table, Db: AllDbBase]:
         non-async users have the `run()` convenience method below.
         """
         query = self.sql()
-        if isinstance(self._db, AsyncDbBase):
-            return self._db.executemany(query).__await__()
 
-        async def get_result():
-            db = cast(DbBase, self._db)
-            return db.executemany(query)
+        async def awaitable():
+            db = self._db
+            if isinstance(db, AsyncDbBase):
+                return await db.executemany(query)
+            else:
+                db = cast(DbBase, self._db)
+                return db.executemany(query)
 
-        return get_result().__await__()
+        return awaitable().__await__()
 
     def run(self):
         """
@@ -89,7 +95,7 @@ class InsertQueryReady[T: Table, Db: AllDbBase]:
             return self._db.executemany(query)
         return self
 
-    def sql(self) -> Query:
+    def sql(self) -> QueryMany:
         """
         Create the SQL query and binding parameters (psycopg format) for the query.
 
@@ -113,4 +119,82 @@ class InsertQueryReady[T: Table, Db: AllDbBase]:
         placeholder_str = ", ".join(placeholders)
         sql = f"INSERT INTO {self.table.fqn()} ({columns}) VALUES ({placeholder_str})"
         values = [it.value_dict() for it in self.items]
-        return Query(sql, many_params=values)
+        return QueryMany(sql, many_params=values)
+
+
+class InsertQueryReturning[T: Table, Db: AllDbBase]:
+    """
+    `InsertQueryReturning` is an insert query that will return what it inserts.
+    """
+
+    _db: Db
+    table: type[T]
+    items: Sequence[T]
+
+    def __init__(self, table: type[T], db: Db, items: Sequence[T]):
+        """
+        Create a new InsertQueryReturning instance.
+        """
+        self.table = table
+        self._db = db
+        self.items = items
+
+    def __await__(self) -> Generator[Any, None, Sequence[T]]:
+        """
+        async users should construct their query and await it.
+
+        non-async users have the `run()` convenience method below.
+        """
+        query = self.sql()
+        model = self._get_model()
+        model = cast(type[T], model)
+        adapter = TypeAdapter(list[model])
+
+        async def awaitable():
+            db = self._db
+            if isinstance(db, AsyncDbBase):
+                data = await db.fetch(query)
+            else:
+                db = cast(DbBase, self._db)
+                data = db.fetch(query)
+            results = adapter.validate_python(data)
+            return results
+
+        return awaitable().__await__()
+
+    def run(self):
+        """
+        Run the query against the underlying DB.
+
+        Convenience method for those not using async.
+        But still works if awaited.
+        """
+        if isinstance(self._db, DbBase):
+            query = self.sql()
+            model = self._get_model()
+            model = cast(type[T], model)
+            adapter = TypeAdapter(list[model])
+            data = self._db.fetch(query)
+            results = adapter.validate_python(data)
+            return results
+        return self
+
+    def sql(self) -> QueryMany:
+        """
+        Create the SQL query and binding parameters (psycopg format) for the query.
+        """
+        column_names = self.table.column_names().values()
+        column_names_quoted = [f'"{c}"' for c in column_names]
+        columns = ", ".join(column_names_quoted)
+        placeholders = [f"%({name})s" for name in column_names]
+        placeholder_str = ", ".join(placeholders)
+        sql = f"INSERT INTO {self.table.fqn()} ({columns}) VALUES ({placeholder_str}) RETURNING *"
+        values = [it.value_dict() for it in self.items]
+        return QueryMany(sql, many_params=values)
+
+    def _get_model(self) -> type[BaseModel]:
+        """
+        Generate the dataclass that will be used to deserialize (and validate) the query results.
+        """
+        model = generate_model(self.table)
+        return model

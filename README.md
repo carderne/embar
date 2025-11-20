@@ -98,7 +98,10 @@ user = User(id=1, email="foo@bar.com")
 message = Message(id=1, user_id=user.id, content="Hello!")
 
 db.insert(User).values(user).run()
-db.insert(Message).values(message).run()
+
+# you can return your inserted data if you want
+msg_inserted = db.insert(Message).values(message).returning().run()
+assert msg_inserted.content = message.content
 ```
 
 ### Query some data
