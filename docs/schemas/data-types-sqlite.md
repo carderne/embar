@@ -1,4 +1,4 @@
-# SQLite Data Types
+# Data Types (SQLite)
 
 Embar provides support for SQLite data types. All types are imported from `embar.column.sqlite` and `embar.column.common`.
 

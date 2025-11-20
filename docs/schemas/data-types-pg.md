@@ -1,4 +1,4 @@
-# Postgres Data Types
+# Data Types (Postgres)
 
 Embar provides comprehensive support for PostgreSQL data types. All types are imported from `embar.column.pg` and `embar.column.common`.
 
