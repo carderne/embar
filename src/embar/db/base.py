@@ -50,6 +50,13 @@ class DbBase(ABC, AllDbBase):
         """
         ...
 
+    @abstractmethod
+    def drop_tables(self, schema: str | None = None) -> None:
+        """
+        Drop all tables in the schema.
+        """
+        ...
+
 
 class AsyncDbBase(ABC, AllDbBase):
     """
@@ -81,5 +88,12 @@ class AsyncDbBase(ABC, AllDbBase):
     async def truncate(self, schema: str | None = None) -> None:
         """
         Truncate all tables in the schema.
+        """
+        ...
+
+    @abstractmethod
+    async def drop_tables(self, schema: str | None = None) -> None:
+        """
+        Drop all tables in the schema.
         """
         ...

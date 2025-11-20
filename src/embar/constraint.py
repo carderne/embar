@@ -3,7 +3,7 @@
 from collections.abc import Callable
 from typing import Self, override
 
-from embar.column.base import ColumnBase, ColumnInfo
+from embar.column.base import ColumnBase
 from embar.constraint_base import Constraint
 from embar.custom_types import PyType
 from embar.query.query import QuerySingle
@@ -29,7 +29,7 @@ class Index:
 
     name: str
 
-    def __init__(self, name: str, *columns: ColumnInfo):
+    def __init__(self, name: str):
         """
         Create a new Index instance.
         """
@@ -49,7 +49,7 @@ class UniqueIndex:
 
     name: str
 
-    def __init__(self, name: str, *columns: ColumnInfo):
+    def __init__(self, name: str):
         """
         Create a new UniqueIndex instance.
         """
@@ -70,7 +70,7 @@ class IndexReady(Constraint):
     unique: bool
     name: str
     columns: tuple[Callable[[], ColumnBase], ...]
-    _where_clause: WhereClause | None = None
+    _where_clause: Callable[[], WhereClause] | None = None
 
     def __init__(self, name: str, unique: bool, *columns: Callable[[], ColumnBase]):
         """
@@ -80,7 +80,7 @@ class IndexReady(Constraint):
         self.unique = unique
         self.columns = columns
 
-    def where(self, where_clause: WhereClause) -> Self:
+    def where(self, where_clause: Callable[[], WhereClause]) -> Self:
         """
         Add a WHERE clause to create a partial index.
         """
@@ -111,7 +111,7 @@ class IndexReady(Constraint):
                 count += 1
                 return count
 
-            where = self._where_clause.sql(get_count)
+            where = self._where_clause().sql(get_count)
             where_sql = f" WHERE {where.sql}"
             params = {**params, **where.params}
 

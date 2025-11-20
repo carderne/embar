@@ -96,7 +96,7 @@ def _get_source_expr(field_name: str, field_type: type, db_type: DbType, hints: 
                         query = f"json_group_array(json_object({column_pairs}))"
                         return query
             if isinstance(annotation, Sql):
-                query = annotation.execute()
+                query = annotation.sql()
                 return query
 
     raise Exception(f"Failed to get source expression for {field_name}")

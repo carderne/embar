@@ -155,11 +155,27 @@ class SqliteDb(DbBase):
         Truncate all tables in the database.
         """
         cursor = self._conn.cursor()
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
-        tables = cursor.fetchall()
+        tables = self._get_live_table_names()
         for (table_name,) in tables:
             cursor.execute(f"DELETE FROM {table_name}")
         self._conn.commit()
+
+    @override
+    def drop_tables(self, schema: str | None = None):
+        """
+        Drop all tables in the database.
+        """
+        cursor = self._conn.cursor()
+        tables = self._get_live_table_names()
+        for (table_name,) in tables:
+            cursor.execute(f"DROP TABLE {table_name}")
+        self._conn.commit()
+
+    def _get_live_table_names(self) -> list[str]:
+        cursor = self._conn.cursor()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
+        tables: list[str] = cursor.fetchall()
+        return tables
 
 
 def _convert_params(query: str) -> str:

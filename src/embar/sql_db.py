@@ -17,27 +17,30 @@ class DbSql[Db: AllDbBase]:
     Used to run raw SQL queries.
     """
 
-    sql: Sql
+    _sql: Sql
     _db: Db
 
     def __init__(self, template: Template, db: Db):
         """
         Create a new DbSql instance.
         """
-        self.sql = Sql(template)
+        self._sql = Sql(template)
         self._db = db
 
     def model[M: BaseModel](self, model: type[M]) -> DbSqlReturning[M, Db]:
         """
         Specify a model for parsing results.
         """
-        return DbSqlReturning(self.sql, model, self._db)
+        return DbSqlReturning(self._sql, model, self._db)
+
+    def sql(self) -> str:
+        return self._sql.sql()
 
     def __await__(self):
         """
         Run the query asynchronously without returning results.
         """
-        sql = self.sql.execute()
+        sql = self._sql.sql()
         query = QuerySingle(sql)
 
         async def awaitable():
@@ -61,7 +64,7 @@ class DbSql[Db: AllDbBase]:
         Run the query synchronously without returning results.
         """
         if isinstance(self._db, DbBase):
-            sql = self.sql.execute()
+            sql = self._sql.sql()
             query = QuerySingle(sql)
             self._db.execute(query)
         return self
@@ -72,7 +75,7 @@ class DbSqlReturning[M: BaseModel, Db: AllDbBase]:
     Used to run raw SQL queries and return a value.
     """
 
-    sql: Sql
+    _sql: Sql
     model: type[M]
     _db: Db
 
@@ -80,15 +83,18 @@ class DbSqlReturning[M: BaseModel, Db: AllDbBase]:
         """
         Create a new DbSqlReturning instance.
         """
-        self.sql = sql
+        self._sql = sql
         self.model = model
         self._db = db
+
+    def sql(self) -> str:
+        return self._sql.sql()
 
     def __await__(self) -> Generator[Any, None, Sequence[M]]:
         """
         Run the query asynchronously and return parsed results.
         """
-        sql = self.sql.execute()
+        sql = self._sql.sql()
         query = QuerySingle(sql)
         model = self._get_model()
         adapter = TypeAdapter(list[model])
@@ -116,7 +122,7 @@ class DbSqlReturning[M: BaseModel, Db: AllDbBase]:
         Run the query synchronously and return parsed results.
         """
         if isinstance(self._db, DbBase):
-            sql = self.sql.execute()
+            sql = self._sql.sql()
             query = QuerySingle(sql)
             data = self._db.fetch(query)
             model = self._get_model()

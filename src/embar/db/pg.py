@@ -126,7 +126,7 @@ class PgDb(DbBase):
             if isinstance(query, QuerySingle):
                 cur.execute(query.sql, query.params)  # pyright:ignore[reportArgumentType]
             else:
-                cur.execute(query.sql, query.many_params)  # pyright:ignore[reportArgumentType]
+                cur.executemany(query.sql, query.many_params, returning=True)  # pyright:ignore[reportArgumentType]
 
             if cur.description is None:
                 return []
@@ -144,15 +144,37 @@ class PgDb(DbBase):
         Truncate all tables in the schema.
         """
         schema = schema if schema is not None else "public"
+        tables = self._get_live_table_names(schema)
+        if tables is None:
+            return
+        table_names = ", ".join(tables)
+        with self._conn.cursor() as cursor:
+            cursor.execute(f"TRUNCATE TABLE {table_names} CASCADE")  # pyright:ignore[reportArgumentType]
+            self._conn.commit()
+
+    @override
+    def drop_tables(self, schema: str | None = None):
+        """
+        Drop all tables in the schema.
+        """
+        schema = schema if schema is not None else "public"
+        tables = self._get_live_table_names(schema)
+        if tables is None:
+            return
+        table_names = ", ".join(tables)
+        with self._conn.cursor() as cursor:
+            cursor.execute(f"DROP TABLE {table_names} CASCADE")  # pyright:ignore[reportArgumentType]
+            self._conn.commit()
+
+    def _get_live_table_names(self, schema: str) -> list[str] | None:
         with self._conn.cursor() as cursor:
             # Get all table names from public schema
             cursor.execute(f"SELECT tablename FROM pg_tables WHERE schemaname = '{schema}'")  # pyright:ignore[reportArgumentType]
             tables = cursor.fetchall()
             if not tables:
-                return
-            table_names = ", ".join([f'"{table[0]}"' for table in tables])
-            cursor.execute(f"TRUNCATE TABLE {table_names} CASCADE")  # pyright:ignore[reportArgumentType]
-            self._conn.commit()
+                return None
+            table_names = [f'"{table[0]}"' for table in tables]
+        return table_names
 
 
 @final
@@ -253,12 +275,13 @@ class AsyncPgDb(AsyncDbBase):
             if isinstance(query, QuerySingle):
                 await cur.execute(query.sql, query.params)  # pyright:ignore[reportArgumentType]
             else:
-                await cur.executemany(query.sql, query.many_params)  # pyright:ignore[reportArgumentType]
+                await cur.executemany(query.sql, query.many_params, returning=True)  # pyright:ignore[reportArgumentType]
 
             if cur.description is None:
                 return []
             columns: list[str] = [desc[0] for desc in cur.description]
             results: list[dict[str, Any]] = []
+
             for row in await cur.fetchall():
                 data = dict(zip(columns, row))
                 results.append(data)
@@ -271,14 +294,37 @@ class AsyncPgDb(AsyncDbBase):
         Truncate all tables in the schema.
         """
         schema = schema if schema is not None else "public"
+        tables = await self._get_live_table_names(schema)
+        if tables is None:
+            return
+        table_names = ", ".join(tables)
+        async with self._conn.cursor() as cursor:
+            await cursor.execute(f"TRUNCATE TABLE {table_names} CASCADE")  # pyright:ignore[reportArgumentType]
+            await self._conn.commit()
+
+    @override
+    async def drop_tables(self, schema: str | None = None):
+        """
+        Drop all tables in the schema.
+        """
+        schema = schema if schema is not None else "public"
+        tables = await self._get_live_table_names(schema)
+        if tables is None:
+            return
+        table_names = ", ".join(tables)
+        async with self._conn.cursor() as cursor:
+            await cursor.execute(f"DROP TABLE {table_names} CASCADE")  # pyright:ignore[reportArgumentType]
+            await self._conn.commit()
+
+    async def _get_live_table_names(self, schema: str) -> list[str] | None:
         async with self._conn.cursor() as cursor:
             # Get all table names from public schema
             await cursor.execute(f"SELECT tablename FROM pg_tables WHERE schemaname = '{schema}'")  # pyright:ignore[reportArgumentType]
             tables = await cursor.fetchall()
-            if tables:
-                table_names = ", ".join([f'"{table[0]}"' for table in tables])
-                await cursor.execute(f"TRUNCATE TABLE {table_names} RESTART IDENTITY CASCADE")  # pyright:ignore[reportArgumentType]
-            await self._conn.commit()
+            if not tables:
+                return None
+            table_names = [f'"{table[0]}"' for table in tables]
+        return table_names
 
 
 def _jsonify_dicts(params: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:

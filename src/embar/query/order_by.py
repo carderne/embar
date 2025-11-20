@@ -183,7 +183,7 @@ class RawSqlOrder(OrderByClause):
     @override
     def sql(self) -> str:
         """Generate the SQL fragment."""
-        return self.sql_obj.execute()
+        return self.sql_obj.sql()
 
 
 @dataclass

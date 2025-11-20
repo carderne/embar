@@ -30,11 +30,30 @@ nav:
       - About: index.md
       - Quickstart: quickstart.md
       - Postgres Quickstart: postgres-quickstart.md
+
+    - Schemas:
+      - Basics: schemas/basics.md
+      - Data types (Postgres): schemas/data-types-pg.md
+      - Data types (Sqlite): schemas/data-types-sqlite.md
+      - Relations: schemas/relations.md
+      - Constraints: schemas/constraints.md
+
+    - Query:
+      - Insert: query/insert.md
+      - Select: query/select.md
+      - Update: query/update.md
+      - Delete: query/delete.md
+      - Where: query/where.md
+      - Joins: query/joins.md
+      - Raw SQL: query/raw-sql.md
+
     - Integration:
       - Migrations: migrations.md
       - Types: types.md
+
     - Community:
       - Contributing: contributing.md
+
   - API Reference: reference/
 
 markdown_extensions:
