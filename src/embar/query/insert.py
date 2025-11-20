@@ -1,7 +1,7 @@
 """Insert query builder."""
 
 from collections.abc import Generator, Sequence
-from typing import Any, cast
+from typing import Any, cast, overload
 
 from pydantic import BaseModel, TypeAdapter
 
@@ -83,7 +83,12 @@ class InsertQueryReady[T: Table, Db: AllDbBase]:
 
         return awaitable().__await__()
 
-    def run(self):
+    @overload
+    def run(self: InsertQueryReady[T, DbBase]) -> None: ...
+    @overload
+    def run(self: InsertQueryReady[T, AsyncDbBase]) -> InsertQueryReady[T, Db]: ...
+
+    def run(self) -> InsertQueryReady[T, Db] | None:
         """
         Run the query against the underlying DB.
 
@@ -162,7 +167,12 @@ class InsertQueryReturning[T: Table, Db: AllDbBase]:
 
         return awaitable().__await__()
 
-    def run(self):
+    @overload
+    def run(self: InsertQueryReady[T, DbBase]) -> list[T]: ...
+    @overload
+    def run(self: InsertQueryReady[T, AsyncDbBase]) -> InsertQueryReturning[T, Db]: ...
+
+    def run(self) -> Sequence[T] | InsertQueryReturning[T, Db]:
         """
         Run the query against the underlying DB.
 

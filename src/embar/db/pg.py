@@ -18,6 +18,7 @@ from embar.column.base import EnumBase
 from embar.db._util import get_migration_defs, merge_ddls
 from embar.db.base import AsyncDbBase, DbBase
 from embar.migration import Migration, MigrationDefs
+from embar.query.delete import DeleteQueryReady
 from embar.query.insert import InsertQuery
 from embar.query.query import QueryMany, QuerySingle
 from embar.query.select import SelectDistinctQuery, SelectQuery
@@ -71,6 +72,12 @@ class PgDb(DbBase):
         Create an UPDATE query.
         """
         return UpdateQuery[T, Self](table=table, db=self)
+
+    def delete[T: Table](self, table: type[T]) -> DeleteQueryReady[T, Self]:
+        """
+        Create an UPDATE query.
+        """
+        return DeleteQueryReady[T, Self](table=table, db=self)
 
     def sql(self, template: Template) -> DbSql[Self]:
         """
@@ -193,6 +200,12 @@ class AsyncPgDb(AsyncDbBase):
         Create an UPDATE query.
         """
         return UpdateQuery[T, Self](table=table, db=self)
+
+    def delete[T: Table](self, table: type[T]) -> DeleteQueryReady[T, Self]:
+        """
+        Create an UPDATE query.
+        """
+        return DeleteQueryReady[T, Self](table=table, db=self)
 
     def sql(self, template: Template) -> DbSql[Self]:
         """

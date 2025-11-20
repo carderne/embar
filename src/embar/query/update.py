@@ -1,7 +1,7 @@
 """Update query builder."""
 
 from collections.abc import Generator, Mapping, Sequence
-from typing import Any, Self, cast
+from typing import Any, Self, cast, overload
 
 from pydantic import BaseModel, TypeAdapter
 
@@ -91,7 +91,12 @@ class UpdateQueryReady[T: Table, Db: AllDbBase]:
 
         return awaitable().__await__()
 
-    def run(self):
+    @overload
+    def run(self: UpdateQueryReady[T, DbBase]) -> None: ...
+    @overload
+    def run(self: UpdateQueryReady[T, AsyncDbBase]) -> UpdateQueryReady[T, Db]: ...
+
+    def run(self) -> None | UpdateQueryReady[T, Db]:
         """
         Run the query against the underlying DB.
 
@@ -180,7 +185,12 @@ class UpdateQueryReturning[T: Table, Db: AllDbBase]:
 
         return awaitable().__await__()
 
-    def run(self):
+    @overload
+    def run(self: UpdateQueryReturning[T, DbBase]) -> list[T]: ...
+    @overload
+    def run(self: UpdateQueryReturning[T, AsyncDbBase]) -> UpdateQueryReturning[T, Db]: ...
+
+    def run(self) -> list[T] | UpdateQueryReturning[T, Db]:
         """
         Run the query against the underlying DB.
 

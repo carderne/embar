@@ -101,7 +101,7 @@ db.insert(User).values(user).run()
 
 # you can return your inserted data if you want
 msg_inserted = db.insert(Message).values(message).returning().run()
-assert msg_inserted.content = message.content
+assert msg_inserted[0].content == message.content
 ```
 
 ### Query some data
@@ -204,6 +204,15 @@ class MessageUpdate(TypedDict, total=False):
     .where(Eq(Message.id, 1))
     .run()
 )
+```
+
+### Delete some rows
+
+And return the deleted data if you like.
+
+```python continuation
+deleted = db.delete(Message).returning().run()
+assert len(deleted) == 1
 ```
 
 ### Add indexes
