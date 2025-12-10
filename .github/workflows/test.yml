@@ -30,3 +30,25 @@ jobs:
       - run: uv run poe ci:lint
       - run: uv run poe ci:check
       - run: uv run poe ci:test
+
+      - name: Get coverage percentage
+        id: coverage
+        run: |
+          # Extract percentage from coverage.xml
+          pip install coverage
+          COVERAGE=$(coverage report --format=total)
+          echo "coverage=$COVERAGE" >> $GITHUB_OUTPUT
+          echo "Coverage: $COVERAGE%"
+
+      - name: Upload badge to Gist
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GIST_TOKEN }}
+          gistID: 9a3090c00e2e164bd197c5853245a7b1
+          filename: coverage.json
+          label: coverage
+          message: ${{ steps.coverage.outputs.coverage }}%
+          valColorRange: ${{ steps.coverage.outputs.coverage }}
+          minColorRange: 50
+          maxColorRange: 90

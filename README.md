@@ -10,6 +10,7 @@
 <div align="center">
 <a href="https://github.com/carderne/embar">
 <img alt="GitHub badge" src="https://img.shields.io/badge/Github-Embar-blue?logo=github">
+<img src="https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/carderne/9a3090c00e2e164bd197c5853245a7b1/raw/coverage.json" alt="Coverage">
 </a>
 </div>
 
