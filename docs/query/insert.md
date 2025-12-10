@@ -161,3 +161,98 @@ async def relations():
 asyncio.run(relations())
 ```
 
+## On Conflict (Upsert)
+
+Handle duplicate key conflicts with `on_conflict_do_nothing()` or `on_conflict_do_update()`.
+
+### Do Nothing
+
+Ignore rows that would cause a unique constraint violation:
+
+```{.python fixture:postgres_container}
+import asyncio
+import psycopg
+
+from embar.db.pg import AsyncPgDb
+from embar.column.common import Integer, Text
+from embar.table import Table
+
+class Product(Table):
+    id: Integer = Integer(primary=True)
+    name: Text = Text()
+
+async def get_db(tables: list[Table] = None):
+    tables = tables if tables is not None else [Product]
+    database_url = "postgres://pg:pw@localhost:25432/db"
+    conn = await psycopg.AsyncConnection.connect(database_url)
+    db = AsyncPgDb(conn)
+    await db.migrate(tables)
+    return db
+
+async def do_nothing():
+    db = await get_db([Product])
+
+    # Insert initial product (using on_conflict for idempotency)
+    await db.insert(Product).values(Product(id=100, name="Widget")).on_conflict_do_nothing(("id",))
+
+    # Attempt to insert duplicate - will be ignored
+    await db.insert(Product).values(
+        Product(id=100, name="Gadget")
+    ).on_conflict_do_nothing(("id",))
+
+asyncio.run(do_nothing())
+```
+
+This generates:
+
+```sql
+INSERT INTO "product" ("id", "name") VALUES (%(id)s, %(name)s)
+ON CONFLICT (id) DO NOTHING
+```
+
+### Do Update
+
+Update existing rows when a conflict occurs:
+
+```{.python continuation}
+async def do_update():
+    db = await get_db([Product])
+
+    # Insert initial product (using on_conflict for idempotency)
+    await db.insert(Product).values(Product(id=101, name="Widget")).on_conflict_do_nothing(("id",))
+
+    # Upsert - update name if id already exists
+    await db.insert(Product).values(
+        Product(id=101, name="Gadget")
+    ).on_conflict_do_update(("id",), {"name": "Updated Widget"})
+
+asyncio.run(do_update())
+```
+
+This generates:
+
+```sql
+INSERT INTO "product" ("id", "name") VALUES (%(id)s, %(name)s)
+ON CONFLICT (id) DO UPDATE SET name = %(set_name_0)s
+```
+
+### With Returning
+
+Combine with `.returning()` to get the result:
+
+```{.python continuation}
+async def upsert_returning():
+    db = await get_db([Product])
+
+    # Insert initial product (using on_conflict for idempotency)
+    await db.insert(Product).values(Product(id=102, name="Widget")).on_conflict_do_nothing(("id",))
+
+    result = await db.insert(Product).values(
+        Product(id=102, name="Gadget")
+    ).on_conflict_do_update(("id",), {"name": "Updated"}).returning()
+
+    assert result[0].id == 102
+
+asyncio.run(upsert_returning())
+```
+
