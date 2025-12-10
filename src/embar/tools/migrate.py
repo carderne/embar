@@ -1,63 +1,20 @@
 """Migration tool for generating and applying database migrations using LLMs."""
 
 import importlib
-import json
 import os
 import sys
-from dataclasses import dataclass
 from datetime import datetime
 from difflib import SequenceMatcher
 from textwrap import dedent
-from typing import Literal
-from urllib.request import Request, urlopen
 
 import psycopg
-import yaml
 
 from embar.db.pg import PgDb
 from embar.migration import Ddl
 from embar.query.query import QuerySingle
-
-
-@dataclass
-class MigrateConfig:
-    """
-    Configuration for the migration tool.
-    """
-
-    dialect: Literal["postgresql"]
-    db_url: str
-    schema_path: str
-    migrations_dir: str | None = None
-
-
-@dataclass
-class TableMatch:
-    """
-    Represents a match between old and new table definitions.
-    """
-
-    old_name: str | None
-    new_name: str | None
-    old_ddl: Ddl | None
-    new_ddl: Ddl | None
-    match_type: Literal["exact", "renamed", "new", "deleted"]
-    similarity_score: float = 1.0
-
-
-@dataclass
-class MigrationDiff:
-    """
-    Represents a migration diff with compatibility information.
-    """
-
-    table_name: str
-    old_table_name: str | None
-    new_table_name: str | None
-    match_type: Literal["exact", "renamed", "new", "deleted"]
-    sql: str
-    is_backward_compatible: bool
-    explanation: str
+from embar.tools.fmt import format_migration_output, green, red_bold, yellow
+from embar.tools.llm import Llm
+from embar.tools.models import MigrateConfig, MigrationDiff, TableMatch
 
 
 def _similarity_score(str1: str, str2: str) -> float:
@@ -150,7 +107,7 @@ def _match_tables(db_schema: list[Ddl], new_schema: list[Ddl]) -> list[TableMatc
     return matches
 
 
-def _get_schema_from_db(conn: psycopg.Connection) -> list[Ddl]:
+def get_schema_from_db(conn: psycopg.Connection) -> list[Ddl]:
     """Extract current database schema as DDL objects."""
     results: list[Ddl] = []
 
@@ -236,26 +193,7 @@ def _get_schema_from_db(conn: psycopg.Connection) -> list[Ddl]:
     return results
 
 
-def _call_anthropic(api_key: str, prompt: str, max_tokens: int = 2000) -> str:
-    """Make a request to Anthropic API using urllib."""
-    url = "https://api.anthropic.com/v1/messages"
-
-    data = {
-        "model": "claude-3-5-haiku-20241022",
-        "max_tokens": max_tokens,
-        "messages": [{"role": "user", "content": prompt}],
-    }
-
-    headers = {"Content-Type": "application/json", "x-api-key": api_key, "anthropic-version": "2023-06-01"}
-
-    request = Request(url, data=json.dumps(data).encode("utf-8"), headers=headers, method="POST")
-
-    with urlopen(request) as response:
-        result = json.loads(response.read().decode("utf-8"))
-        return result["content"][0]["text"]
-
-
-def _llm_diff_table(match: TableMatch, api_key: str) -> MigrationDiff:
+def _llm_diff_table(match: TableMatch, api_key: str, llm: Llm) -> MigrationDiff:
     """Use Anthropic Haiku to generate SQL diff for table changes."""
 
     prompt: str
@@ -315,7 +253,7 @@ def _llm_diff_table(match: TableMatch, api_key: str) -> MigrationDiff:
         raise Exception(f"Cannot handle match: {match}")
 
     # Get SQL from LLM
-    sql = _call_anthropic(api_key, prompt, max_tokens=2000).strip()
+    sql = llm(api_key, prompt, max_tokens=2000).strip()
 
     # Now check if it's backward compatible
     compatibility_prompt = dedent(f"""
@@ -345,7 +283,7 @@ def _llm_diff_table(match: TableMatch, api_key: str) -> MigrationDiff:
     2. "NON-BACKWARD-COMPATIBLE: <brief explanation>"
     """).strip()
 
-    compat_response = _call_anthropic(api_key, compatibility_prompt, max_tokens=500).strip()
+    compat_response = llm(api_key, compatibility_prompt, max_tokens=500).strip()
     is_backward_compatible = compat_response.startswith("BACKWARD-COMPATIBLE")
     explanation = compat_response.split(": ", 1)[1] if ": " in compat_response else compat_response
 
@@ -360,9 +298,9 @@ def _llm_diff_table(match: TableMatch, api_key: str) -> MigrationDiff:
     )
 
 
-def create_migrations(config: MigrateConfig, api_key: str, conn: psycopg.Connection) -> list[MigrationDiff]:
+def _create_migrations(config: MigrateConfig, api_key: str, conn: psycopg.Connection, llm: Llm) -> list[MigrationDiff]:
     """Generate migration diffs by comparing database schema with Python models."""
-    db_schema = _get_schema_from_db(conn)
+    db_schema = get_schema_from_db(conn)
 
     db = PgDb(conn)
     schema = importlib.import_module(config.schema_path)
@@ -375,51 +313,10 @@ def create_migrations(config: MigrateConfig, api_key: str, conn: psycopg.Connect
     diffs: list[MigrationDiff] = []
     for match in matches:
         print(f"Processing {match.match_type} table: {match.old_name or match.new_name}...")
-        diff = _llm_diff_table(match, api_key)
+        diff = _llm_diff_table(match, api_key, llm)
         diffs.append(diff)
 
     return diffs
-
-
-def _format_migration_output(diffs: list[MigrationDiff]) -> str:
-    """Format migration diffs as SQL with metadata comments."""
-    output: list[str] = []
-    output.append("-- Generated Migration SQL")
-    output.append("-- =======================")
-    output.append("")
-
-    for i, diff in enumerate(diffs, 1):
-        output.append(f"-- Migration {i}/{len(diffs)}")
-        output.append(f"-- Table: {diff.table_name}")
-        output.append(f"-- Type: {diff.match_type.upper()}")
-
-        if diff.old_table_name and diff.new_table_name and diff.old_table_name != diff.new_table_name:
-            output.append(f"-- Rename: {diff.old_table_name} -> {diff.new_table_name}")
-
-        compat_status = "BACKWARD-COMPATIBLE" if diff.is_backward_compatible else "⚠️  NON-BACKWARD-COMPATIBLE"
-        output.append(f"-- Compatibility: {compat_status}")
-        output.append(f"-- Explanation: {diff.explanation}")
-        output.append("")
-        output.append(diff.sql)
-        output.append("")
-        output.append("")
-
-    return "\n".join(output)
-
-
-def _red_bold(text: str) -> str:
-    """Return text in red and bold for terminal."""
-    return f"\033[1;31m{text}\033[0m"
-
-
-def _green(text: str) -> str:
-    """Return text in green for terminal."""
-    return f"\033[32m{text}\033[0m"
-
-
-def _yellow(text: str) -> str:
-    """Return text in yellow for terminal."""
-    return f"\033[33m{text}\033[0m"
 
 
 def _confirm_migration(diff: MigrationDiff, index: int, total: int) -> bool:
@@ -432,13 +329,13 @@ def _confirm_migration(diff: MigrationDiff, index: int, total: int) -> bool:
         print(f"Rename: {diff.old_table_name} -> {diff.new_table_name}")
 
     if diff.is_backward_compatible:
-        print(_green("✓ BACKWARD-COMPATIBLE"))
+        print(green("✓ BACKWARD-COMPATIBLE"))
     else:
-        print(_red_bold("⚠️  NON-BACKWARD-COMPATIBLE"))
-        print(_red_bold(f"⚠️  {diff.explanation}"))
+        print(red_bold("⚠️  NON-BACKWARD-COMPATIBLE"))
+        print(red_bold(f"⚠️  {diff.explanation}"))
 
     print("\nSQL to execute:")
-    print(_yellow(diff.sql))
+    print(yellow(diff.sql))
     print()
 
     while True:
@@ -451,7 +348,7 @@ def _confirm_migration(diff: MigrationDiff, index: int, total: int) -> bool:
             print("Please enter 'y' or 'n'")
 
 
-def _save_migration_to_file(diffs: list[MigrationDiff], migrations_dir: str, migration_name: str) -> str:
+def save_migration_to_file(diffs: list[MigrationDiff], migrations_dir: str, migration_name: str) -> str:
     """Save migrations to a file in the migrations directory."""
     # Create migrations directory if it doesn't exist
     os.makedirs(migrations_dir, exist_ok=True)
@@ -462,81 +359,36 @@ def _save_migration_to_file(diffs: list[MigrationDiff], migrations_dir: str, mig
     filepath = os.path.join(migrations_dir, filename)
 
     # Write migration to file
-    content = _format_migration_output(diffs)
+    content = format_migration_output(diffs)
     with open(filepath, "w") as f:
         f.write(content)
 
     return filepath
 
 
-def _execute_migrations(diffs: list[MigrationDiff], db: PgDb) -> None:
+def execute_migrations(diffs: list[MigrationDiff], db: PgDb) -> None:
     """Execute migrations with user confirmation for each one."""
-    print(f"\n{_yellow('EXECUTE MODE ENABLED')}")
+    print(f"\n{yellow('EXECUTE MODE ENABLED')}")
     print("You will be prompted to confirm each migration.\n")
 
     for i, diff in enumerate(diffs, 1):
         if not _confirm_migration(diff, i, len(diffs)):
-            print(_red_bold("\n✗ Migration cancelled by user. Exiting."))
+            print(red_bold("\n✗ Migration cancelled by user. Exiting."))
             sys.exit(0)
 
         # Execute the migration
         print("Executing...")
         try:
             db.execute(QuerySingle(diff.sql))
-            print(_green("✓ Migration executed successfully"))
+            print(green("✓ Migration executed successfully"))
         except Exception as e:
-            print(_red_bold(f"✗ Error executing migration: {e}"))
+            print(red_bold(f"✗ Error executing migration: {e}"))
             sys.exit(1)
 
-    print(f"\n{_green('✓ All migrations executed successfully!')}")
+    print(f"\n{green('✓ All migrations executed successfully!')}")
 
 
-def _load_env_file():
-    """Load environment variables from .env file if it exists."""
-    # Try current directory first, then parent directory
-    for env_path in [".env", "../.env"]:
-        if os.path.exists(env_path):
-            with open(env_path, "r") as f:
-                for line in f:
-                    line = line.strip()
-                    if line and not line.startswith("#") and "=" in line:
-                        key, value = line.split("=", 1)
-                        os.environ[key.strip()] = value.strip()
-            break
-
-
-def _load_config(config_path: str | None = None) -> MigrateConfig:
-    """Load and validate configuration from file."""
-    if config_path is None:
-        config_path = "embar.yml"
-
-    if not os.path.exists(config_path):
-        print(f"Error: Config file '{config_path}' not found.")
-        sys.exit(1)
-
-    with open(config_path, "r") as f:
-        config_data = yaml.safe_load(f)
-
-    try:
-        return MigrateConfig(**config_data)
-    except TypeError as e:
-        print(f"Error: Invalid config format: {e}")
-        sys.exit(1)
-
-
-def _get_api_key() -> str:
-    """Get API key from environment or prompt user."""
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
-    if not api_key:
-        print("ANTHROPIC_API_KEY environment variable not set.")
-        api_key = input("Please enter your Anthropic API key: ").strip()
-        if not api_key:
-            print("Error: API key is required.")
-            sys.exit(1)
-    return api_key
-
-
-def _generate_diffs(config: MigrateConfig, api_key: str) -> list[MigrationDiff]:
+def generate_diffs(config: MigrateConfig, api_key: str, llm: Llm) -> list[MigrationDiff]:
     """Generate migration diffs from database and schema comparison."""
     print(f"Connecting to database: {config.db_url}")
     print(f"Loading schema from: {config.schema_path}")
@@ -545,7 +397,7 @@ def _generate_diffs(config: MigrateConfig, api_key: str) -> list[MigrationDiff]:
     conn = psycopg.connect(config.db_url)
 
     try:
-        diffs = create_migrations(config, api_key, conn)
+        diffs = _create_migrations(config, api_key, conn, llm)
     except Exception as e:
         print(f"Error generating migrations: {e}")
         import traceback
@@ -556,31 +408,7 @@ def _generate_diffs(config: MigrateConfig, api_key: str) -> list[MigrationDiff]:
     return diffs
 
 
-def cmd_generate(config_path: str | None = None):
-    """Generate migration and save to file."""
-    config = _load_config(config_path)
-
-    if not config.migrations_dir:
-        print(_red_bold("Error: 'migrations_dir' must be set in config to use 'embar generate'"))
-        sys.exit(1)
-
-    api_key = _get_api_key()
-    diffs = _generate_diffs(config, api_key)
-
-    if not diffs:
-        print("No migrations needed.")
-        return
-
-    migration_name = input("Enter migration name: ").strip()
-    if not migration_name:
-        print("Error: Migration name is required.")
-        sys.exit(1)
-
-    filepath = _save_migration_to_file(diffs, config.migrations_dir, migration_name)
-    print(f"\n{_green(f'✓ Migration saved to: {filepath}')}")
-
-
-def _ensure_migrations_table(conn: psycopg.Connection) -> None:
+def ensure_migrations_table(conn: psycopg.Connection) -> None:
     """Create _embar_migrations table if it doesn't exist."""
     with conn.cursor() as cur:
         cur.execute("""
@@ -593,7 +421,7 @@ def _ensure_migrations_table(conn: psycopg.Connection) -> None:
     conn.commit()
 
 
-def _check_migration_state(conn: psycopg.Connection) -> None:
+def check_migration_state(conn: psycopg.Connection) -> None:
     """Check if any migrations are in an invalid state (started but not finished)."""
     with conn.cursor() as cur:
         cur.execute("""
@@ -605,7 +433,7 @@ def _check_migration_state(conn: psycopg.Connection) -> None:
         incomplete = cur.fetchall()
 
     if incomplete:
-        print(_red_bold("Error: Database is in an invalid state!"))
+        print(red_bold("Error: Database is in an invalid state!"))
         print("The following migrations were started but not completed:")
         for name, started_at in incomplete:
             print(f"  - {name} (started at {started_at})")
@@ -613,7 +441,7 @@ def _check_migration_state(conn: psycopg.Connection) -> None:
         sys.exit(1)
 
 
-def _get_applied_migrations(conn: psycopg.Connection) -> set[str]:
+def get_applied_migrations(conn: psycopg.Connection) -> set[str]:
     """Get set of migration names that have been successfully applied."""
     with conn.cursor() as cur:
         cur.execute("""
@@ -625,7 +453,7 @@ def _get_applied_migrations(conn: psycopg.Connection) -> set[str]:
         return {row[0] for row in cur.fetchall()}
 
 
-def _get_migration_files(migrations_dir: str) -> list[tuple[str, str]]:
+def get_migration_files(migrations_dir: str) -> list[tuple[str, str]]:
     """Get list of migration files sorted by timestamp. Returns (filename, filepath) tuples."""
     if not os.path.exists(migrations_dir):
         return []
@@ -641,7 +469,7 @@ def _get_migration_files(migrations_dir: str) -> list[tuple[str, str]]:
     return files
 
 
-def _apply_migration_file(conn: psycopg.Connection, db: PgDb, migration_name: str, filepath: str) -> None:
+def apply_migration_file(conn: psycopg.Connection, db: PgDb, migration_name: str, filepath: str) -> None:
     """Apply a single migration file."""
     # Read the SQL file
     with open(filepath, "r") as f:
@@ -660,7 +488,7 @@ def _apply_migration_file(conn: psycopg.Connection, db: PgDb, migration_name: st
     full_sql = "\n".join(current_statement).strip()
 
     if not full_sql:
-        print(f"  {_yellow('⊘ No SQL to execute (comments only)')}")
+        print(f"  {yellow('⊘ No SQL to execute (comments only)')}")
         return
 
     # Record migration start
@@ -690,149 +518,9 @@ def _apply_migration_file(conn: psycopg.Connection, db: PgDb, migration_name: st
             )
         conn.commit()
 
-        print(f"  {_green('✓ Applied successfully')}")
+        print(f"  {green('✓ Applied successfully')}")
 
     except Exception as e:
-        print(f"  {_red_bold(f'✗ Error: {e}')}")
+        print(f"  {red_bold(f'✗ Error: {e}')}")
         conn.rollback()
         raise
-
-
-def cmd_migrate(config_path: str | None = None):
-    """Apply migrations from migration files."""
-    config = _load_config(config_path)
-
-    if not config.migrations_dir:
-        print(_red_bold("Error: 'migrations_dir' must be set in config to use 'embar migrate'"))
-        sys.exit(1)
-
-    if not os.path.exists(config.migrations_dir):
-        print(_red_bold(f"Error: Migrations directory '{config.migrations_dir}' not found"))
-        sys.exit(1)
-
-    print(f"Connecting to database: {config.db_url}")
-    conn = psycopg.connect(config.db_url)
-    db = PgDb(conn)
-
-    # Ensure migrations table exists
-    _ensure_migrations_table(conn)
-
-    # Check for incomplete migrations
-    _check_migration_state(conn)
-
-    # Get applied and pending migrations
-    applied = _get_applied_migrations(conn)
-    all_migrations = _get_migration_files(config.migrations_dir)
-
-    pending = [(name, path) for name, path in all_migrations if name not in applied]
-
-    if not pending:
-        print(_green("✓ No pending migrations to apply"))
-        return
-
-    print(f"\nFound {len(pending)} pending migration(s):")
-    for name, _ in pending:
-        print(f"  - {name}")
-    print()
-
-    # Apply each pending migration
-    for i, (migration_name, filepath) in enumerate(pending, 1):
-        print(f"[{i}/{len(pending)}] Applying {migration_name}...")
-
-        try:
-            _apply_migration_file(conn, db, migration_name, filepath)
-        except Exception:
-            print(_red_bold(f"\n✗ Migration failed: {migration_name}"))
-            print("Database state has been rolled back for this migration.")
-            sys.exit(1)
-
-    print(f"\n{_green('✓ All migrations applied successfully!')}")
-
-
-def cmd_push(config_path: str | None = None):
-    """Generate and execute migrations with user confirmation."""
-    config = _load_config(config_path)
-    api_key = _get_api_key()
-    diffs = _generate_diffs(config, api_key)
-
-    if not diffs:
-        print("No migrations needed.")
-        return
-
-    # Execute migrations with confirmation
-    conn = psycopg.connect(config.db_url)
-    db = PgDb(conn)
-    _execute_migrations(diffs, db)
-
-
-def cmd_pull(config_path: str | None = None):
-    """Pull schema from database and print DDL."""
-    config = _load_config(config_path)
-
-    print(f"Connecting to database: {config.db_url}")
-    print("Extracting schema...\n")
-
-    conn = psycopg.connect(config.db_url)
-    schema = _get_schema_from_db(conn)
-
-    if not schema:
-        print("No tables or enums found in database.")
-        return
-
-    print("-- Database Schema")
-    print("-- " + "=" * 78)
-    print()
-
-    for ddl in schema:
-        print(f"-- {ddl.name}")
-        print(ddl.ddl)
-        if ddl.constraints:
-            print()
-            for constraint in ddl.constraints:
-                print(constraint)
-        print()
-        print()
-
-
-def main():
-    """Main entry point for the migration tool."""
-    # Load .env file
-    _load_env_file()
-
-    # Add current directory to Python path for schema imports
-    if os.getcwd() not in sys.path:
-        sys.path.insert(0, os.getcwd())
-
-    # Parse command line arguments
-    if len(sys.argv) < 2:
-        print("Usage: embar <command> [config_path]")
-        print("")
-        print("Commands:")
-        print("  generate    Generate migration and save to file (requires migrations_dir in config)")
-        print("  migrate     Apply migrations from migration files (not yet implemented)")
-        print("  push        Generate and execute migrations with confirmation")
-        print("  pull        Pull schema from database (not yet implemented)")
-        print("")
-        print("Arguments:")
-        print("  config_path    Optional path to config file (default: embar.yml)")
-        sys.exit(1)
-
-    command = sys.argv[1]
-    config_path = sys.argv[2] if len(sys.argv) > 2 else None
-
-    if command == "generate":
-        cmd_generate(config_path)
-    elif command == "migrate":
-        cmd_migrate(config_path)
-    elif command == "push":
-        cmd_push(config_path)
-    elif command == "pull":
-        cmd_pull(config_path)
-    else:
-        print(f"Error: Unknown command '{command}'")
-        print("Valid commands: generate, migrate, push, pull")
-        sys.exit(1)
-
-
-if __name__ == "__main__":
-    main()
