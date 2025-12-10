@@ -1,12 +1,14 @@
 """Insert query builder."""
 
 from collections.abc import Generator, Sequence
-from typing import Any, cast, overload
+from typing import Any, Self, cast, overload
 
 from pydantic import BaseModel, TypeAdapter
 
+from embar.custom_types import PyType
 from embar.db.base import AllDbBase, AsyncDbBase, DbBase
 from embar.model import generate_model
+from embar.query.conflict import OnConflict, OnConflictDoNothing, OnConflictDoUpdate
 from embar.query.query import QueryMany
 from embar.table import Table
 
@@ -53,6 +55,7 @@ class InsertQueryReady[T: Table, Db: AllDbBase]:
     _db: Db
     table: type[T]
     items: Sequence[T]
+    on_conflict: OnConflict | None = None
 
     def __init__(self, table: type[T], db: Db, items: Sequence[T]):
         """
@@ -63,7 +66,15 @@ class InsertQueryReady[T: Table, Db: AllDbBase]:
         self.items = items
 
     def returning(self) -> InsertQueryReturning[T, Db]:
-        return InsertQueryReturning(self.table, self._db, self.items)
+        return InsertQueryReturning(self.table, self._db, self.items, on_conflict=self.on_conflict)
+
+    def on_conflict_do_nothing(self, target: tuple[str] | None = None) -> Self:
+        self.on_conflict = OnConflictDoNothing(target)
+        return self
+
+    def on_conflict_do_update(self, target: tuple[str], update: dict[str, PyType]) -> Self:
+        self.on_conflict = OnConflictDoUpdate(target, update)
+        return self
 
     def __await__(self):
         """
@@ -117,6 +128,7 @@ class InsertQueryReady[T: Table, Db: AllDbBase]:
         assert query.many_params == [{'my_col': 'foo'}]
         ```
         """
+
         column_names = self.table.column_names().values()
         column_names_quoted = [f'"{c}"' for c in column_names]
         columns = ", ".join(column_names_quoted)
@@ -124,6 +136,19 @@ class InsertQueryReady[T: Table, Db: AllDbBase]:
         placeholder_str = ", ".join(placeholders)
         sql = f"INSERT INTO {self.table.fqn()} ({columns}) VALUES ({placeholder_str})"
         values = [it.value_dict() for it in self.items]
+
+        if self.on_conflict is not None:
+            count = -1
+
+            def get_count() -> int:
+                nonlocal count
+                count += 1
+                return count
+
+            conflict_query = self.on_conflict.sql(get_count)
+            values = [{**row, **conflict_query.params} for row in values]
+            sql += f"\n{conflict_query.sql}"
+
         return QueryMany(sql, many_params=values)
 
 
@@ -135,14 +160,16 @@ class InsertQueryReturning[T: Table, Db: AllDbBase]:
     _db: Db
     table: type[T]
     items: Sequence[T]
+    on_conflict: OnConflict | None
 
-    def __init__(self, table: type[T], db: Db, items: Sequence[T]):
+    def __init__(self, table: type[T], db: Db, items: Sequence[T], on_conflict: OnConflict | None):
         """
         Create a new InsertQueryReturning instance.
         """
         self.table = table
         self._db = db
         self.items = items
+        self.on_conflict = on_conflict
 
     def __await__(self) -> Generator[Any, None, Sequence[T]]:
         """
@@ -200,6 +227,19 @@ class InsertQueryReturning[T: Table, Db: AllDbBase]:
         placeholder_str = ", ".join(placeholders)
         sql = f"INSERT INTO {self.table.fqn()} ({columns}) VALUES ({placeholder_str}) RETURNING *"
         values = [it.value_dict() for it in self.items]
+
+        if self.on_conflict is not None:
+            count = -1
+
+            def get_count() -> int:
+                nonlocal count
+                count += 1
+                return count
+
+            conflict_query = self.on_conflict.sql(get_count)
+            values = [{**row, **conflict_query.params} for row in values]
+            sql += f"\n{conflict_query.sql}"
+
         return QueryMany(sql, many_params=values)
 
     def _get_model(self) -> type[BaseModel]:
