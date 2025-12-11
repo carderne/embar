@@ -45,6 +45,7 @@ nav:
       - Delete: query/delete.md
       - Where: query/where.md
       - Joins: query/joins.md
+      - Transactions: query/transactions.md
       - Raw SQL: query/raw-sql.md
 
     - Integration:

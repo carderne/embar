@@ -2,6 +2,7 @@
 
 import types
 from collections.abc import Sequence
+from contextlib import AbstractAsyncContextManager, AbstractContextManager
 from string.templatelib import Template
 from typing import (
     Any,
@@ -10,7 +11,7 @@ from typing import (
     override,
 )
 
-from psycopg import AsyncConnection, Connection
+from psycopg import AsyncConnection, AsyncTransaction, Connection, Transaction
 from psycopg.types.json import Json
 from pydantic import BaseModel
 
@@ -34,20 +35,37 @@ class PgDb(DbBase):
     """
 
     db_type = "postgres"
-    _conn: Connection
+    conn: Connection
+    _commit_after_execute: bool = True
 
     def __init__(self, connection: Connection):
         """
         Create a new PgDb instance.
         """
-        self._conn = connection
+        self.conn = connection
 
     def close(self):
         """
         Close the database connection.
         """
-        if self._conn:
-            self._conn.close()
+        if self.conn:
+            self.conn.close()
+
+    def transaction(self) -> PgDbTransaction:
+        """
+        Start an isolated transaction.
+
+        ```python notest
+        from embar.db.pg import PgDb
+        db = PgDb(None)
+
+        with db.transaction() as tx:
+            ...
+        ```
+        """
+        db_copy = PgDb(self.conn)
+        db_copy._commit_after_execute = False
+        return PgDbTransaction(db_copy)
 
     def select[M: BaseModel](self, model: type[M]) -> SelectQuery[M, Self]:
         """
@@ -104,8 +122,9 @@ class PgDb(DbBase):
         """
         Execute a query without returning results.
         """
-        self._conn.execute(query.sql, query.params)  # pyright:ignore[reportArgumentType]
-        self._conn.commit()
+        self.conn.execute(query.sql, query.params)  # pyright:ignore[reportArgumentType]
+        if self._commit_after_execute:
+            self.conn.commit()
 
     @override
     def executemany(self, query: QueryMany):
@@ -113,16 +132,17 @@ class PgDb(DbBase):
         Execute a query with multiple parameter sets.
         """
         params = _jsonify_dicts(query.many_params)
-        with self._conn.cursor() as cur:
+        with self.conn.cursor() as cur:
             cur.executemany(query.sql, params)  # pyright:ignore[reportArgumentType]
-        self._conn.commit()
+        if self._commit_after_execute:
+            self.conn.commit()
 
     @override
     def fetch(self, query: QuerySingle | QueryMany) -> list[dict[str, Any]]:
         """
         Execute a query and return results as a list of dicts.
         """
-        with self._conn.cursor() as cur:
+        with self.conn.cursor() as cur:
             if isinstance(query, QuerySingle):
                 cur.execute(query.sql, query.params)  # pyright:ignore[reportArgumentType]
             else:
@@ -135,7 +155,8 @@ class PgDb(DbBase):
             for row in cur.fetchall():
                 data = dict(zip(columns, row))
                 results.append(data)
-        self._conn.commit()  # Commit after SELECT
+        if self._commit_after_execute:
+            self.conn.commit()  # Commit after SELECT
         return results
 
     @override
@@ -148,9 +169,10 @@ class PgDb(DbBase):
         if tables is None:
             return
         table_names = ", ".join(tables)
-        with self._conn.cursor() as cursor:
+        with self.conn.cursor() as cursor:
             cursor.execute(f"TRUNCATE TABLE {table_names} CASCADE")  # pyright:ignore[reportArgumentType]
-            self._conn.commit()
+            if self._commit_after_execute:
+                self.conn.commit()
 
     @override
     def drop_tables(self, schema: str | None = None):
@@ -162,12 +184,13 @@ class PgDb(DbBase):
         if tables is None:
             return
         table_names = ", ".join(tables)
-        with self._conn.cursor() as cursor:
+        with self.conn.cursor() as cursor:
             cursor.execute(f"DROP TABLE {table_names} CASCADE")  # pyright:ignore[reportArgumentType]
-            self._conn.commit()
+            if self._commit_after_execute:
+                self.conn.commit()
 
     def _get_live_table_names(self, schema: str) -> list[str] | None:
-        with self._conn.cursor() as cursor:
+        with self.conn.cursor() as cursor:
             # Get all table names from public schema
             cursor.execute(f"SELECT tablename FROM pg_tables WHERE schemaname = '{schema}'")  # pyright:ignore[reportArgumentType]
             tables = cursor.fetchall()
@@ -177,6 +200,33 @@ class PgDb(DbBase):
         return table_names
 
 
+class PgDbTransaction:
+    """
+    Transaction context manager for PgDb.
+    """
+
+    _db: PgDb
+    _tx: AbstractContextManager[Transaction] | None = None
+
+    def __init__(self, db: PgDb):
+        self._db = db
+
+    def __enter__(self) -> PgDb:
+        self._tx = self._db.conn.transaction()
+        self._tx.__enter__()
+        return self._db
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: types.TracebackType | None,
+    ):
+        if self._tx is None:
+            return False
+        return self._tx.__exit__(exc_type, exc_val, exc_tb)
+
+
 @final
 class AsyncPgDb(AsyncDbBase):
     """
@@ -184,20 +234,37 @@ class AsyncPgDb(AsyncDbBase):
     """
 
     db_type = "postgres"
-    _conn: AsyncConnection
+    conn: AsyncConnection
+    _commit_after_execute: bool = True
 
     def __init__(self, connection: AsyncConnection):
         """
         Create a new AsyncPgDb instance.
         """
-        self._conn = connection
+        self.conn = connection
 
     async def close(self):
         """
         Close the database connection.
         """
-        if self._conn:
-            await self._conn.close()
+        if self.conn:
+            await self.conn.close()
+
+    def transaction(self) -> AsyncPgDbTransaction:
+        """
+        Start an isolated transaction.
+
+        ```python notest
+        from embar.db.pg import AsyncPgDb
+        db = AsyncPgDb(None)
+
+        async with db.transaction() as tx:
+            ...
+        ```
+        """
+        db_copy = AsyncPgDb(self.conn)
+        db_copy._commit_after_execute = False
+        return AsyncPgDbTransaction(db_copy)
 
     def select[M: BaseModel](self, model: type[M]) -> SelectQuery[M, Self]:
         """
@@ -254,7 +321,9 @@ class AsyncPgDb(AsyncDbBase):
         """
         Execute a query without returning results.
         """
-        await self._conn.execute(query.sql, query.params)  # pyright:ignore[reportArgumentType]
+        await self.conn.execute(query.sql, query.params)  # pyright:ignore[reportArgumentType]
+        if self._commit_after_execute:
+            await self.conn.commit()
 
     @override
     async def executemany(self, query: QueryMany):
@@ -262,16 +331,17 @@ class AsyncPgDb(AsyncDbBase):
         Execute a query with multiple parameter sets.
         """
         params = _jsonify_dicts(query.many_params)
-        async with self._conn.cursor() as cur:
+        async with self.conn.cursor() as cur:
             await cur.executemany(query.sql, params)  # pyright:ignore[reportArgumentType]
-            await self._conn.commit()
+            if self._commit_after_execute:
+                await self.conn.commit()
 
     @override
     async def fetch(self, query: QuerySingle | QueryMany) -> list[dict[str, Any]]:
         """
         Execute a query and return results as a list of dicts.
         """
-        async with self._conn.cursor() as cur:
+        async with self.conn.cursor() as cur:
             if isinstance(query, QuerySingle):
                 await cur.execute(query.sql, query.params)  # pyright:ignore[reportArgumentType]
             else:
@@ -285,7 +355,8 @@ class AsyncPgDb(AsyncDbBase):
             for row in await cur.fetchall():
                 data = dict(zip(columns, row))
                 results.append(data)
-        await self._conn.commit()
+        if self._commit_after_execute:
+            await self.conn.commit()
         return results
 
     @override
@@ -298,9 +369,10 @@ class AsyncPgDb(AsyncDbBase):
         if tables is None:
             return
         table_names = ", ".join(tables)
-        async with self._conn.cursor() as cursor:
+        async with self.conn.cursor() as cursor:
             await cursor.execute(f"TRUNCATE TABLE {table_names} CASCADE")  # pyright:ignore[reportArgumentType]
-            await self._conn.commit()
+            if self._commit_after_execute:
+                await self.conn.commit()
 
     @override
     async def drop_tables(self, schema: str | None = None):
@@ -312,12 +384,13 @@ class AsyncPgDb(AsyncDbBase):
         if tables is None:
             return
         table_names = ", ".join(tables)
-        async with self._conn.cursor() as cursor:
+        async with self.conn.cursor() as cursor:
             await cursor.execute(f"DROP TABLE {table_names} CASCADE")  # pyright:ignore[reportArgumentType]
-            await self._conn.commit()
+            if self._commit_after_execute:
+                await self.conn.commit()
 
     async def _get_live_table_names(self, schema: str) -> list[str] | None:
-        async with self._conn.cursor() as cursor:
+        async with self.conn.cursor() as cursor:
             # Get all table names from public schema
             await cursor.execute(f"SELECT tablename FROM pg_tables WHERE schemaname = '{schema}'")  # pyright:ignore[reportArgumentType]
             tables = await cursor.fetchall()
@@ -325,6 +398,33 @@ class AsyncPgDb(AsyncDbBase):
                 return None
             table_names = [f'"{table[0]}"' for table in tables]
         return table_names
+
+
+class AsyncPgDbTransaction:
+    """
+    Transaction context manager for AsyncPgDb.
+    """
+
+    _db: AsyncPgDb
+    _tx: AbstractAsyncContextManager[AsyncTransaction] | None = None
+
+    def __init__(self, db: AsyncPgDb):
+        self._db = db
+
+    async def __aenter__(self) -> AsyncPgDb:
+        self._tx = self._db.conn.transaction()
+        await self._tx.__aenter__()
+        return self._db
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: types.TracebackType | None,
+    ):
+        if self._tx is None:
+            return False
+        return await self._tx.__aexit__(exc_type, exc_val, exc_tb)
 
 
 def _jsonify_dicts(params: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:

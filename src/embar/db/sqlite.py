@@ -35,20 +35,30 @@ class SqliteDb(DbBase):
     """
 
     db_type = "sqlite"
+    conn: sqlite3.Connection
+    _commit_after_execute: bool = True
 
     def __init__(self, connection: sqlite3.Connection):
         """
         Create a new SqliteDb instance.
         """
-        self._conn = connection
-        self._conn.row_factory = sqlite3.Row
+        self.conn = connection
+        self.conn.row_factory = sqlite3.Row
 
     def close(self):
         """
         Close the database connection.
         """
-        if self._conn:
-            self._conn.close()
+        if self.conn:
+            self.conn.close()
+
+    def transaction(self) -> SqliteDbTransaction:
+        """
+        Start an isolated transaction.
+        """
+        db_copy = SqliteDb(self.conn)
+        db_copy._commit_after_execute = False
+        return SqliteDbTransaction(db_copy)
 
     def select[M: BaseModel](self, model: type[M]) -> SelectQuery[M, Self]:
         """
@@ -106,8 +116,9 @@ class SqliteDb(DbBase):
         Execute a query without returning results.
         """
         sql = _convert_params(query.sql)
-        self._conn.execute(sql, query.params)
-        self._conn.commit()
+        self.conn.execute(sql, query.params)
+        if self._commit_after_execute:
+            self.conn.commit()
 
     @override
     def executemany(self, query: QueryMany):
@@ -115,8 +126,9 @@ class SqliteDb(DbBase):
         Execute a query with multiple parameter sets.
         """
         sql = _convert_params(query.sql)
-        self._conn.executemany(sql, query.many_params)
-        self._conn.commit()
+        self.conn.executemany(sql, query.many_params)
+        if self._commit_after_execute:
+            self.conn.commit()
 
     @override
     def fetch(self, query: QuerySingle | QueryMany) -> list[dict[str, Any]]:
@@ -127,9 +139,9 @@ class SqliteDb(DbBase):
         """
         sql = _convert_params(query.sql)
         if isinstance(query, QuerySingle):
-            cur = self._conn.execute(sql, query.params)
+            cur = self.conn.execute(sql, query.params)
         else:
-            cur = self._conn.executemany(sql, query.many_params)
+            cur = self.conn.executemany(sql, query.many_params)
 
         if cur.description is None:
             return []
@@ -154,28 +166,57 @@ class SqliteDb(DbBase):
         """
         Truncate all tables in the database.
         """
-        cursor = self._conn.cursor()
+        cursor = self.conn.cursor()
         tables = self._get_live_table_names()
         for (table_name,) in tables:
             cursor.execute(f"DELETE FROM {table_name}")
-        self._conn.commit()
+        if self._commit_after_execute:
+            self.conn.commit()
 
     @override
     def drop_tables(self, schema: str | None = None):
         """
         Drop all tables in the database.
         """
-        cursor = self._conn.cursor()
+        cursor = self.conn.cursor()
         tables = self._get_live_table_names()
         for (table_name,) in tables:
             cursor.execute(f"DROP TABLE {table_name}")
-        self._conn.commit()
+        if self._commit_after_execute:
+            self.conn.commit()
 
     def _get_live_table_names(self) -> list[str]:
-        cursor = self._conn.cursor()
+        cursor = self.conn.cursor()
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
         tables: list[str] = cursor.fetchall()
         return tables
+
+
+class SqliteDbTransaction:
+    """
+    Transaction context manager for SqliteDb
+    """
+
+    _db: SqliteDb
+
+    def __init__(self, db: SqliteDb):
+        self._db = db
+
+    def __enter__(self) -> SqliteDb:
+        self._db.conn.execute("BEGIN")
+        return self._db
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: types.TracebackType | None,
+    ) -> bool:
+        if exc_type is None:
+            self._db.conn.commit()
+        else:
+            self._db.conn.rollback()
+        return False
 
 
 def _convert_params(query: str) -> str:
