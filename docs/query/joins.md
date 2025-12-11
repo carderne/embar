@@ -44,7 +44,7 @@ async def basic():
     db = await get_db()
     users = await (
         db.select(UserWithEmail)
-        .fromm(User)
+        .from_(User)
         .left_join(Message, Eq(User.id, Message.user_id))
     )
 
@@ -72,7 +72,7 @@ async def left_join():
     db = await get_db()
     users = await (
         db.select(SelectAll)
-        .fromm(User)
+        .from_(User)
         .left_join(Message, Eq(User.id, Message.user_id))
     )
 
@@ -96,7 +96,7 @@ async def inner_join():
     db = await get_db()
     users = await (
         db.select(SelectAll)
-        .fromm(User)
+        .from_(User)
         .inner_join(Message, Eq(User.id, Message.user_id))
     )
 
@@ -120,7 +120,7 @@ async def right_join():
     db = await get_db()
     users = await (
         db.select(SelectAll)
-        .fromm(User)
+        .from_(User)
         .right_join(Message, Eq(User.id, Message.user_id))
     )
 
@@ -144,7 +144,7 @@ async def full_join():
     db = await get_db()
     users = await (
         db.select(SelectAll)
-        .fromm(User)
+        .from_(User)
         .full_join(Message, Eq(User.id, Message.user_id))
     )
 
@@ -168,7 +168,7 @@ async def cross_join():
     db = await get_db()
     users = await (
         db.select(SelectAll)
-        .fromm(User)
+        .from_(User)
         .cross_join(Message)
     )
 
@@ -196,7 +196,7 @@ async def equality():
     db = await get_db()
     await (
         db.select(SelectAll)
-        .fromm(User)
+        .from_(User)
         .left_join(Message, Eq(User.id, Message.user_id))
     )
 
@@ -215,14 +215,14 @@ async def operators():
     # Greater than
     await (
         db.select(SelectAll)
-        .fromm(User)
+        .from_(User)
         .left_join(Message, Gt(User.id, Message.user_id))
     )
 
     # Multiple conditions
     await (
         db.select(SelectAll)
-        .fromm(User)
+        .from_(User)
         .left_join(Message, And(
             Eq(User.id, Message.user_id),
             Gt(Message.id, 100)
@@ -251,7 +251,7 @@ async def arrays():
     db = await get_db()
     users = await (
         db.select(UserWithMessages)
-        .fromm(User)
+        .from_(User)
         .left_join(Message, Eq(User.id, Message.user_id))
         .group_by(User.id)
     )
@@ -285,7 +285,7 @@ async def objects():
     db = await get_db()
     users = await (
         db.select(UserWithFullMessages)
-        .fromm(User)
+        .from_(User)
         .left_join(Message, Eq(User.id, Message.user_id))
         .group_by(User.id)
     )
@@ -339,7 +339,7 @@ async def multiple():
     db = await get_db([User, Message, Comment])
     users = await (
         db.select(UserWithData)
-        .fromm(User)
+        .from_(User)
         .left_join(Message, Eq(User.id, Message.user_id))
         .left_join(Comment, Eq(Message.id, Comment.message_id))
         .group_by(User.id)
@@ -377,7 +377,7 @@ async def join_where():
     db = await get_db()
     users = await (
         db.select(UserFiltered)
-        .fromm(User)
+        .from_(User)
         .left_join(Message, Eq(User.id, Message.user_id))
         .where(Like(User.email, "%@example.com"))
         .group_by(User.id)
@@ -413,7 +413,7 @@ async def nested():
     db = await get_db()
     messages = await (
         db.select(MessageWithUser)
-        .fromm(Message)
+        .from_(Message)
         .left_join(User, Eq(User.id, Message.user_id))
     )
     # [MessageWithUser(

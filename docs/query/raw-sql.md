@@ -181,7 +181,7 @@ async def select():
     db = await get_db([User, Message])
     users = await (
         db.select(UserWithCount)
-        .fromm(User)
+        .from_(User)
         .left_join(Message, Eq(User.id, Message.user_id))
         .group_by(User.id)
     )
@@ -214,7 +214,7 @@ class UserWithTimestamp(BaseModel):
 
 async def timestamp():
     db = await get_db()
-    users = await db.select(UserWithTimestamp).fromm(User)
+    users = await db.select(UserWithTimestamp).from_(User)
 
 asyncio.run(timestamp())
 ```
@@ -249,7 +249,7 @@ async def mix():
     db = await get_db()
     users = await (
         db.select(UserStats)
-        .fromm(User)
+        .from_(User)
         .where(Gt(User.id, 10))
         .limit(5)
     )

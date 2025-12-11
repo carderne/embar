@@ -16,7 +16,7 @@ async def test_await_on_async_pg(async_pg_db: AsyncPgDb):
     user = User(id=1, email="john@foo.com")
     await db.insert(User).values(user)
 
-    res = await db.select(User.all()).fromm(User)
+    res = await db.select(User.all()).from_(User)
 
     assert len(res) == 1
     got = res[0]
@@ -31,7 +31,7 @@ def test_no_await_on_async_pg(async_pg_db: AsyncPgDb):
     user = User(id=1, email="john@foo.com")
     db.insert(User).values(user)
 
-    res = db.select(User.all()).fromm(User)
+    res = db.select(User.all()).from_(User)
 
     # nothing has been executed
     assert isinstance(res, SelectQueryReady)
@@ -46,7 +46,7 @@ async def test_await_on_sync_pg(pg_db: PgDb):
     user = User(id=1, email="john@foo.com")
     await db.insert(User).values(user)
 
-    res = await db.select(User.all()).fromm(User)
+    res = await db.select(User.all()).from_(User)
 
     assert len(res) == 1
     got = res[0]
@@ -62,7 +62,7 @@ def test_no_await_on_sync_pg(pg_db: PgDb):
     db.insert(User).values(user).run()
 
     # note the added .run()
-    res = db.select(User.all()).fromm(User).run()
+    res = db.select(User.all()).from_(User).run()
 
     assert len(res) == 1
     got = res[0]
@@ -78,7 +78,7 @@ async def test_await_on_sqlite(sqlite_db: SqliteDb):
     user = User(id=1, email="john@foo.com")
     await db.insert(User).values(user)
 
-    res = await db.select(User.all()).fromm(User)
+    res = await db.select(User.all()).from_(User)
 
     assert len(res) == 1
     got = res[0]
@@ -94,7 +94,7 @@ def test_no_await_on_sqlite(sqlite_db: SqliteDb):
     db.insert(User).values(user).run()
 
     # note the added .run()
-    res = db.select(User.all()).fromm(User).run()
+    res = db.select(User.all()).from_(User).run()
 
     assert len(res) == 1
     got = res[0]

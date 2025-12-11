@@ -28,7 +28,7 @@ async def test_postgres_jsonb(pg_db: PgDb):
     # fmt: off
     res = (
         db.select(TableWithJsonB.all())
-        .fromm(TableWithJsonB)
+        .from_(TableWithJsonB)
         .run()
     )
     # fmt: on
@@ -96,7 +96,7 @@ async def test_postgres_enum(pg_db: PgDb):
     # fmt: off
     res = (
         db.select(TableWithStatus.all())
-        .fromm(TableWithStatus)
+        .from_(TableWithStatus)
         .run()
     )
     # fmt: on

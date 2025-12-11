@@ -89,7 +89,7 @@ async def app():
 
     users = await (
         db.select(UserSel)
-        .fromm(User)
+        .from_(User)
         .left_join(Message, Eq(User.id, Message.user_id))
         .where(Or(Eq(User.id, 1), Like(User.email, "foo%")))
         .group_by(User.id)
@@ -106,7 +106,7 @@ async def app():
 
     users = await (
         db.select(UserHydrated)
-        .fromm(User)
+        .from_(User)
         .left_join(Message, Eq(User.id, Message.user_id))
         .group_by(User.id)
         .limit(2)
@@ -124,7 +124,7 @@ async def app():
     # method:
     users_query = (
         db.select(UserHydrated)
-        .fromm(User)
+        .from_(User)
         .left_join(Message, Eq(User.id, Message.user_id))
         .group_by(User.id)
         .sql()

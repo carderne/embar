@@ -20,7 +20,7 @@ def test_insert_on_conflict_do_nothing(db: SqliteDb | PgDb):
     class UserSel(BaseModel):
         email: Annotated[str, User.email]
 
-    res = db.select(UserSel).fromm(User).run()
+    res = db.select(UserSel).from_(User).run()
     assert len(res) == 1
     assert res[0].email == "alice@example.com"
 
@@ -37,7 +37,7 @@ def test_insert_on_conflict_do_update(db: SqliteDb | PgDb):
     class UserSel(BaseModel):
         email: Annotated[str, User.email]
 
-    res = db.select(UserSel).fromm(User).run()
+    res = db.select(UserSel).from_(User).run()
     assert len(res) == 1
     assert res[0].email == "updated@example.com"
 

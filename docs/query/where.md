@@ -30,7 +30,7 @@ async def get_db(tables: list[Table] = None):
 
 async def basic():
     db = await get_db()
-    users = await db.select(User.all()).fromm(User).where(Eq(User.id, 1))
+    users = await db.select(User.all()).from_(User).where(Eq(User.id, 1))
 
 asyncio.run(basic())
 ```
@@ -55,10 +55,10 @@ from embar.query.where import Eq, Ne
 async def equality():
     db = await get_db()
     # Equal
-    await db.select(User.all()).fromm(User).where(Eq(User.id, 1))
+    await db.select(User.all()).from_(User).where(Eq(User.id, 1))
 
     # Not equal
-    await db.select(User.all()).fromm(User).where(Ne(User.id, 1))
+    await db.select(User.all()).from_(User).where(Ne(User.id, 1))
 
 asyncio.run(equality())
 ```
@@ -73,16 +73,16 @@ from embar.query.where import Gt, Gte, Lt, Lte
 async def numeric():
     db = await get_db()
     # Greater than
-    await db.select(User.all()).fromm(User).where(Gt(User.id, 10))
+    await db.select(User.all()).from_(User).where(Gt(User.id, 10))
 
     # Greater than or equal
-    await db.select(User.all()).fromm(User).where(Gte(User.id, 10))
+    await db.select(User.all()).from_(User).where(Gte(User.id, 10))
 
     # Less than
-    await db.select(User.all()).fromm(User).where(Lt(User.id, 100))
+    await db.select(User.all()).from_(User).where(Lt(User.id, 100))
 
     # Less than or equal
-    await db.select(User.all()).fromm(User).where(Lte(User.id, 100))
+    await db.select(User.all()).from_(User).where(Lte(User.id, 100))
 
 asyncio.run(numeric())
 ```
@@ -115,13 +115,13 @@ from embar.query.where import Like
 async def like():
     db = await get_db()
     # Starts with "alice"
-    await db.select(User.all()).fromm(User).where(Like(User.email, "alice%"))
+    await db.select(User.all()).from_(User).where(Like(User.email, "alice%"))
 
     # Ends with "@example.com"
-    await db.select(User.all()).fromm(User).where(Like(User.email, "%@example.com"))
+    await db.select(User.all()).from_(User).where(Like(User.email, "%@example.com"))
 
     # Contains "test"
-    await db.select(User.all()).fromm(User).where(Like(User.email, "%test%"))
+    await db.select(User.all()).from_(User).where(Like(User.email, "%test%"))
 
 asyncio.run(like())
 ```
@@ -141,7 +141,7 @@ from embar.query.where import Ilike
 
 async def insensitive():
     db = await get_db()
-    await db.select(User.all()).fromm(User).where(Ilike(User.email, "ALICE%"))
+    await db.select(User.all()).from_(User).where(Ilike(User.email, "ALICE%"))
 
 asyncio.run(insensitive())
 ```
@@ -161,7 +161,7 @@ from embar.query.where import NotLike
 
 async def notlike():
     db = await get_db()
-    await db.select(User.all()).fromm(User).where(NotLike(User.email, "%spam%"))
+    await db.select(User.all()).from_(User).where(NotLike(User.email, "%spam%"))
 
 asyncio.run(notlike())
 ```
@@ -182,10 +182,10 @@ from embar.query.where import IsNull, IsNotNull
 async def null():
     db = await get_db()
     # Is null
-    await db.select(User.all()).fromm(User).where(IsNull(User.email))
+    await db.select(User.all()).from_(User).where(IsNull(User.email))
 
     # Is not null
-    await db.select(User.all()).fromm(User).where(IsNotNull(User.email))
+    await db.select(User.all()).from_(User).where(IsNotNull(User.email))
 
 asyncio.run(null())
 ```
@@ -211,7 +211,7 @@ from embar.query.where import InArray
 
 async def array():
     db = await get_db()
-    await db.select(User.all()).fromm(User).where(InArray(User.id, [1, 2, 3]))
+    await db.select(User.all()).from_(User).where(InArray(User.id, [1, 2, 3]))
 
 asyncio.run(array())
 ```
@@ -233,7 +233,7 @@ from embar.query.where import NotInArray
 
 async def not_in_array():
     db = await get_db()
-    await db.select(User.all()).fromm(User).where(NotInArray(User.id, [5, 10, 15]))
+    await db.select(User.all()).from_(User).where(NotInArray(User.id, [5, 10, 15]))
 
 asyncio.run(not_in_array())
 ```
@@ -255,7 +255,7 @@ from embar.query.where import Between
 
 async def between():
     db = await get_db()
-    await db.select(User.all()).fromm(User).where(Between(User.id, 10, 20))
+    await db.select(User.all()).from_(User).where(Between(User.id, 10, 20))
 
 asyncio.run(between())
 ```
@@ -275,7 +275,7 @@ from embar.query.where import NotBetween
 
 async def not_between():
     db = await get_db()
-    await db.select(User.all()).fromm(User).where(NotBetween(User.id, 10, 20))
+    await db.select(User.all()).from_(User).where(NotBetween(User.id, 10, 20))
 
 asyncio.run(not_between())
 ```
@@ -299,7 +299,7 @@ async def op_and():
     db = await get_db()
     await (
         db.select(User.all())
-        .fromm(User)
+        .from_(User)
         .where(And(
             Gt(User.id, 10),
             Like(User.email, "%@example.com")
@@ -326,7 +326,7 @@ async def op_or():
     db = await get_db()
     await (
         db.select(User.all())
-        .fromm(User)
+        .from_(User)
         .where(Or(
             Eq(User.id, 1),
             Eq(User.id, 2)
@@ -351,7 +351,7 @@ from embar.query.where import Not, Eq
 
 async def op_not():
     db = await get_db()
-    await db.select(User.all()).fromm(User).where(Not(Eq(User.id, 1)))
+    await db.select(User.all()).from_(User).where(Not(Eq(User.id, 1)))
 
 asyncio.run(op_not())
 ```
@@ -371,7 +371,7 @@ async def complex():
     db = await get_db()
     await (
         db.select(User.all())
-        .fromm(User)
+        .from_(User)
         .where(Or(
             And(
                 Gt(User.id, 10),
@@ -410,11 +410,11 @@ class Message(Table):
 
 async def exists():
     db = await get_db([User, Message])
-    subquery = db.select(User.all()).fromm(Message).where(Eq(Message.user_id, User.id))
+    subquery = db.select(User.all()).from_(Message).where(Eq(Message.user_id, User.id))
 
     users = await (
         db.select(User.all())
-        .fromm(User)
+        .from_(User)
         .where(Exists(subquery))
     )
 
@@ -441,10 +441,10 @@ from embar.query.where import NotExists
 
 async def notexists():
     db = await get_db()
-    subquery = db.select(User.all()).fromm(Message).where(Eq(Message.user_id, User.id))
+    subquery = db.select(User.all()).from_(Message).where(Eq(Message.user_id, User.id))
     users = await (
         db.select(User.all())
-        .fromm(User)
+        .from_(User)
         .where(NotExists(subquery))
     )
 
@@ -471,7 +471,7 @@ async def compare():
     db = await get_db([Order])
     orders = await (
         db.select(Order.all())
-        .fromm(Order)
+        .from_(Order)
         .where(Gt(Order.updated_at, Order.created_at))
     )
 
@@ -495,7 +495,7 @@ async def raw_sql():
     db = await get_db()
     query = (
         db.select(User.all())
-        .fromm(User)
+        .from_(User)
         .where(And(
             Gt(User.id, 10),
             Like(User.email, "%@example.com")

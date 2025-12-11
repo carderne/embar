@@ -28,7 +28,7 @@ async def test_select_string_array(db_loaded: SqliteDb | PgDb):
     # fmt: off
     res = (
         db.select(UserSel)
-        .fromm(User)
+        .from_(User)
         .left_join(Message, Eq(User.id, Message.user_id))
         .where(Or(
             Eq(User.id, 1),
@@ -57,7 +57,7 @@ def test_select_json_array(db_loaded: SqliteDb | PgDb):
     # fmt: off
     got = (
         db.select(UserFullMessages)
-        .fromm(User)
+        .from_(User)
         .left_join(Message, Eq(User.id, Message.user_id))
         .group_by(User.id)
         .limit(2)
@@ -82,7 +82,7 @@ def test_select_json(db_loaded: SqliteDb | PgDb):
     # fmt: off
     res = (
         db.select(MessageSel)
-        .fromm(Message)
+        .from_(Message)
         .left_join(User, Eq(User.id, Message.user_id))
         .limit(2)
         .run()
@@ -105,7 +105,7 @@ def test_select_subquery(db_loaded: SqliteDb | PgDb):
     # fmt: off
     inner_query = (
         db.select(MessageSel)
-        .fromm(Message)
+        .from_(Message)
         .where(Eq(Message.id, 100))
     )
     # fmt: on
@@ -113,7 +113,7 @@ def test_select_subquery(db_loaded: SqliteDb | PgDb):
     # fmt: off
     res = (
         db.select(MessageSel)
-        .fromm(Message)
+        .from_(Message)
         .where(Exists(inner_query))
         .run()
     )

@@ -144,7 +144,7 @@ async def main():
     db = AsyncPgDb(...)
     users = await (
         db.select(UserWithMessages)
-        .fromm(User)
+        .from_(User)
         .left_join(Message, Eq(User.id, Message.user_id))
         .group_by(User.id)
     )

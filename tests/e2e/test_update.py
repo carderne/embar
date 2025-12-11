@@ -27,7 +27,7 @@ def test_update_row(db_loaded: SqliteDb | PgDb):
 
     res = (
         db.select(MessageSel)
-        .fromm(Message)
+        .from_(Message)
         .where(
             Eq(Message.id, 1),
         )

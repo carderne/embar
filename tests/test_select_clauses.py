@@ -24,7 +24,7 @@ def test_order_by_bare_column(db_dummy: PgDb):
     # fmt: off
     query = (
         db.select(UserSel)
-        .fromm(User)
+        .from_(User)
         .order_by(User.email)
     )
     # fmt: on
@@ -45,7 +45,7 @@ def test_order_by_asc(db_dummy: PgDb):
     # fmt: off
     query = (
         db.select(UserSel)
-        .fromm(User)
+        .from_(User)
         .order_by(Asc(User.email))
     )
     # fmt: on
@@ -67,7 +67,7 @@ def test_order_by_desc(db_dummy: PgDb):
     # fmt: off
     query = (
         db.select(UserSel)
-        .fromm(User)
+        .from_(User)
         .order_by(Desc(User.id))
     )
     # fmt: on
@@ -89,7 +89,7 @@ def test_order_by_multiple(db_dummy: PgDb):
     # fmt: off
     query = (
         db.select(UserSel)
-        .fromm(User)
+        .from_(User)
         .order_by(Asc(User.email), Desc(User.id))
     )
     # fmt: on
@@ -112,7 +112,7 @@ def test_order_by_chained(db_dummy: PgDb):
     # fmt: off
     query = (
         db.select(UserSel)
-        .fromm(User)
+        .from_(User)
         .order_by(Asc(User.email))
         .order_by(Desc(User.id))
     )
@@ -135,7 +135,7 @@ def test_order_by_with_nulls_first(db_dummy: PgDb):
     # fmt: off
     query = (
         db.select(MessageSel)
-        .fromm(Message)
+        .from_(Message)
         .order_by(Asc(Message.content, nulls="first"))
     )
     # fmt: on
@@ -156,7 +156,7 @@ def test_order_by_with_nulls_last(db_dummy: PgDb):
     # fmt: off
     query = (
         db.select(MessageSel)
-        .fromm(Message)
+        .from_(Message)
         .order_by(Desc(Message.content, nulls="last"))
     )
     # fmt: on
@@ -177,7 +177,7 @@ def test_order_by_raw_sql(db_dummy: PgDb):
     # fmt: off
     query = (
         db.select(UserSel)
-        .fromm(User)
+        .from_(User)
         .order_by(Sql(t"{User.id} DESC"))
     )
     # fmt: on
@@ -194,7 +194,7 @@ def test_limit_with_offset(db_dummy: PgDb):
     # fmt: off
     query = (
         db.select(SelectAll)
-        .fromm(User)
+        .from_(User)
         .limit(5)
         .offset(10)
     )
@@ -216,7 +216,7 @@ def test_having_clause(db_dummy: PgDb):
     # fmt: off
     query = (
         db.select(UserSel)
-        .fromm(User)
+        .from_(User)
         .group_by(User.id)
         .having(Gt(User.id, 0))
     )
@@ -239,7 +239,7 @@ def test_full_query_with_many_clauses(db_dummy: PgDb):
     # fmt: off
     query = (
         db.select(UserSel)
-        .fromm(User)
+        .from_(User)
         .where(Gt(User.id, 0))
         .group_by(User.id)
         .having(Gt(User.id, 0))

@@ -3,6 +3,7 @@
 from collections.abc import Generator, Sequence
 from textwrap import dedent
 from typing import Any, Self, cast, overload
+from warnings import deprecated
 
 from pydantic import BaseModel, TypeAdapter
 
@@ -39,9 +40,16 @@ class SelectQuery[M: BaseModel, Db: AllDbBase]:
         self.model = model
         self._db = db
 
+    @deprecated("Use from_ instead")
     def fromm[T: Table](self, table: type[T]) -> SelectQueryReady[M, T, Db]:
         """
         The silly name is because `from` is a reserved keyword.
+        """
+        return SelectQueryReady[M, T, Db](model=self.model, table=table, db=self._db, distinct=False)
+
+    def from_[T: Table](self, table: type[T]) -> SelectQueryReady[M, T, Db]:
+        """
+        The underscore is because `from` is a reserved keyword.
         """
         return SelectQueryReady[M, T, Db](model=self.model, table=table, db=self._db, distinct=False)
 
@@ -63,9 +71,16 @@ class SelectDistinctQuery[M: BaseModel, Db: AllDbBase]:
         self.model = model
         self._db = db
 
+    @deprecated("Use from_ instead")
     def fromm[T: Table](self, table: type[T]) -> SelectQueryReady[M, T, Db]:
         """
         The silly name is because `from` is a reserved keyword.
+        """
+        return SelectQueryReady[M, T, Db](model=self.model, table=table, db=self._db, distinct=True)
+
+    def from_[T: Table](self, table: type[T]) -> SelectQueryReady[M, T, Db]:
+        """
+        The underscore is because `from` is a reserved keyword.
         """
         return SelectQueryReady[M, T, Db](model=self.model, table=table, db=self._db, distinct=True)
 
@@ -76,13 +91,13 @@ class SelectQueryReady[M: BaseModel, T: Table, Db: AllDbBase]:
 
     It is generic over the `Model` made, `Table` being inserted into, and the database being used.
 
-    `SelectQueryReady` is returned by [`fromm`][embar.query.select.SelectQuery.fromm].
+    `SelectQueryReady` is returned by [`from_`][embar.query.select.SelectQuery.from_].
 
     ```python
     from embar.db.pg import PgDb
     from embar.query.select import SelectQueryReady
     db = PgDb(None)
-    select = db.select(None).fromm(None)
+    select = db.select(None).from_(None)
     assert isinstance(select, SelectQueryReady)
     ```
     """
@@ -181,7 +196,7 @@ class SelectQueryReady[M: BaseModel, T: Table, Db: AllDbBase]:
         db = PgDb(None)
 
         # SELECT * FROM users GROUP BY age HAVING COUNT(*) > 5
-        query = db.select(SelectAll).fromm(User).group_by(User.age).having(Gt(User.age, 18))
+        query = db.select(SelectAll).from_(User).group_by(User.age).having(Gt(User.age, 18))
         sql_result = query.sql()
         assert "HAVING" in sql_result.sql
         ```
@@ -217,17 +232,17 @@ class SelectQueryReady[M: BaseModel, T: Table, Db: AllDbBase]:
         db = PgDb(None)
 
         # Multiple ways to specify ORDER BY
-        query = db.select(SelectAll).fromm(User).order_by(User.age, Desc(User.name))
+        query = db.select(SelectAll).from_(User).order_by(User.age, Desc(User.name))
         sql_result = query.sql()
         assert "ORDER BY" in sql_result.sql
 
         # With nulls handling
-        query2 = db.select(SelectAll).fromm(User).order_by(Asc(User.age, nulls="last"))
+        query2 = db.select(SelectAll).from_(User).order_by(Asc(User.age, nulls="last"))
         sql_result2 = query2.sql()
         assert "NULLS LAST" in sql_result2.sql
 
         # With raw SQL
-        query3 = db.select(SelectAll).fromm(User).order_by(Sql(t"{User.id} DESC"))
+        query3 = db.select(SelectAll).from_(User).order_by(Sql(t"{User.id} DESC"))
         sql_result3 = query3.sql()
         assert "ORDER BY" in sql_result3.sql
         ```
@@ -277,7 +292,7 @@ class SelectQueryReady[M: BaseModel, T: Table, Db: AllDbBase]:
         db = PgDb(None)
 
         # SELECT * FROM users LIMIT 10 OFFSET 20
-        query = db.select(SelectAll).fromm(User).limit(10).offset(20)
+        query = db.select(SelectAll).from_(User).limit(10).offset(20)
         sql_result = query.sql()
         assert "LIMIT 10" in sql_result.sql
         assert "OFFSET 20" in sql_result.sql

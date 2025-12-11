@@ -33,7 +33,7 @@ async def app():
 
     users = await (
         db.select(UserSel)
-        .fromm(User)
+        .from_(User)
         .left_join(Message, Eq(User.id, Message.user_id))
         .where(Or(Eq(User.id, 1), Like(User.email, "foo%")))
         .group_by(User.id)
@@ -49,7 +49,7 @@ async def app():
         date: Annotated[datetime, Sql(t"CURRENT_TIMESTAMP")]
 
     users = await (
-        db.select(UserHydrated).fromm(User).left_join(Message, Eq(User.id, Message.user_id)).group_by(User.id).limit(2)
+        db.select(UserHydrated).from_(User).left_join(Message, Eq(User.id, Message.user_id)).group_by(User.id).limit(2)
     )
     print(users)
     # [UserHydrated(
@@ -63,7 +63,7 @@ async def app():
     # And you can always see what's happening under the hood with the `.sql()`
     # method:
     users_query = (
-        db.select(UserHydrated).fromm(User).left_join(Message, Eq(User.id, Message.user_id)).group_by(User.id).sql()
+        db.select(UserHydrated).from_(User).left_join(Message, Eq(User.id, Message.user_id)).group_by(User.id).sql()
     )
     print(users_query.sql)
     # SELECT

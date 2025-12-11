@@ -120,7 +120,7 @@ class UserSel(BaseModel):
 
 users = (
     db.select(UserSel)
-    .fromm(User)
+    .from_(User)
     .left_join(Message, Eq(User.id, Message.user_id))
     .where(Or(
         Eq(User.id, 1),
@@ -147,7 +147,7 @@ class UserHydrated(BaseModel):
 
 users = (
     db.select(UserHydrated)
-    .fromm(User)
+    .from_(User)
     .left_join(Message, Eq(User.id, Message.user_id))
     .group_by(User.id)
     .limit(2)
@@ -168,7 +168,7 @@ And you can always see what's happening under the hood with the `.sql()` method:
 ```python continuation
 users_query = (
     db.select(UserHydrated)
-    .fromm(User)
+    .from_(User)
     .left_join(Message, Eq(User.id, Message.user_id))
     .group_by(User.id)
     .sql()

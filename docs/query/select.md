@@ -30,7 +30,7 @@ async def get_db(tables: list[Table] = None):
 
 async def basic():
     db = await get_db()
-    users = await db.select(SelectAll).fromm(User)
+    users = await db.select(SelectAll).from_(User)
     # [User(id=1, email="alice@example.com"), User(id=2, email="bob@example.com")]
 
 asyncio.run(basic())
@@ -55,7 +55,7 @@ class UserEmail(BaseModel):
 
 async def columns():
     db = await get_db()
-    users = await db.select(UserEmail).fromm(User)
+    users = await db.select(UserEmail).from_(User)
     # [UserEmail(email="alice@example.com"), UserEmail(email="bob@example.com")]
 
 asyncio.run(columns())
@@ -80,7 +80,7 @@ async def where():
     db = await get_db()
     users = await (
         db.select(SelectAll)
-        .fromm(User)
+        .from_(User)
         .where(Eq(User.id, 1))
     )
 
@@ -115,7 +115,7 @@ async def joins():
     db = await get_db([User, Message])
     users = await (
         db.select(UserWithMessages)
-        .fromm(User)
+        .from_(User)
         .left_join(Message, Eq(User.id, Message.user_id))
     )
 
@@ -145,7 +145,7 @@ async def arrays():
     db = await get_db([User, Message])
     users = await (
         db.select(UserWithMessages)
-        .fromm(User)
+        .from_(User)
         .left_join(Message, Eq(User.id, Message.user_id))
         .group_by(User.id)
     )
@@ -165,7 +165,7 @@ async def nested():
     db = await get_db([User, Message])
     users = await (
         db.select(UserWithFullMessages)
-        .fromm(User)
+        .from_(User)
         .left_join(Message, Eq(User.id, Message.user_id))
         .group_by(User.id)
     )
@@ -187,7 +187,7 @@ Select distinct rows using `select_distinct()`:
 ```{.python continuation}
 async def distinct():
     db = await get_db()
-    users = await db.select_distinct(SelectAll).fromm(User)
+    users = await db.select_distinct(SelectAll).from_(User)
 
 asyncio.run(distinct())
 ```
@@ -211,7 +211,7 @@ async def group_by():
     db = await get_db([User, Message])
     users = await (
         db.select(UserMessageCount)
-        .fromm(User)
+        .from_(User)
         .left_join(Message, Eq(User.id, Message.user_id))
         .group_by(User.id)
     )
@@ -244,7 +244,7 @@ async def having():
     db = await get_db([User, Message])
     users = await (
         db.select(UserWithCount)
-        .fromm(User)
+        .from_(User)
         .left_join(Message, Eq(User.id, Message.user_id))
         .group_by(User.id)
         .having(Gt(User.id, 2))
@@ -276,7 +276,7 @@ async def order_by():
     db = await get_db()
     users = await (
         db.select(SelectAll)
-        .fromm(User)
+        .from_(User)
         .order_by(Desc(User.id))
     )
 
@@ -296,7 +296,7 @@ async def order_multi():
     db = await get_db()
     users = await (
         db.select(SelectAll)
-        .fromm(User)
+        .from_(User)
         .order_by(Asc(User.email), Desc(User.id))
     )
 
@@ -310,7 +310,7 @@ async def nulls():
     db = await get_db()
     users = await (
         db.select(SelectAll)
-        .fromm(User)
+        .from_(User)
         .order_by(Asc(User.email, nulls="last"))
     )
 
@@ -332,7 +332,7 @@ async def limit():
     db = await get_db()
     users = await (
         db.select(SelectAll)
-        .fromm(User)
+        .from_(User)
         .limit(10)
         .offset(20)
     )
@@ -359,7 +359,7 @@ class UserStats(BaseModel):
 
 async def aggregation():
     db = await get_db()
-    stats = await db.select(UserStats).fromm(User)
+    stats = await db.select(UserStats).from_(User)
     # [UserStats(total=100, avg_id=50.5)]
 
 asyncio.run(aggregation())
@@ -376,7 +376,7 @@ async def raw_sql():
     db = await get_db()
     query = (
         db.select(SelectAll)
-        .fromm(User)
+        .from_(User)
         .where(Eq(User.id, 1))
         .sql()
     )
