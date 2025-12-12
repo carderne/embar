@@ -4,10 +4,10 @@ from collections.abc import Generator, Sequence
 from string.templatelib import Template
 from typing import Any, cast, overload
 
-from pydantic import BaseModel, TypeAdapter
+from pydantic import TypeAdapter
 
 from embar.db.base import AllDbBase, AsyncDbBase, DbBase
-from embar.model import upgrade_model_nested_fields
+from embar.model import DataModel, upgrade_model_nested_fields
 from embar.query.query import QuerySingle
 from embar.sql import Sql
 
@@ -27,7 +27,7 @@ class DbSql[Db: AllDbBase]:
         self._sql = Sql(template)
         self._db = db
 
-    def model[M: BaseModel](self, model: type[M]) -> DbSqlReturning[M, Db]:
+    def model[M: DataModel](self, model: type[M]) -> DbSqlReturning[M, Db]:
         """
         Specify a model for parsing results.
         """
@@ -70,7 +70,7 @@ class DbSql[Db: AllDbBase]:
         return self
 
 
-class DbSqlReturning[M: BaseModel, Db: AllDbBase]:
+class DbSqlReturning[M: DataModel, Db: AllDbBase]:
     """
     Used to run raw SQL queries and return a value.
     """

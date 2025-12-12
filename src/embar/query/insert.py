@@ -3,11 +3,11 @@
 from collections.abc import Generator, Sequence
 from typing import Any, Self, cast, overload
 
-from pydantic import BaseModel, TypeAdapter
+from pydantic import TypeAdapter
 
 from embar.custom_types import PyType
 from embar.db.base import AllDbBase, AsyncDbBase, DbBase
-from embar.model import generate_model
+from embar.model import DataModel, generate_model
 from embar.query.conflict import OnConflict, OnConflictDoNothing, OnConflictDoUpdate, TupleAtLeastOne
 from embar.query.query import QueryMany
 from embar.table import Table
@@ -65,8 +65,14 @@ class InsertQueryReady[T: Table, Db: AllDbBase]:
         self._db = db
         self.items = items
 
-    def returning(self) -> InsertQueryReturning[T, Db]:
-        return InsertQueryReturning(self.table, self._db, self.items, on_conflict=self.on_conflict)
+    def returning(self, use_pydantic: bool = False) -> InsertQueryReturning[T, Db]:
+        return InsertQueryReturning(
+            table=self.table,
+            db=self._db,
+            use_pydantic=use_pydantic,
+            items=self.items,
+            on_conflict=self.on_conflict,
+        )
 
     def on_conflict_do_nothing(self, target: TupleAtLeastOne | None = None) -> Self:
         self.on_conflict = OnConflictDoNothing(target)
@@ -158,16 +164,18 @@ class InsertQueryReturning[T: Table, Db: AllDbBase]:
     """
 
     _db: Db
+    _use_pydantic: bool
     table: type[T]
     items: Sequence[T]
     on_conflict: OnConflict | None
 
-    def __init__(self, table: type[T], db: Db, items: Sequence[T], on_conflict: OnConflict | None):
+    def __init__(self, table: type[T], db: Db, use_pydantic: bool, items: Sequence[T], on_conflict: OnConflict | None):
         """
         Create a new InsertQueryReturning instance.
         """
         self.table = table
         self._db = db
+        self._use_pydantic = use_pydantic
         self.items = items
         self.on_conflict = on_conflict
 
@@ -243,9 +251,9 @@ class InsertQueryReturning[T: Table, Db: AllDbBase]:
         sql += " RETURNING *"
         return QueryMany(sql, many_params=values)
 
-    def _get_model(self) -> type[BaseModel]:
+    def _get_model(self) -> type[DataModel]:
         """
         Generate the dataclass that will be used to deserialize (and validate) the query results.
         """
-        model = generate_model(self.table)
+        model = generate_model(self.table, self._use_pydantic)
         return model

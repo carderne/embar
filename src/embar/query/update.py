@@ -3,10 +3,10 @@
 from collections.abc import Generator, Mapping, Sequence
 from typing import Any, Self, cast, overload
 
-from pydantic import BaseModel, TypeAdapter
+from pydantic import TypeAdapter
 
 from embar.db.base import AllDbBase, AsyncDbBase, DbBase
-from embar.model import generate_model
+from embar.model import DataModel, generate_model
 from embar.query.query import QuerySingle
 from embar.query.where import WhereClause
 from embar.table import Table
@@ -70,8 +70,14 @@ class UpdateQueryReady[T: Table, Db: AllDbBase]:
         self._where_clause = where_clause
         return self
 
-    def returning(self) -> UpdateQueryReturning[T, Db]:
-        return UpdateQueryReturning(self.table, self._db, self.data, self._where_clause)
+    def returning(self, use_pydantic: bool = False) -> UpdateQueryReturning[T, Db]:
+        return UpdateQueryReturning(
+            table=self.table,
+            db=self._db,
+            use_pydantic=use_pydantic,
+            data=self.data,
+            where_clause=self._where_clause,
+        )
 
     def __await__(self):
         """
@@ -150,15 +156,19 @@ class UpdateQueryReturning[T: Table, Db: AllDbBase]:
 
     table: type[T]
     _db: Db
+    _use_pydantic: bool
     data: Mapping[str, Any]
     _where_clause: WhereClause | None = None
 
-    def __init__(self, table: type[T], db: Db, data: Mapping[str, Any], where_clause: WhereClause | None):
+    def __init__(
+        self, table: type[T], db: Db, use_pydantic: bool, data: Mapping[str, Any], where_clause: WhereClause | None
+    ):
         """
         Create a new UpdateQueryReturning instance.
         """
         self.table = table
         self._db = db
+        self._use_pydantic = use_pydantic
         self.data = data
         self._where_clause = where_clause
 
@@ -243,9 +253,9 @@ class UpdateQueryReturning[T: Table, Db: AllDbBase]:
 
         return QuerySingle(sql, params)
 
-    def _get_model(self) -> type[BaseModel]:
+    def _get_model(self) -> type[DataModel]:
         """
         Generate the dataclass that will be used to deserialize (and validate) the query results.
         """
-        model = generate_model(self.table)
+        model = generate_model(self.table, self._use_pydantic)
         return model

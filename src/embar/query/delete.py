@@ -4,11 +4,12 @@ from collections.abc import Generator
 from textwrap import dedent
 from typing import Any, Self, cast, overload
 
-from pydantic import BaseModel, TypeAdapter
+from pydantic import TypeAdapter
 
 from embar.column.base import ColumnBase
 from embar.db.base import AllDbBase, AsyncDbBase, DbBase
 from embar.model import (
+    DataModel,
     generate_model,
 )
 from embar.query.order_by import Asc, BareColumn, Desc, OrderBy, OrderByClause, RawSqlOrder
@@ -41,8 +42,15 @@ class DeleteQueryReady[T: Table, Db: AllDbBase]:
         self.table = table
         self._db = db
 
-    def returning(self) -> DeleteQueryReturning[T, Db]:
-        return DeleteQueryReturning(self.table, self._db, self._where_clause, self._order_clause, self._limit_value)
+    def returning(self, use_pydantic: bool = False) -> DeleteQueryReturning[T, Db]:
+        return DeleteQueryReturning(
+            table=self.table,
+            db=self._db,
+            use_pydantic=use_pydantic,
+            where_clause=self._where_clause,
+            order_clause=self._order_clause,
+            limit_value=self._limit_value,
+        )
 
     def where(self, where_clause: WhereClause) -> Self:
         """
@@ -188,6 +196,7 @@ class DeleteQueryReturning[T: Table, Db: AllDbBase]:
 
     table: type[T]
     _db: Db
+    _use_pydantic: bool
 
     _where_clause: WhereClause | None = None
     _order_clause: OrderBy | None = None
@@ -197,6 +206,7 @@ class DeleteQueryReturning[T: Table, Db: AllDbBase]:
         self,
         table: type[T],
         db: Db,
+        use_pydantic: bool,
         where_clause: WhereClause | None,
         order_clause: OrderBy | None,
         limit_value: int | None,
@@ -206,6 +216,7 @@ class DeleteQueryReturning[T: Table, Db: AllDbBase]:
         """
         self.table = table
         self._db = db
+        self._use_pydantic = use_pydantic
         self._where_clause = where_clause
         self._order_clause = order_clause
         self._limit_value = limit_value
@@ -300,9 +311,9 @@ class DeleteQueryReturning[T: Table, Db: AllDbBase]:
 
         return QuerySingle(sql, params=params)
 
-    def _get_model(self) -> type[BaseModel]:
+    def _get_model(self) -> type[DataModel]:
         """
         Generate the dataclass that will be used to deserialize (and validate) the query results.
         """
-        model = generate_model(self.table)
+        model = generate_model(self.table, self._use_pydantic)
         return model
