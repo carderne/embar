@@ -34,7 +34,7 @@ from embar.column.pg import (
 )
 from embar.config import EmbarConfig
 from embar.custom_types import Undefined
-from embar.model import SelectAll
+from embar.model import SelectAllDataclass, SelectAllPydantic
 from embar.query.many import ManyTable, OneTable
 from embar.table_base import TableBase
 
@@ -213,20 +213,31 @@ CREATE TABLE IF NOT EXISTS {cls.fqn()} (
 
         return sql
 
+    @overload
     @classmethod
-    def all(cls) -> type[SelectAll]:
+    def all(cls) -> type[SelectAllDataclass]: ...
+    @overload
+    @classmethod
+    def all(cls, use_pydantic: Literal[False]) -> type[SelectAllDataclass]: ...
+    @overload
+    @classmethod
+    def all(cls, use_pydantic: Literal[True]) -> type[SelectAllPydantic]: ...
+
+    @classmethod
+    def all(cls, use_pydantic: bool = False) -> type[SelectAllPydantic] | type[SelectAllDataclass]:
         """
         Generate a Select query model that returns all the table's fields.
 
         ```python
-        from embar.model import SelectAll
         from embar.table import Table
         class MyTable(Table): ...
         model = MyTable.all()
-        assert model == SelectAll
+        assert model == SelectAllDataclass
         ```
         """
-        return SelectAll
+        if use_pydantic:
+            return SelectAllPydantic
+        return SelectAllDataclass
 
     def value_dict(self) -> dict[str, Any]:
         """

@@ -26,6 +26,7 @@ from embar.column.base import EnumBase
 from embar.db._util import get_migration_defs, merge_ddls
 from embar.db.base import AsyncDbBase, DbBase
 from embar.migration import Migration, MigrationDefs
+from embar.model import DataModel
 from embar.query.delete import DeleteQueryReady
 from embar.query.insert import InsertQuery
 from embar.query.query import QueryMany, QuerySingle
@@ -134,13 +135,13 @@ class PgDb(DbBase):
         """
         return PgDbTransaction(self)
 
-    def select[M: BaseModel](self, model: type[M]) -> SelectQuery[M, Self]:
+    def select[M: DataModel](self, model: type[M]) -> SelectQuery[M, Self]:
         """
         Create a SELECT query.
         """
         return SelectQuery[M, Self](db=self, model=model)
 
-    def select_distinct[M: BaseModel](self, model: type[M]) -> SelectDistinctQuery[M, Self]:
+    def select_distinct[M: DataModel](self, model: type[M]) -> SelectDistinctQuery[M, Self]:
         """
         Create a SELECT query.
         """
@@ -358,13 +359,13 @@ class AsyncPgDb(AsyncDbBase):
         """
         return AsyncPgDbTransaction(self)
 
-    def select[M: BaseModel](self, model: type[M]) -> SelectQuery[M, Self]:
+    def select[M: DataModel](self, model: type[M]) -> SelectQuery[M, Self]:
         """
         Create a SELECT query.
         """
         return SelectQuery[M, Self](db=self, model=model)
 
-    def select_distinct[M: BaseModel](self, model: type[M]) -> SelectDistinctQuery[M, Self]:
+    def select_distinct[M: DataModel](self, model: type[M]) -> SelectDistinctQuery[M, Self]:
         """
         Create a SELECT query.
         """
