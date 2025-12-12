@@ -4,7 +4,7 @@ to import table_base.py without triggering table.py, causing a circular loop by 
 (that's the reason the two were separated in the first place).
 """
 
-from typing import Any, Self, dataclass_transform
+from typing import Any, Literal, Self, dataclass_transform, overload
 
 from pydantic_core import core_schema
 
@@ -12,7 +12,7 @@ from embar.column.base import ColumnBase
 from embar.column.common import Column, Integer, Text
 from embar.config import EmbarConfig
 from embar.custom_types import Undefined
-from embar.model import SelectAll
+from embar.model import SelectAllDataclass, SelectAllPydantic
 from embar.query.many import ManyTable, OneTable
 from embar.table_base import TableBase
 
@@ -108,20 +108,31 @@ class Table(TableBase):
         columns_str = ",".join(columns)
         return f"""CREATE TABLE IF NOT EXISTS {cls.fqn()} ({columns_str});"""
 
+    @overload
     @classmethod
-    def all(cls) -> type[SelectAll]:
+    def all(cls) -> type[SelectAllDataclass]: ...
+    @overload
+    @classmethod
+    def all(cls, use_pydantic: Literal[False]) -> type[SelectAllDataclass]: ...
+    @overload
+    @classmethod
+    def all(cls, use_pydantic: Literal[True]) -> type[SelectAllPydantic]: ...
+
+    @classmethod
+    def all(cls, use_pydantic: bool = False) -> type[SelectAllPydantic] | type[SelectAllDataclass]:
         """
         Generate a Select query model that returns all the table's fields.
 
         ```python
-        from embar.model import SelectAll
         from embar.table import Table
         class MyTable(Table): ...
         model = MyTable.all()
-        assert model == SelectAll
+        assert model == SelectAllDataclass
         ```
         """
-        return SelectAll
+        if use_pydantic:
+            return SelectAllPydantic
+        return SelectAllDataclass
 
     def value_dict(self) -> dict[str, Any]:
         """

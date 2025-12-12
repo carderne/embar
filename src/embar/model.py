@@ -1,14 +1,19 @@
+from dataclasses import field, make_dataclass
 from typing import (
     Annotated,
     Any,
+    ClassVar,
     Literal,
+    Protocol,
     cast,
     get_args,
     get_origin,
     get_type_hints,
+    overload,
 )
 
-from pydantic import BaseModel, Field, create_model
+from pydantic import BaseModel, create_model
+from pydantic import Field as PydanticField
 
 from embar.column.base import ColumnBase
 from embar.db.base import DbType
@@ -17,18 +22,30 @@ from embar.sql import Sql
 from embar.table_base import TableBase
 
 
-class SelectAll(BaseModel):
-    """
-    `SelectAll` tells the query engine to get all fields from the `from()` table ONLY.
+class DataclassType(Protocol):
+    __dataclass_fields__: ClassVar[dict[str, type]]
 
-    Ideally it could get fields from joined tables too, but no way for that to work (from a typing POV)
-    Not recommended for public use, users should rather use their table's `all()` method.
+
+type DataModel = BaseModel | DataclassType
+
+
+class SelectAllPydantic(BaseModel):
+    """
+    `SelectAll` version that validates with Pydantic
     """
 
     ...
 
 
-def to_sql_columns(model: type[BaseModel], db_type: DbType) -> str:
+class SelectAllDataclass:
+    """
+    `SelectAll` version that doesn't validate
+    """
+
+    __dataclass_fields__: ClassVar[dict[str, type]]
+
+
+def to_sql_columns(model: type[DataModel], db_type: DbType) -> str:
     parts: list[str] = []
     hints = get_type_hints(model, include_extras=True)
     for field_name, field_type in hints.items():
@@ -104,13 +121,12 @@ def _get_source_expr(field_name: str, field_type: type, db_type: DbType, hints: 
 
 def _convert_annotation(
     field_type: type,
+    use_pydantic: bool,
 ) -> Annotated[Any, Any] | Literal[False]:
     """
     Extract complex annotated types from `Annotated[int, MyTable.my_col]` expressions.
 
     If the annotated type is a column reference then this does nothing and returns false.
-
-    Only used by `embar.query.Select` but more at home here with the context where it's used.
 
     ```python
     from typing import Annotated
@@ -130,20 +146,32 @@ def _convert_annotation(
             if isinstance(annotation, ManyTable):
                 many_table = cast(ManyTable[type[TableBase]], annotation)
                 inner_type = many_table.of
-                dc = generate_model(inner_type)
+                dc = generate_model(inner_type, use_pydantic)
                 new_type = Annotated[list[dc], annotation]
                 return new_type
 
             if isinstance(annotation, OneTable):
                 one_table = cast(OneTable[type[TableBase]], annotation)
                 inner_type = one_table.of
-                dc = generate_model(inner_type)
+                dc = generate_model(inner_type, use_pydantic)
                 new_type = Annotated[dc, annotation]
                 return new_type
     return False
 
 
-def generate_model(cls: type[TableBase]) -> type[BaseModel]:
+@overload
+def generate_model(cls: type[TableBase], use_pydantic: Literal[True]) -> type[BaseModel]: ...
+@overload
+def generate_model(cls: type[TableBase], use_pydantic: Literal[False]) -> type[DataclassType]: ...
+
+
+def generate_model(cls: type[TableBase], use_pydantic: bool) -> type[DataModel]:
+    if use_pydantic:
+        return generate_pydantic_model(cls)
+    return generate_dataclass_model(cls)
+
+
+def generate_pydantic_model(cls: type[TableBase]) -> type[BaseModel]:
     """
     Create a model based on a `Table`.
 
@@ -162,7 +190,7 @@ def generate_model(cls: type[TableBase]) -> type[BaseModel]:
         field_type = column.info.py_type
         fields_dict[field_name] = (
             Annotated[field_type, column],
-            Field(default_factory=lambda a=column: column.info.fqn()),
+            PydanticField(default_factory=lambda a=column: column.info.fqn()),
         )
 
     model = create_model(cls.__name__, **fields_dict)
@@ -170,18 +198,73 @@ def generate_model(cls: type[TableBase]) -> type[BaseModel]:
     return model
 
 
-def upgrade_model_nested_fields[B: BaseModel](model: type[B]) -> type[B]:
+def generate_dataclass_model(cls: type[TableBase]) -> type[DataclassType]:
+    """
+    Create a dataclass based on a `Table`.
+
+    Note the new table has the same exact name, maybe something to revisit.
+
+    ```python
+    from embar.table import Table
+    from embar.query.selection import generate_selection_dataclass
+    class MyTable(Table): ...
+    generate_selection_dataclass(MyTable)
+    ```
+    """
+    fields: list[tuple[str, Annotated[Any, Any], Any]] = []
+    for field_name, column in cls._fields.items():  # pyright:ignore[reportPrivateUsage]
+        field_type = column.info.py_type
+        fields.append(
+            (
+                field_name,
+                Annotated[field_type, column],
+                field(default_factory=lambda a=column: column.info.fqn()),
+            )
+        )
+
+    data_class = make_dataclass(cls.__name__, fields)
+    data_class.__init_subclass__()
+    return data_class
+
+
+def upgrade_model_nested_fields[B: DataModel](model: type[B]) -> type[B]:
+    """
+    Get nested field models into root model.
+    """
     type_hints = get_type_hints(model, include_extras=True)
 
-    fields_dict: dict[str, Any] = {}
-    for field_name, field_type in type_hints.items():
-        new_type = _convert_annotation(field_type)
-        if new_type:
-            fields_dict[field_name] = (new_type, None)
-        else:
-            fields_dict[field_name] = (field_type, None)
+    if issubclass(model, BaseModel):
+        fields_dict: dict[str, Any] = {}
+        for field_name, field_type in type_hints.items():
+            new_type = _convert_annotation(field_type, use_pydantic=True)
+            if new_type:
+                fields_dict[field_name] = (new_type, None)
+            else:
+                fields_dict[field_name] = (field_type, None)
 
-    new_class = create_model(model.__name__, __base__=model, **fields_dict)
-    new_class.model_rebuild()
+        new_class = create_model(model.__name__, __base__=model, **fields_dict)
+        new_class.model_rebuild()
+        return new_class
+
+    model.__init_subclass__()
+
+    new_fields: list[tuple[str, type]] = []
+    for field_name, field_type in model.__dataclass_fields__.items():
+        new_type = _convert_annotation(field_type, False)
+        if new_type:
+            new_fields.append((field_name, new_type))
+        else:
+            # This means convert_annotation returned False, i.e. it's a 'simple' field.
+            # We have to recreate it with a Field tuple to match the stuff above for the legitimately new fields.
+            # (I haven't found a way for it to just be left in-place or something.)
+            # field_type = cast(type, cls_field.type)
+            new_fields.append((field_name, field_type))
+
+    new_class = make_dataclass(model.__name__, new_fields)
+
+    # Pretty gruesome stuff going on here...
+    # __init_subclass__ won't have been called, so _fields won't have been assigned
+    # so do it manually...
+    new_class.__init_subclass__()
 
     return new_class
