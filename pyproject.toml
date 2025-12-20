@@ -40,6 +40,7 @@ requires-python = ">=3.14"
 dependencies = [
     "psycopg[binary]>=3.2.11",
     "pydantic>=2.12.4",
+    "pyyaml>=6.0.3"
 ]
 
 [project.urls]
