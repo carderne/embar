@@ -4,6 +4,7 @@ to import table_base.py without triggering table.py, causing a circular loop by 
 (that's the reason the two were separated in the first place).
 """
 
+from textwrap import dedent, indent
 from typing import Any, Self, dataclass_transform
 
 from pydantic_core import core_schema
@@ -105,8 +106,17 @@ class Table(TableBase):
                 continue
             if isinstance(attr, ColumnBase):
                 columns.append(attr.info.ddl())
-        columns_str = ",".join(columns)
-        return f"""CREATE TABLE IF NOT EXISTS {cls.fqn()} ({columns_str});"""
+        columns_str = ",\n".join(columns)
+        columns_str = indent(columns_str, "    ")
+
+        sql = f"""
+CREATE TABLE IF NOT EXISTS {cls.fqn()} (
+{columns_str}
+);"""
+
+        sql = dedent(sql).strip()
+
+        return sql
 
     @classmethod
     def all(cls) -> type[SelectAll]:

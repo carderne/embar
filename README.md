@@ -270,12 +270,20 @@ schema_path: app.schema
 migrations_dir: migrations   # optional
 ```
 
+#### Simple DDL output
+If you just want to output the current schema as SQL (DDL), run:
+```bash
+embar schema
+```
+
+#### Migration files
 Then to generate migrations, run the following and follow the prompts:
 
 ```bash
 embar migrate
 ```
 
+#### Push changes
 Or to push directly to your db, run the following.
 You will be prompted before each change.
 

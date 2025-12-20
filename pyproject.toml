@@ -47,7 +47,7 @@ homepage = "https://github.com/carderne/embar"
 repository = "https://github.com/carderne/embar"
 
 [project.scripts]
-embar = "embar.tools.migrate:main"
+embar = "embar.tools.commands:main"
 
 [dependency-groups]
 dev = [

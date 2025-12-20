@@ -1,3 +1,4 @@
+import importlib
 import os
 import sys
 
@@ -18,6 +19,18 @@ from embar.tools.migrate import (
     save_migration_to_file,
 )
 from embar.tools.utils import get_api_key, load_config, load_env_file
+
+
+def _cmd_schema(config_path: str | None = None):
+    """Generate migration and save to file."""
+    config = load_config(config_path)
+
+    db = PgDb(None)  # pyright:ignore[reportArgumentType]
+    schema = importlib.import_module(config.schema_path)
+    new_schema = db.migrates(schema).ddls
+
+    output = "\n\n".join(ddl.ddl for ddl in new_schema)
+    print(output)
 
 
 def _cmd_generate(config_path: str | None = None, llm: Llm = call_anthropic):
@@ -154,6 +167,7 @@ def main():
         print("Usage: embar <command> [config_path]")
         print("")
         print("Commands:")
+        print("  schema      Print the current table schema to stdout")
         print("  generate    Generate migration and save to file (requires migrations_dir in config)")
         print("  migrate     Apply migrations from migration files (not yet implemented)")
         print("  push        Generate and execute migrations with confirmation")
@@ -166,7 +180,9 @@ def main():
     command = sys.argv[1]
     config_path = sys.argv[2] if len(sys.argv) > 2 else None
 
-    if command == "generate":
+    if command == "schema":
+        _cmd_schema(config_path)
+    elif command == "generate":
         _cmd_generate(config_path)
     elif command == "migrate":
         _cmd_migrate(config_path)
