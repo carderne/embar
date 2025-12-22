@@ -1,0 +1,4 @@
+dialect = "postgresql"
+db_url = "postgresql://pg:pw@localhost:3601/db"
+schema_path = "app.schema"
+migrations_dir = "migrations"

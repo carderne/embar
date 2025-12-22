@@ -7,7 +7,6 @@ from unittest.mock import patch
 
 import psycopg
 import pytest
-import yaml
 
 from embar.tools.commands import (
     _cmd_generate as cmd_generate,  # pyright: ignore[reportPrivateUsage]
@@ -70,14 +69,11 @@ def temp_migrations_dir():
 @pytest.fixture
 def test_config_path(clean_db: PostgresContainer, temp_migrations_dir: str):
     """Create a test config file."""
-    config = {
-        "dialect": "postgresql",
-        "db_url": clean_db.get_connection_url(),
-        "schema_path": "tests.e2e.migrations_schema",
-        "migrations_dir": temp_migrations_dir,
-    }
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".yml", delete=False) as f:
-        yaml.dump(config, f)
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".toml", delete=False) as f:
+        print('dialect = "postgresql"', file=f)
+        print(f'db_url = "{clean_db.get_connection_url()}"', file=f)
+        print('schema_path = "tests.e2e.migrations_schema"', file=f)
+        print(f'migrations_dir = "{temp_migrations_dir}"', file=f)
         config_path = f.name
     yield config_path
     os.unlink(config_path)

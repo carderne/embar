@@ -1,7 +1,6 @@
 import os
 import sys
-
-import yaml
+import tomllib
 
 from embar.tools.models import MigrateConfig
 
@@ -23,14 +22,14 @@ def load_env_file():
 def load_config(config_path: str | None = None) -> MigrateConfig:
     """Load and validate configuration from file."""
     if config_path is None:
-        config_path = "embar.yml"
+        config_path = "embar.toml"
 
     if not os.path.exists(config_path):
         print(f"Error: Config file '{config_path}' not found.")
         sys.exit(1)
 
-    with open(config_path, "r") as f:
-        config_data = yaml.safe_load(f)
+    with open(config_path, "rb") as f:
+        config_data = tomllib.load(f)
 
     try:
         return MigrateConfig(**config_data)

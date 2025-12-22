@@ -261,13 +261,13 @@ You should inspect these before running them.
 
 You can see a working example at [example/](https://github.com/carderne/embar/tree/main/example).
 
-First create a config file `embar.yml` in your app root:
+First create a config file `embar.toml` in your app root:
 
-```yml
-dialect: postgresql
-db_url: postgresql://user:password@localhost:5432/db
-schema_path: app.schema
-migrations_dir: migrations   # optional
+```toml
+dialect = "postgresql"
+db_url = "postgresql://pg:pw@localhost:3601/db"
+schema_path = "app.schema"
+migrations_dir = "migrations"  # optional
 ```
 
 #### Simple DDL output
