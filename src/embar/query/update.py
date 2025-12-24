@@ -7,8 +7,8 @@ from pydantic import BaseModel, TypeAdapter
 
 from embar.db.base import AllDbBase, AsyncDbBase, DbBase
 from embar.model import generate_model
+from embar.query.clause_base import ClauseBase
 from embar.query.query import QuerySingle
-from embar.query.where import WhereClause
 from embar.table import Table
 
 
@@ -53,7 +53,7 @@ class UpdateQueryReady[T: Table, Db: AllDbBase]:
     table: type[T]
     _db: Db
     data: Mapping[str, Any]
-    _where_clause: WhereClause | None = None
+    _where_clause: ClauseBase | None = None
 
     def __init__(self, table: type[T], db: Db, data: Mapping[str, Any]):
         """
@@ -63,7 +63,7 @@ class UpdateQueryReady[T: Table, Db: AllDbBase]:
         self._db = db
         self.data = data
 
-    def where(self, where_clause: WhereClause) -> Self:
+    def where(self, where_clause: ClauseBase) -> Self:
         """
         Add a WHERE clause to limit which rows are updated.
         """
@@ -151,9 +151,9 @@ class UpdateQueryReturning[T: Table, Db: AllDbBase]:
     table: type[T]
     _db: Db
     data: Mapping[str, Any]
-    _where_clause: WhereClause | None = None
+    _where_clause: ClauseBase | None = None
 
-    def __init__(self, table: type[T], db: Db, data: Mapping[str, Any], where_clause: WhereClause | None):
+    def __init__(self, table: type[T], db: Db, data: Mapping[str, Any], where_clause: ClauseBase | None):
         """
         Create a new UpdateQueryReturning instance.
         """

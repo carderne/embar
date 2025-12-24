@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 
-from embar.query.where import WhereClause
+from embar.query.clause_base import ClauseBase
 
 
 @dataclass
@@ -32,4 +32,4 @@ class Having:
     ```
     """
 
-    clause: WhereClause
+    clause: ClauseBase

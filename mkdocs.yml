@@ -48,6 +48,9 @@ nav:
       - Transactions: query/transactions.md
       - Raw SQL: query/raw-sql.md
 
+    - Extensions:
+      - Vector: extensions/vector.md
+
     - Integration:
       - Migrations: migrations.md
       - Types: types.md

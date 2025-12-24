@@ -11,9 +11,9 @@ from embar.db.base import AllDbBase, AsyncDbBase, DbBase
 from embar.model import (
     generate_model,
 )
-from embar.query.order_by import Asc, BareColumn, Desc, OrderBy, OrderByClause, RawSqlOrder
+from embar.query.clause_base import ClauseBase
+from embar.query.order_by import Asc, BareColumn, Desc, OrderBy, RawSqlOrder
 from embar.query.query import QuerySingle
-from embar.query.where import WhereClause
 from embar.sql import Sql
 from embar.table import Table
 
@@ -30,7 +30,7 @@ class DeleteQueryReady[T: Table, Db: AllDbBase]:
     table: type[T]
     _db: Db
 
-    _where_clause: WhereClause | None = None
+    _where_clause: ClauseBase | None = None
     _order_clause: OrderBy | None = None
     _limit_value: int | None = None
 
@@ -44,7 +44,7 @@ class DeleteQueryReady[T: Table, Db: AllDbBase]:
     def returning(self) -> DeleteQueryReturning[T, Db]:
         return DeleteQueryReturning(self.table, self._db, self._where_clause, self._order_clause, self._limit_value)
 
-    def where(self, where_clause: WhereClause) -> Self:
+    def where(self, where_clause: ClauseBase) -> Self:
         """
         Add a WHERE clause to the query.
         """
@@ -79,7 +79,7 @@ class DeleteQueryReady[T: Table, Db: AllDbBase]:
         ```
         """
         # Convert each clause to an OrderByClause
-        order_clauses: list[OrderByClause] = []
+        order_clauses: list[ClauseBase] = []
         for clause in clauses:
             if isinstance(clause, (Asc, Desc)):
                 order_clauses.append(clause)
@@ -170,8 +170,9 @@ class DeleteQueryReady[T: Table, Db: AllDbBase]:
             params = {**params, **where_data.params}
 
         if self._order_clause is not None:
-            order_by_sql = self._order_clause.sql()
-            sql += f"\nORDER BY {order_by_sql}"
+            order_by_query = self._order_clause.sql(get_count)
+            sql += f"\nORDER BY {order_by_query.sql}"
+            params = {**params, **order_by_query.params}
 
         if self._limit_value is not None:
             sql += f"\nLIMIT {self._limit_value}"
@@ -189,7 +190,7 @@ class DeleteQueryReturning[T: Table, Db: AllDbBase]:
     table: type[T]
     _db: Db
 
-    _where_clause: WhereClause | None = None
+    _where_clause: ClauseBase | None = None
     _order_clause: OrderBy | None = None
     _limit_value: int | None = None
 
@@ -197,7 +198,7 @@ class DeleteQueryReturning[T: Table, Db: AllDbBase]:
         self,
         table: type[T],
         db: Db,
-        where_clause: WhereClause | None,
+        where_clause: ClauseBase | None,
         order_clause: OrderBy | None,
         limit_value: int | None,
     ):
@@ -287,8 +288,9 @@ class DeleteQueryReturning[T: Table, Db: AllDbBase]:
             params = {**params, **where_data.params}
 
         if self._order_clause is not None:
-            order_by_sql = self._order_clause.sql()
-            sql += f"\nORDER BY {order_by_sql}"
+            order_by_query = self._order_clause.sql(get_count)
+            sql += f"\nORDER BY {order_by_query.sql}"
+            params = {**params, **order_by_query.params}
 
         if self._limit_value is not None:
             sql += f"\nLIMIT {self._limit_value}"
