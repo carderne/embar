@@ -1,3 +1,4 @@
+import json
 from typing import (
     Annotated,
     Any,
@@ -8,7 +9,7 @@ from typing import (
     get_type_hints,
 )
 
-from pydantic import BaseModel, Field, create_model
+from pydantic import BaseModel, BeforeValidator, Field, create_model
 
 from embar.column.base import ColumnBase
 from embar.db.base import DbType
@@ -160,6 +161,10 @@ def generate_model(cls: type[TableBase]) -> type[BaseModel]:
     fields_dict: dict[str, Any] = {}
     for field_name, column in cls._fields.items():  # pyright:ignore[reportPrivateUsage]
         field_type = column.info.py_type
+
+        if column.info.col_type == "VECTOR":
+            field_type = Annotated[field_type, BeforeValidator(_parse_json_list)]
+
         fields_dict[field_name] = (
             Annotated[field_type, column],
             Field(default_factory=lambda a=column: column.info.fqn()),
@@ -185,3 +190,9 @@ def upgrade_model_nested_fields[B: BaseModel](model: type[B]) -> type[B]:
     new_class.model_rebuild()
 
     return new_class
+
+
+def _parse_json_list(v: Any):
+    if isinstance(v, str):
+        return json.loads(v)
+    return v

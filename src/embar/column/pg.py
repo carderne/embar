@@ -32,6 +32,7 @@ __all__ = [
     "Timestamp",
     "Varchar",
     "EnumCol",
+    "Vector",
 ]
 
 
@@ -343,4 +344,32 @@ class EnumCol[E: EmbarEnum](Column[str]):
         """
         self._sql_type = pg_enum.name
 
+        super().__init__(name=name, default=default, primary=primary, not_null=not_null)
+
+
+# Extension: pgvector
+# Should also support `halfvec` and `bit`
+class Vector(Column[list[float]]):
+    """
+    Vector column using [pgvector](https://github.com/pgvector/pgvector).
+
+    This assumes the extension is already installed and activated with
+    CREATE EXTENSION vector;
+    """
+
+    _sql_type: str = "VECTOR"
+    _py_type: Type = list[float]
+
+    def __init__(
+        self,
+        length: int,
+        name: str | None = None,
+        default: list[float] | None = None,
+        primary: bool = False,
+        not_null: bool = False,
+    ):
+        """
+        Create a new Vector instance.
+        """
+        self._extra_args: tuple[int] | tuple[int, int] | None = (length,)
         super().__init__(name=name, default=default, primary=primary, not_null=not_null)

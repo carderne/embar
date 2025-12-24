@@ -9,7 +9,7 @@ from tests.e2e.container import PostgresContainer
 def postgres_container_raw(request: pytest.FixtureRequest):
     """Session-scoped postgres container for docs tests."""
     try:
-        with PostgresContainer("postgres:18-alpine3.22", port=25432) as postgres:
+        with PostgresContainer("pgvector/pgvector:0.8.1-pg18-trixie", port=25432) as postgres:
             request.addfinalizer(postgres.stop)
             yield postgres
     except Exception as e:

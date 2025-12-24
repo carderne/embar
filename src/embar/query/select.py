@@ -15,12 +15,12 @@ from embar.model import (
     to_sql_columns,
     upgrade_model_nested_fields,
 )
+from embar.query.clause_base import ClauseBase
 from embar.query.group_by import GroupBy
 from embar.query.having import Having
 from embar.query.join import CrossJoin, FullJoin, InnerJoin, JoinClause, LeftJoin, RightJoin
-from embar.query.order_by import Asc, BareColumn, Desc, OrderBy, OrderByClause, RawSqlOrder
+from embar.query.order_by import Asc, BareColumn, Desc, OrderBy, RawSqlOrder
 from embar.query.query import QuerySingle
-from embar.query.where import WhereClause
 from embar.sql import Sql
 from embar.table import Table
 
@@ -108,7 +108,7 @@ class SelectQueryReady[M: BaseModel, T: Table, Db: AllDbBase]:
 
     _distinct: bool
     _joins: list[JoinClause]
-    _where_clause: WhereClause | None = None
+    _where_clause: ClauseBase | None = None
     _group_clause: GroupBy | None = None
     _having_clause: Having | None = None
     _order_clause: OrderBy | None = None
@@ -125,28 +125,28 @@ class SelectQueryReady[M: BaseModel, T: Table, Db: AllDbBase]:
         self._distinct = distinct
         self._joins = []
 
-    def left_join(self, table: type[Table], on: WhereClause) -> Self:
+    def left_join(self, table: type[Table], on: ClauseBase) -> Self:
         """
         Add a LEFT JOIN clause to the query.
         """
         self._joins.append(LeftJoin(table, on))
         return self
 
-    def right_join(self, table: type[Table], on: WhereClause) -> Self:
+    def right_join(self, table: type[Table], on: ClauseBase) -> Self:
         """
         Add a RIGHT JOIN clause to the query.
         """
         self._joins.append(RightJoin(table, on))
         return self
 
-    def inner_join(self, table: type[Table], on: WhereClause) -> Self:
+    def inner_join(self, table: type[Table], on: ClauseBase) -> Self:
         """
         Add an INNER JOIN clause to the query.
         """
         self._joins.append(InnerJoin(table, on))
         return self
 
-    def full_join(self, table: type[Table], on: WhereClause) -> Self:
+    def full_join(self, table: type[Table], on: ClauseBase) -> Self:
         """
         Add a FULL OUTER JOIN clause to the query.
         """
@@ -160,7 +160,7 @@ class SelectQueryReady[M: BaseModel, T: Table, Db: AllDbBase]:
         self._joins.append(CrossJoin(table))
         return self
 
-    def where(self, where_clause: WhereClause) -> Self:
+    def where(self, where_clause: ClauseBase) -> Self:
         """
         Add a WHERE clause to the query.
         """
@@ -174,7 +174,7 @@ class SelectQueryReady[M: BaseModel, T: Table, Db: AllDbBase]:
         self._group_clause = GroupBy(cols)
         return self
 
-    def having(self, clause: WhereClause) -> Self:
+    def having(self, clause: ClauseBase) -> Self:
         """
         Add a HAVING clause to filter grouped/aggregated results.
 
@@ -204,7 +204,7 @@ class SelectQueryReady[M: BaseModel, T: Table, Db: AllDbBase]:
         self._having_clause = Having(clause)
         return self
 
-    def order_by(self, *clauses: ColumnBase | Asc | Desc | Sql) -> Self:
+    def order_by(self, *clauses: ColumnBase | Asc | Desc | ClauseBase | Sql) -> Self:
         """
         Add an ORDER BY clause to sort query results.
 
@@ -248,12 +248,14 @@ class SelectQueryReady[M: BaseModel, T: Table, Db: AllDbBase]:
         ```
         """
         # Convert each clause to an OrderByClause
-        order_clauses: list[OrderByClause] = []
+        order_clauses: list[ClauseBase] = []
         for clause in clauses:
             if isinstance(clause, (Asc, Desc)):
                 order_clauses.append(clause)
             elif isinstance(clause, Sql):
                 order_clauses.append(RawSqlOrder(clause))
+            elif isinstance(clause, ClauseBase):
+                order_clauses.append(clause)
             else:
                 order_clauses.append(BareColumn(clause))
 
@@ -419,8 +421,9 @@ class SelectQueryReady[M: BaseModel, T: Table, Db: AllDbBase]:
             params = {**params, **having_data.params}
 
         if self._order_clause is not None:
-            order_by_sql = self._order_clause.sql()
-            sql += f"\nORDER BY {order_by_sql}"
+            order_by_query = self._order_clause.sql(get_count)
+            sql += f"\nORDER BY {order_by_query.sql}"
+            params = {**params, **order_by_query.params}
 
         if self._limit_value is not None:
             sql += f"\nLIMIT {self._limit_value}"

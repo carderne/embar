@@ -6,8 +6,8 @@ from typing import Self, override
 from embar.column.base import ColumnBase
 from embar.constraint_base import Constraint
 from embar.custom_types import PyType
+from embar.query.clause_base import ClauseBase
 from embar.query.query import QuerySingle
-from embar.query.where import WhereClause
 
 
 class Index:
@@ -70,7 +70,7 @@ class IndexReady(Constraint):
     unique: bool
     name: str
     columns: tuple[Callable[[], ColumnBase], ...]
-    _where_clause: Callable[[], WhereClause] | None = None
+    _where_clause: Callable[[], ClauseBase] | None = None
 
     def __init__(self, name: str, unique: bool, *columns: Callable[[], ColumnBase]):
         """
@@ -80,7 +80,7 @@ class IndexReady(Constraint):
         self.unique = unique
         self.columns = columns
 
-    def where(self, where_clause: Callable[[], WhereClause]) -> Self:
+    def where(self, where_clause: Callable[[], ClauseBase]) -> Self:
         """
         Add a WHERE clause to create a partial index.
         """

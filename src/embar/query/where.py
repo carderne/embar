@@ -1,178 +1,151 @@
 """Where clauses for filtering queries."""
 
-from abc import ABC, abstractmethod
-from typing import Any, Callable, Protocol, override
+from typing import Any, Protocol, override
 
 from embar.column.base import ColumnInfo
 from embar.column.common import Column
 from embar.custom_types import PyType
+from embar.query.clause_base import ClauseBase, GetCount
 from embar.query.query import QuerySingle
 
-# Where clauses get passed a get_count() function that returns a monotonically
-# increasing integer. This allows each SQL binding parameter to get a unique
-# name like `%(eq_id_2)s` in psycopg format.
-type GetCount = Callable[[], int]
 
+def _gen_comparison_sql(
+    left: ColumnInfo | ClauseBase,
+    right: ColumnInfo | PyType,
+    operator: str,
+    name_root: str,
+    get_count: GetCount,
+) -> QuerySingle:
+    """Generate SQL for binary comparison operators."""
+    name = "vals"
+    params: dict[str, PyType] = {}
 
-class WhereClause(ABC):
-    """
-    ABC for Where clauses.
+    if isinstance(left, ColumnInfo):
+        left_sql = left.fqn()
+        name = left.name
+    else:
+        left_result = left.sql(get_count)
+        left_sql = left_result.sql
+        params.update(left_result.params)
 
-    Not all use the get_count() directly (those with no bindings)
-    but their children might.
-    """
+    if isinstance(right, ColumnInfo):
+        right_sql = right.fqn()
+    else:
+        count = get_count()
+        param_name = f"{name_root}_{name}_{count}"
+        right_sql = f"%({param_name})s"
+        params[param_name] = right
 
-    @abstractmethod
-    def sql(self, get_count: GetCount) -> QuerySingle:
-        """
-        Generate the SQL for this where clause.
-        """
-        ...
+    return QuerySingle(sql=f"{left_sql} {operator} {right_sql}", params=params)
 
 
 # Comparison operators
-class Eq[T: PyType](WhereClause):
+class Eq[T: PyType](ClauseBase):
     """
     Checks if a column value is equal to another column or a passed param.
 
     Right now the left must always be a column, maybe that must be loosened.
     """
 
-    left: ColumnInfo
-    right: PyType | ColumnInfo
+    left: ColumnInfo | ClauseBase
+    right: ColumnInfo | PyType
 
-    def __init__(self, left: Column[T], right: T | Column[T]):
-        self.left = left.info
+    def __init__(self, left: Column[T] | ClauseBase, right: Column[T] | T):
+        self.left = left.info if isinstance(left, Column) else left
         self.right = right.info if isinstance(right, Column) else right
 
     @override
     def sql(self, get_count: GetCount) -> QuerySingle:
-        count = get_count()
-        name = f"eq_{self.left.name}_{count}"
-
-        if isinstance(self.right, ColumnInfo):
-            return QuerySingle(sql=f"{self.left.fqn()} = {self.right.fqn()}")
-
-        return QuerySingle(sql=f"{self.left.fqn()} = %({name})s", params={name: self.right})
+        return _gen_comparison_sql(self.left, self.right, "=", "eq", get_count)
 
 
-class Ne[T: PyType](WhereClause):
+class Ne[T: PyType](ClauseBase):
     """
     Checks if a column value is not equal to another column or a passed param.
     """
 
-    left: ColumnInfo
-    right: PyType | ColumnInfo
+    left: ColumnInfo | ClauseBase
+    right: ColumnInfo | PyType
 
-    def __init__(self, left: Column[T], right: T | Column[T]):
-        self.left = left.info
+    def __init__(self, left: Column[T] | ClauseBase, right: Column[T] | T):
+        self.left = left.info if isinstance(left, Column) else left
         self.right = right.info if isinstance(right, Column) else right
 
     @override
     def sql(self, get_count: GetCount) -> QuerySingle:
-        count = get_count()
-        name = f"ne_{self.left.name}_{count}"
-
-        if isinstance(self.right, ColumnInfo):
-            return QuerySingle(sql=f"{self.left.fqn()} != {self.right.fqn()}")
-
-        return QuerySingle(sql=f"{self.left.fqn()} != %({name})s", params={name: self.right})
+        return _gen_comparison_sql(self.left, self.right, "!=", "ne", get_count)
 
 
-class Gt[T: PyType](WhereClause):
+class Gt[T: PyType](ClauseBase):
     """
     Checks if a column value is greater than another column or a passed param.
     """
 
-    left: ColumnInfo
-    right: PyType | ColumnInfo
+    left: ColumnInfo | ClauseBase
+    right: ColumnInfo | PyType
 
-    def __init__(self, left: Column[T], right: T | Column[T]):
-        self.left = left.info
+    def __init__(self, left: Column[T] | ClauseBase, right: Column[T] | T):
+        self.left = left.info if isinstance(left, Column) else left
         self.right = right.info if isinstance(right, Column) else right
 
     @override
     def sql(self, get_count: GetCount) -> QuerySingle:
-        count = get_count()
-        name = f"gt_{self.left.name}_{count}"
-
-        if isinstance(self.right, ColumnInfo):
-            return QuerySingle(sql=f"{self.left.fqn()} > {self.right.fqn()}")
-
-        return QuerySingle(sql=f"{self.left.fqn()} > %({name})s", params={name: self.right})
+        return _gen_comparison_sql(self.left, self.right, ">", "gt", get_count)
 
 
-class Gte[T: PyType](WhereClause):
+class Gte[T: PyType](ClauseBase):
     """
     Checks if a column value is greater than or equal to another column or a passed param.
     """
 
-    left: ColumnInfo
-    right: PyType | ColumnInfo
+    left: ColumnInfo | ClauseBase
+    right: ColumnInfo | PyType
 
-    def __init__(self, left: Column[T], right: T | Column[T]):
-        self.left = left.info
+    def __init__(self, left: Column[T] | ClauseBase, right: Column[T] | T):
+        self.left = left.info if isinstance(left, Column) else left
         self.right = right.info if isinstance(right, Column) else right
 
     @override
     def sql(self, get_count: GetCount) -> QuerySingle:
-        count = get_count()
-        name = f"gte_{self.left.name}_{count}"
-
-        if isinstance(self.right, ColumnInfo):
-            return QuerySingle(sql=f"{self.left.fqn()} >= {self.right.fqn()}")
-
-        return QuerySingle(sql=f"{self.left.fqn()} >= %({name})s", params={name: self.right})
+        return _gen_comparison_sql(self.left, self.right, ">=", "gte", get_count)
 
 
-class Lt[T: PyType](WhereClause):
+class Lt[T: PyType](ClauseBase):
     """
     Checks if a column value is less than another column or a passed param.
     """
 
-    left: ColumnInfo
-    right: PyType | ColumnInfo
+    left: ColumnInfo | ClauseBase
+    right: ColumnInfo | PyType
 
-    def __init__(self, left: Column[T], right: T | Column[T]):
-        self.left = left.info
+    def __init__(self, left: Column[T] | ClauseBase, right: Column[T] | T):
+        self.left = left.info if isinstance(left, Column) else left
         self.right = right.info if isinstance(right, Column) else right
 
     @override
     def sql(self, get_count: GetCount) -> QuerySingle:
-        count = get_count()
-        name = f"lt_{self.left.name}_{count}"
-
-        if isinstance(self.right, ColumnInfo):
-            return QuerySingle(sql=f"{self.left.fqn()} < {self.right.fqn()}")
-
-        return QuerySingle(sql=f"{self.left.fqn()} < %({name})s", params={name: self.right})
+        return _gen_comparison_sql(self.left, self.right, "<", "lt", get_count)
 
 
-class Lte[T: PyType](WhereClause):
+class Lte[T: PyType](ClauseBase):
     """
     Checks if a column value is less than or equal to another column or a passed param.
     """
 
-    left: ColumnInfo
-    right: PyType | ColumnInfo
+    left: ColumnInfo | ClauseBase
+    right: ColumnInfo | PyType
 
-    def __init__(self, left: Column[T], right: T | Column[T]):
-        self.left = left.info
+    def __init__(self, left: Column[T] | ClauseBase, right: Column[T] | T):
+        self.left = left.info if isinstance(left, Column) else left
         self.right = right.info if isinstance(right, Column) else right
 
     @override
     def sql(self, get_count: GetCount) -> QuerySingle:
-        count = get_count()
-        name = f"lte_{self.left.name}_{count}"
-
-        if isinstance(self.right, ColumnInfo):
-            return QuerySingle(sql=f"{self.left.fqn()} <= {self.right.fqn()}")
-
-        return QuerySingle(sql=f"{self.left.fqn()} <= %({name})s", params={name: self.right})
+        return _gen_comparison_sql(self.left, self.right, "<=", "lte", get_count)
 
 
 # String matching operators
-class Like[T: PyType](WhereClause):
+class Like[T: PyType](ClauseBase):
     left: ColumnInfo
     right: PyType | ColumnInfo
 
@@ -190,7 +163,7 @@ class Like[T: PyType](WhereClause):
         return QuerySingle(sql=f"{self.left.fqn()} LIKE %({name})s", params={name: self.right})
 
 
-class Ilike[T: PyType](WhereClause):
+class Ilike[T: PyType](ClauseBase):
     """
     Case-insensitive LIKE pattern matching.
     """
@@ -212,7 +185,7 @@ class Ilike[T: PyType](WhereClause):
         return QuerySingle(sql=f"{self.left.fqn()} ILIKE %({name})s", params={name: self.right})
 
 
-class NotLike[T: PyType](WhereClause):
+class NotLike[T: PyType](ClauseBase):
     """
     Negated LIKE pattern matching.
     """
@@ -235,7 +208,7 @@ class NotLike[T: PyType](WhereClause):
 
 
 # Null checks
-class IsNull(WhereClause):
+class IsNull(ClauseBase):
     """
     Checks if a column value is NULL.
     """
@@ -250,7 +223,7 @@ class IsNull(WhereClause):
         return QuerySingle(sql=f"{self.column.fqn()} IS NULL")
 
 
-class IsNotNull(WhereClause):
+class IsNotNull(ClauseBase):
     """
     Checks if a column value is NOT NULL.
     """
@@ -266,7 +239,7 @@ class IsNotNull(WhereClause):
 
 
 # Array/list operations
-class InArray[T: PyType](WhereClause):
+class InArray[T: PyType](ClauseBase):
     """
     Checks if a column value is in a list of values.
     """
@@ -285,7 +258,7 @@ class InArray[T: PyType](WhereClause):
         return QuerySingle(sql=f"{self.column.fqn()} = ANY(%({name})s)", params={name: self.values})
 
 
-class NotInArray[T: PyType](WhereClause):
+class NotInArray[T: PyType](ClauseBase):
     """
     Checks if a column value is not in a list of values.
     """
@@ -307,7 +280,7 @@ class NotInArray[T: PyType](WhereClause):
 # Range operations
 
 
-class Between[T: PyType](WhereClause):
+class Between[T: PyType](ClauseBase):
     """
     Checks if a column value is between two values (inclusive).
     """
@@ -332,7 +305,7 @@ class Between[T: PyType](WhereClause):
         )
 
 
-class NotBetween[T: PyType](WhereClause):
+class NotBetween[T: PyType](ClauseBase):
     """
     Checks if a column value is not between two values (inclusive).
     """
@@ -362,7 +335,7 @@ class SqlAble(Protocol):
     def sql(self) -> QuerySingle: ...
 
 
-class Exists(WhereClause):
+class Exists(ClauseBase):
     """
     Check if a subquery result exists.
     """
@@ -378,7 +351,7 @@ class Exists(WhereClause):
         return QuerySingle(f"EXISTS ({query.sql})", query.params)
 
 
-class NotExists(WhereClause):
+class NotExists(ClauseBase):
     """
     Check if a subquery result does not exist.
     """
@@ -395,14 +368,14 @@ class NotExists(WhereClause):
 
 
 # Logical operators
-class Not(WhereClause):
+class Not(ClauseBase):
     """
     Negates a where clause.
     """
 
-    clause: WhereClause
+    clause: ClauseBase
 
-    def __init__(self, clause: WhereClause):
+    def __init__(self, clause: ClauseBase):
         self.clause = clause
 
     @override
@@ -411,11 +384,15 @@ class Not(WhereClause):
         return QuerySingle(sql=f"NOT ({inner.sql})", params=inner.params)
 
 
-class And(WhereClause):
-    left: WhereClause
-    right: WhereClause
+class And(ClauseBase):
+    """
+    AND two clauses.
+    """
 
-    def __init__(self, left: WhereClause, right: WhereClause):
+    left: ClauseBase
+    right: ClauseBase
+
+    def __init__(self, left: ClauseBase, right: ClauseBase):
         self.left = left
         self.right = right
 
@@ -428,11 +405,15 @@ class And(WhereClause):
         return QuerySingle(sql=sql, params=params)
 
 
-class Or(WhereClause):
-    left: WhereClause
-    right: WhereClause
+class Or(ClauseBase):
+    """
+    OR two clauses.
+    """
 
-    def __init__(self, left: WhereClause, right: WhereClause):
+    left: ClauseBase
+    right: ClauseBase
+
+    def __init__(self, left: ClauseBase, right: ClauseBase):
         self.left = left
         self.right = right
 

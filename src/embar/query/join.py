@@ -3,8 +3,8 @@
 from abc import ABC, abstractmethod
 from typing import override
 
+from embar.query.clause_base import ClauseBase, GetCount
 from embar.query.query import QuerySingle
-from embar.query.where import GetCount, WhereClause
 from embar.table import Table
 
 
@@ -27,9 +27,9 @@ class LeftJoin(JoinClause):
     """
 
     table: type[Table]
-    on: WhereClause
+    on: ClauseBase
 
-    def __init__(self, table: type[Table], on: WhereClause):
+    def __init__(self, table: type[Table], on: ClauseBase):
         """
         Create a new LeftJoin instance.
         """
@@ -53,9 +53,9 @@ class RightJoin(JoinClause):
     """
 
     table: type[Table]
-    on: WhereClause
+    on: ClauseBase
 
-    def __init__(self, table: type[Table], on: WhereClause):
+    def __init__(self, table: type[Table], on: ClauseBase):
         """
         Create a new RightJoin instance.
         """
@@ -79,9 +79,9 @@ class InnerJoin(JoinClause):
     """
 
     table: type[Table]
-    on: WhereClause
+    on: ClauseBase
 
-    def __init__(self, table: type[Table], on: WhereClause):
+    def __init__(self, table: type[Table], on: ClauseBase):
         """
         Create a new InnerJoin instance.
         """
@@ -105,9 +105,9 @@ class FullJoin(JoinClause):
     """
 
     table: type[Table]
-    on: WhereClause
+    on: ClauseBase
 
-    def __init__(self, table: type[Table], on: WhereClause):
+    def __init__(self, table: type[Table], on: ClauseBase):
         """
         Create a new FullJoin instance.
         """

@@ -2,8 +2,8 @@ from abc import ABC, abstractmethod
 from typing import override
 
 from embar.custom_types import PyType
+from embar.query.clause_base import GetCount
 from embar.query.query import QuerySingle
-from embar.query.where import GetCount
 
 # require at least one element in tuple
 TupleAtLeastOne = tuple[str, *tuple[str, ...]]
