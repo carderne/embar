@@ -49,6 +49,7 @@ nav:
       - Raw SQL: query/raw-sql.md
 
     - Integration:
+      - Connection pool: integration/connection-pool.md
       - Migrations: migrations.md
       - Types: types.md
 
