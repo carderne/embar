@@ -52,6 +52,7 @@ nav:
       - Vector: extensions/vector.md
 
     - Integration:
+      - Connection pool: integration/connection-pool.md
       - Migrations: migrations.md
       - Types: types.md
 
