@@ -14,7 +14,6 @@ from pydantic import BaseModel
 
 from embar.column.common import Integer, Text
 from embar.db.pg import AsyncPgDb
-from embar.model import SelectAll
 from embar.query.where import Eq
 from embar.table import Table
 
@@ -71,7 +70,7 @@ Returns all rows from the left table and matched rows from the right table. If t
 async def left_join():
     db = await get_db()
     users = await (
-        db.select(SelectAll)
+        db.select(User.all())
         .from_(User)
         .left_join(Message, Eq(User.id, Message.user_id))
     )
@@ -95,7 +94,7 @@ Returns only rows where there is a match in both tables:
 async def inner_join():
     db = await get_db()
     users = await (
-        db.select(SelectAll)
+        db.select(User.all())
         .from_(User)
         .inner_join(Message, Eq(User.id, Message.user_id))
     )
@@ -119,7 +118,7 @@ Returns all rows from the right table and matched rows from the left table:
 async def right_join():
     db = await get_db()
     users = await (
-        db.select(SelectAll)
+        db.select(User.all())
         .from_(User)
         .right_join(Message, Eq(User.id, Message.user_id))
     )
@@ -143,7 +142,7 @@ Returns all rows from both tables, matching where possible:
 async def full_join():
     db = await get_db()
     users = await (
-        db.select(SelectAll)
+        db.select(User.all())
         .from_(User)
         .full_join(Message, Eq(User.id, Message.user_id))
     )
@@ -167,7 +166,7 @@ Returns the Cartesian product of both tables. No join condition is needed:
 async def cross_join():
     db = await get_db()
     users = await (
-        db.select(SelectAll)
+        db.select(User.all())
         .from_(User)
         .cross_join(Message)
     )
@@ -195,7 +194,7 @@ from embar.query.where import Eq
 async def equality():
     db = await get_db()
     await (
-        db.select(SelectAll)
+        db.select(User.all())
         .from_(User)
         .left_join(Message, Eq(User.id, Message.user_id))
     )
@@ -214,14 +213,14 @@ async def operators():
     db = await get_db()
     # Greater than
     await (
-        db.select(SelectAll)
+        db.select(User.all())
         .from_(User)
         .left_join(Message, Gt(User.id, Message.user_id))
     )
 
     # Multiple conditions
     await (
-        db.select(SelectAll)
+        db.select(User.all())
         .from_(User)
         .left_join(Message, And(
             Eq(User.id, Message.user_id),

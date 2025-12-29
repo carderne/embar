@@ -186,7 +186,6 @@ class SelectQueryReady[M: BaseModel, T: Table, Db: AllDbBase]:
         from embar.table import Table
         from embar.column.common import Integer, Text
         from embar.query.where import Gt
-        from embar.model import SelectAll
 
         class User(Table):
             id: Integer = Integer(primary=True)
@@ -196,7 +195,7 @@ class SelectQueryReady[M: BaseModel, T: Table, Db: AllDbBase]:
         db = PgDb(None)
 
         # SELECT * FROM users GROUP BY age HAVING COUNT(*) > 5
-        query = db.select(SelectAll).from_(User).group_by(User.age).having(Gt(User.age, 18))
+        query = db.select(User.all()).from_(User).group_by(User.age).having(Gt(User.age, 18))
         sql_result = query.sql()
         assert "HAVING" in sql_result.sql
         ```
@@ -220,7 +219,6 @@ class SelectQueryReady[M: BaseModel, T: Table, Db: AllDbBase]:
         from embar.db.pg import PgDb
         from embar.table import Table
         from embar.column.common import Integer, Text
-        from embar.model import SelectAll
         from embar.query.order_by import Asc, Desc
         from embar.sql import Sql
 
@@ -232,17 +230,17 @@ class SelectQueryReady[M: BaseModel, T: Table, Db: AllDbBase]:
         db = PgDb(None)
 
         # Multiple ways to specify ORDER BY
-        query = db.select(SelectAll).from_(User).order_by(User.age, Desc(User.name))
+        query = db.select(User.all()).from_(User).order_by(User.age, Desc(User.name))
         sql_result = query.sql()
         assert "ORDER BY" in sql_result.sql
 
         # With nulls handling
-        query2 = db.select(SelectAll).from_(User).order_by(Asc(User.age, nulls="last"))
+        query2 = db.select(User.all()).from_(User).order_by(Asc(User.age, nulls="last"))
         sql_result2 = query2.sql()
         assert "NULLS LAST" in sql_result2.sql
 
         # With raw SQL
-        query3 = db.select(SelectAll).from_(User).order_by(Sql(t"{User.id} DESC"))
+        query3 = db.select(User.all()).from_(User).order_by(Sql(t"{User.id} DESC"))
         sql_result3 = query3.sql()
         assert "ORDER BY" in sql_result3.sql
         ```
@@ -284,7 +282,6 @@ class SelectQueryReady[M: BaseModel, T: Table, Db: AllDbBase]:
         from embar.db.pg import PgDb
         from embar.table import Table
         from embar.column.common import Integer, Text
-        from embar.model import SelectAll
 
         class User(Table):
             id: Integer = Integer(primary=True)
@@ -294,7 +291,7 @@ class SelectQueryReady[M: BaseModel, T: Table, Db: AllDbBase]:
         db = PgDb(None)
 
         # SELECT * FROM users LIMIT 10 OFFSET 20
-        query = db.select(SelectAll).from_(User).limit(10).offset(20)
+        query = db.select(User.all()).from_(User).limit(10).offset(20)
         sql_result = query.sql()
         assert "LIMIT 10" in sql_result.sql
         assert "OFFSET 20" in sql_result.sql

@@ -4,15 +4,13 @@ Select operations retrieve data from your database. Embar provides a fluent inte
 
 ## Basic Select
 
-Select all columns from a table using `SelectAll`:
-
-```{.python continuation fixture:postgres_container}
+Setup.
+```{.python fixture:postgres_container}
 import asyncio
 import psycopg
 
 from embar.column.common import Integer, Text
 from embar.db.pg import AsyncPgDb
-from embar.model import SelectAll
 from embar.table import Table
 
 class User(Table):
@@ -27,10 +25,15 @@ async def get_db(tables: list[Table] = None):
     db = AsyncPgDb(conn)
     await db.migrate(tables)
     return db
+```
 
+
+Select all columns from a table using `.all()`:
+
+```{.python continuation fixture:postgres_container}
 async def basic():
     db = await get_db()
-    users = await db.select(SelectAll).from_(User)
+    users = await db.select(User.all()).from_(User)
     # [User(id=1, email="alice@example.com"), User(id=2, email="bob@example.com")]
 
 asyncio.run(basic())
@@ -79,7 +82,7 @@ from embar.query.where import Eq
 async def where():
     db = await get_db()
     users = await (
-        db.select(SelectAll)
+        db.select(User.all())
         .from_(User)
         .where(Eq(User.id, 1))
     )
@@ -187,7 +190,7 @@ Select distinct rows using `select_distinct()`:
 ```{.python continuation}
 async def distinct():
     db = await get_db()
-    users = await db.select_distinct(SelectAll).from_(User)
+    users = await db.select_distinct(User.all()).from_(User)
 
 asyncio.run(distinct())
 ```
@@ -275,7 +278,7 @@ from embar.query.order_by import Asc, Desc
 async def order_by():
     db = await get_db()
     users = await (
-        db.select(SelectAll)
+        db.select(User.all())
         .from_(User)
         .order_by(Desc(User.id))
     )
@@ -295,7 +298,7 @@ You can order by multiple columns:
 async def order_multi():
     db = await get_db()
     users = await (
-        db.select(SelectAll)
+        db.select(User.all())
         .from_(User)
         .order_by(Asc(User.email), Desc(User.id))
     )
@@ -309,7 +312,7 @@ Control null ordering:
 async def nulls():
     db = await get_db()
     users = await (
-        db.select(SelectAll)
+        db.select(User.all())
         .from_(User)
         .order_by(Asc(User.email, nulls="last"))
     )
@@ -331,7 +334,7 @@ Paginate results with `.limit()` and `.offset()`:
 async def limit():
     db = await get_db()
     users = await (
-        db.select(SelectAll)
+        db.select(User.all())
         .from_(User)
         .limit(10)
         .offset(20)
@@ -375,7 +378,7 @@ Inspect the generated query without executing it:
 async def raw_sql():
     db = await get_db()
     query = (
-        db.select(SelectAll)
+        db.select(User.all())
         .from_(User)
         .where(Eq(User.id, 1))
         .sql()
