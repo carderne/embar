@@ -2,8 +2,8 @@ import pytest
 
 from .schemas.schema import Message, User
 
-# NOTE ABOUT pyright:ignore
-# The fact that (based)pyright DOES NOT complain about the ignores
+# NOTE ABOUT ty:ignore
+# The fact that ty DOES NOT complain about the ignores
 # tells us that they are valid ignores, and that the code is therefore invalid
 # We're checking that the typechecker usefully shouts at the user for bad code
 
@@ -11,8 +11,8 @@ from .schemas.schema import Message, User
 def test_fail_if_missing_table_fields():
     with pytest.raises(TypeError) as exc:
         # fmt: off
-        User(
-            email="",  # pyright:ignore[reportCallIssue]
+        User(  # ty: ignore[missing-argument]
+            email="",
         )
         # fmt: on
     error_str = str(exc.value)

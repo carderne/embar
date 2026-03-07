@@ -10,7 +10,7 @@ from typing import Any, Self, dataclass_transform
 from pydantic_core import core_schema
 
 from embar.column.base import ColumnBase
-from embar.column.common import Column, Integer, Text
+from embar.column.common import Column, Integer, Text, integer, text, float_col
 from embar.config import EmbarConfig
 from embar.custom_types import Undefined
 from embar.model import SelectAll
@@ -18,7 +18,7 @@ from embar.query.many import ManyTable, OneTable
 from embar.table_base import TableBase
 
 
-@dataclass_transform(kw_only_default=True, field_specifiers=(Integer, Text, Integer.fk))
+@dataclass_transform(kw_only_default=True, field_specifiers=(integer, text, float_col))
 class Table(TableBase):
     """
     All table definitions inherit from `Table`.
@@ -33,7 +33,7 @@ class Table(TableBase):
         """
         Populate `_fields` and the `embar_config` if not provided.
         """
-        cls._fields = {name: attr for name, attr in cls.__dict__.items() if isinstance(attr, ColumnBase)}  # pyright:ignore[reportUnannotatedClassAttribute]
+        cls._fields = {name: attr for name, attr in cls.__dict__.items() if isinstance(attr, ColumnBase)}
 
         if cls.embar_config == Undefined:
             cls.embar_config: EmbarConfig = EmbarConfig()

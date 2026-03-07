@@ -7,17 +7,17 @@ Foreign keys define relationships between tables. In Embar, you create foreign k
 Use the `.fk()` method to reference a column in another table:
 
 ```{.python continuation}
-from embar.column.common import Integer, Text
+from embar.column.common import Integer, Text, integer, text
 from embar.table import Table
 
 class User(Table):
-    id: Integer = Integer(primary=True)
-    email: Text = Text()
+    id: Integer = integer(primary=True)
+    email: Text = text()
 
 class Message(Table):
-    id: Integer = Integer(primary=True)
-    user_id: Integer = Integer().fk(lambda: User.id)
-    content: Text = Text()
+    id: Integer = integer(primary=True)
+    user_id: Integer = integer(fk=lambda: User.id)
+    content: Text = text()
 ```
 
 The lambda syntax (`lambda: User.id`) is required because `User` might not be defined yet when Python evaluates the `Message` class body.
@@ -34,12 +34,9 @@ You can specify what happens when the referenced row is deleted using the `on_de
 
 ```{.python continuation}
 class Message(Table):
-    id: Integer = Integer(primary=True)
-    user_id: Integer = Integer().fk(
-        lambda: User.id,
-        on_delete="cascade"
-    )
-    content: Text = Text()
+    id: Integer = integer(primary=True)
+    user_id: Integer = integer(fk=lambda: User.id, on_delete="cascade")
+    content: Text = text()
 ```
 
 ### Available Options
@@ -58,10 +55,7 @@ When a user is deleted, all their messages are deleted:
 
 ```{.python continuation}
 class Message(Table):
-    user_id: Integer = Integer().fk(
-        lambda: User.id,
-        on_delete="cascade"
-    )
+    user_id: Integer = integer(fk=lambda: User.id, on_delete="cascade")
 ```
 
 Generates:
@@ -76,10 +70,7 @@ When a user is deleted, the foreign key is set to NULL:
 
 ```{.python continuation}
 class Message(Table):
-    user_id: Integer = Integer().fk(
-        lambda: User.id,
-        on_delete="set null"
-    )
+    user_id: Integer = integer(fk=lambda: User.id, on_delete="set null")
 ```
 
 Make sure the column allows NULL values (don't use `not_null=True`).
@@ -96,18 +87,18 @@ You can chain foreign keys across multiple tables:
 
 ```{.python continuation}
 class Organization(Table):
-    id: Integer = Integer(primary=True)
-    name: Text = Text()
+    id: Integer = integer(primary=True)
+    name: Text = text()
 
 class User(Table):
-    id: Integer = Integer(primary=True)
-    org_id: Integer = Integer().fk(lambda: Organization.id)
-    email: Text = Text()
+    id: Integer = integer(primary=True)
+    org_id: Integer = integer(fk=lambda: Organization.id)
+    email: Text = text()
 
 class Message(Table):
-    id: Integer = Integer(primary=True)
-    user_id: Integer = Integer().fk(lambda: User.id, on_delete="cascade")
-    content: Text = Text()
+    id: Integer = integer(primary=True)
+    user_id: Integer = integer(fk=lambda: User.id, on_delete="cascade")
+    content: Text = text()
 ```
 
 ## Composite Constraints
@@ -116,12 +107,12 @@ For more complex relationships, combine foreign keys with other column options:
 
 ```{.python continuation}
 class Message(Table):
-    id: Integer = Integer(primary=True)
-    user_id: Integer = Integer(not_null=True).fk(
+    id: Integer = integer(primary=True)
+    user_id: Integer = integer(not_null=True).fk(
         lambda: User.id,
         on_delete="cascade"
     )
-    content: Text = Text(not_null=True)
+    content: Text = text(not_null=True)
 ```
 
 This ensures every message must have a user, and messages are deleted when their user is deleted.

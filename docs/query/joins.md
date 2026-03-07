@@ -12,19 +12,19 @@ import psycopg
 from typing import Annotated
 from pydantic import BaseModel
 
-from embar.column.common import Integer, Text
+from embar.column.common import Integer, Text, integer, text
 from embar.db.pg import AsyncPgDb
 from embar.query.where import Eq
 from embar.table import Table
 
 class User(Table):
-    id: Integer = Integer(primary=True)
-    email: Text = Text()
+    id: Integer = integer(primary=True)
+    email: Text = text()
 
 class Message(Table):
-    id: Integer = Integer(primary=True)
-    user_id: Integer = Integer().fk(lambda: User.id)
-    content: Text = Text()
+    id: Integer = integer(primary=True)
+    user_id: Integer = integer(fk=lambda: User.id)
+    content: Text = text()
 
 class UserWithEmail(BaseModel):
     id: Annotated[int, User.id]
@@ -324,9 +324,9 @@ Chain multiple join calls to join more than two tables:
 
 ```{.python continuation}
 class Comment(Table):
-    id: Integer = Integer(primary=True)
-    message_id: Integer = Integer().fk(lambda: Message.id)
-    text: Text = Text()
+    id: Integer = integer(primary=True)
+    message_id: Integer = integer(fk=lambda: Message.id)
+    text: Text = text()
 
 class UserWithData(BaseModel):
     id: Annotated[int, User.id]

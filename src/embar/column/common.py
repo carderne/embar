@@ -57,9 +57,9 @@ class Column[T: PyType](ColumnBase):
 
         ```python
         from embar.table import Table
-        from embar.column.common import Text
+        from embar.column.common import Text, text
         class MyTable(Table):
-            my_col: Text = Text()      # typechecked as `Text`
+            my_col: Text = text()      # typechecked as `Text`
         my_row = MyTable(my_col="foo") # typechecked as `str`
         assert isinstance(MyTable.my_col, Text)
         assert isinstance(my_row.my_col, str)
@@ -121,10 +121,10 @@ class Column[T: PyType](ColumnBase):
         ```python
         from typing import Annotated
         from pydantic import BaseModel
-        from embar.column.common import Text
+        from embar.column.common import Text, text
         from embar.table import Table
         class MyTable(Table):
-            my_col: Text = Text()
+            my_col: Text = text()
         class MyModel(BaseModel):
             values: Annotated[list[str], MyTable.my_col.many()]
         ```
@@ -157,3 +157,61 @@ class Float(Column[float]):
 
     _sql_type: str = "REAL"
     _py_type: Type = float
+
+
+# ---------------------------------------------------------------------------
+# Factory functions (field specifiers for @dataclass_transform)
+#
+# ty (the type checker) only recognises *functions* — not classes — as
+# field_specifiers.  These thin wrappers have the right signature so that
+# ty can inspect the ``default`` parameter and decide whether a field is
+# required or optional.  At runtime they just delegate to the class.
+# ---------------------------------------------------------------------------
+
+
+def text(
+    name: str | None = None,
+    default: str | None = None,
+    *,
+    primary: bool = False,
+    not_null: bool = False,
+    fk: Callable[[], Column[str]] | None = None,
+    on_delete: OnDelete | None = None,
+) -> Text:
+    """Create a :class:`Text` column (field specifier for ``@dataclass_transform``)."""
+    col = Text(name=name, default=default, primary=primary, not_null=not_null)
+    if fk is not None:
+        col.fk(fk, on_delete)
+    return col
+
+
+def integer(
+    name: str | None = None,
+    default: int | None = None,
+    *,
+    primary: bool = False,
+    not_null: bool = False,
+    fk: Callable[[], Column[int]] | None = None,
+    on_delete: OnDelete | None = None,
+) -> Integer:
+    """Create an :class:`Integer` column (field specifier for ``@dataclass_transform``)."""
+    col = Integer(name=name, default=default, primary=primary, not_null=not_null)
+    if fk is not None:
+        col.fk(fk, on_delete)
+    return col
+
+
+def float_col(
+    name: str | None = None,
+    default: float | None = None,
+    *,
+    primary: bool = False,
+    not_null: bool = False,
+    fk: Callable[[], Column[float]] | None = None,
+    on_delete: OnDelete | None = None,
+) -> Float:
+    """Create a :class:`Float` column (field specifier for ``@dataclass_transform``)."""
+    col = Float(name=name, default=default, primary=primary, not_null=not_null)
+    if fk is not None:
+        col.fk(fk, on_delete)
+    return col

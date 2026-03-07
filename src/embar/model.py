@@ -116,11 +116,11 @@ def _convert_annotation(
     ```python
     from typing import Annotated
     from pydantic import BaseModel
-    from embar.column.common import Text
+    from embar.column.common import Text, text
     from embar.table import Table
     from embar.model import _convert_annotation
     class MyTable(Table):
-        my_col: Text = Text()
+        my_col: Text = text()
     class MyModel(BaseModel):
         my_col: Annotated[str, MyTable.my_col]
     """
