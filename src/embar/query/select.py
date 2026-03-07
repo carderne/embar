@@ -265,7 +265,7 @@ class SelectQueryReady[M: BaseModel, T: Table, Db: AllDbBase]:
 
         return self
 
-    def limit(self, n: int) -> Self:
+    def limit(self, n: int):
         """
         Add a LIMIT clause to the query.
         """

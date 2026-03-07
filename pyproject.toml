@@ -2,7 +2,7 @@
 # run with eg `uv run poe fmt`
 fmt = "ruff format"
 lint = "ruff check --fix"
-check = "basedpyright"
+check = "ty check"
 
 test = "pytest -vv -s"
 cov = "pytest --cov=embar --cov-report=html"
@@ -12,7 +12,7 @@ all = [ {ref="fmt"}, {ref="lint"}, {ref="check"}, {ref="test"} ]
 
 "ci:fmt" = "ruff format --check"  # fail if not formatted
 "ci:lint" = "ruff check"
-"ci:check" = "basedpyright"
+"ci:check" = "ty check"
 "ci:test" = "pytest --cov=embar --cov-report=xml"
 
 "docs" = "mkdocs serve"
@@ -52,7 +52,6 @@ embar = "embar.tools.commands:main"
 
 [dependency-groups]
 dev = [
-    "basedpyright>=1.31.7",
     "mkdocs-gen-files>=0.5.0",
     "mkdocs-literate-nav>=0.6.2",
     "mkdocs-material>=9.6.23",
@@ -89,14 +88,8 @@ select = [
   "T100", # breakpoints (probably don't want these in prod!)
 ]
 
-[tool.pyright]
-venvPath = "."
-venv = ".venv"
-strict = ["**/*.py"]
-pythonVersion = "3.14"
-reportExplicitAny = false
-reportUnusedCallResult = false
-reportAny = false
+[tool.ty.rules]
+invalid-type-form = "ignore"
 
 [tool.pytest.ini_options]
 addopts = "--doctest-modules --doctest-glob='*.py' --markdown-docs --markdown-docs-syntax=superfences"

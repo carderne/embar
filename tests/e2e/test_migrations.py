@@ -106,6 +106,13 @@ def mock_llm(
     return "-- No changes needed"
 
 
+def foo(x: int):
+    pass
+
+
+foo("adas")
+
+
 @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-api-key"})
 def test_cmd_generate(test_config_path: str, temp_migrations_dir: str):
     """Test cmd_generate creates a migration file."""
