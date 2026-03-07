@@ -36,3 +36,15 @@ def load_config(config_path: str | None = None) -> MigrateConfig:
     except TypeError as e:
         print(f"Error: Invalid config format: {e}")
         sys.exit(1)
+
+
+def get_api_key() -> str:
+    """Get API key from environment or prompt user."""
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        print("ANTHROPIC_API_KEY environment variable not set.")
+        api_key = input("Please enter your Anthropic API key: ").strip()
+        if not api_key:
+            print("Error: API key is required.")
+            sys.exit(1)
+    return api_key

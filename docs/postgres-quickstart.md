@@ -157,7 +157,7 @@ async def app():
     )
 
     # Add indexes
-    class MessageIndexed(Table):  # pyright:ignore[reportUnusedClass]
+    class MessageIndexed(Table):
         embar_config: EmbarConfig = EmbarConfig(
             constraints=[Index("message_idx").on(lambda: Message.user_id)]
         )

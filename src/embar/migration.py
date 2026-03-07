@@ -1,7 +1,7 @@
 """Migration classes for creating and running database migrations."""
 
 from collections.abc import Generator, Sequence
-from typing import Any, cast, overload
+from typing import Any, Self, cast
 
 from embar.column.base import EnumBase
 from embar.db.base import AllDbBase, AsyncDbBase, DbBase
@@ -93,18 +93,16 @@ class Migration[Db: AllDbBase]:
 
         return awaitable().__await__()
 
-    @overload
-    def run(self: Migration[DbBase]) -> None: ...
-    @overload
-    def run(self: Migration[AsyncDbBase]) -> Migration[Db]: ...
-    def run(self) -> None | Migration[Db]:
+    def run(self) -> Self:
         """
         Run the migration synchronously.
+
+        Returns self so that `await db.migrate([...]).run()` works for async.
+        For sync callers, the return value can be ignored.
         """
         if isinstance(self._db, DbBase):
             for ddl in self.ddls:
                 self._db.execute(QuerySingle(ddl.ddl))
                 for constraint in ddl.constraints:
                     self._db.execute(QuerySingle(constraint))
-            return
         return self

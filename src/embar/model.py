@@ -159,7 +159,7 @@ def generate_model(cls: type[TableBase]) -> type[BaseModel]:
     """
 
     fields_dict: dict[str, Any] = {}
-    for field_name, column in cls._fields.items():  # pyright:ignore[reportPrivateUsage]
+    for field_name, column in cls._fields.items():
         field_type = column.info.py_type
 
         if column.info.col_type == "VECTOR":

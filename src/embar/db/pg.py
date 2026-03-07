@@ -184,7 +184,7 @@ class PgDb(DbBase):
         Execute a query without returning results.
         """
         with self.conn_wrapper as conn:
-            conn.execute(query.sql, query.params)  # pyright:ignore[reportArgumentType]
+            conn.execute(query.sql, query.params)  # ty: ignore[invalid-argument-type]
             if self._commit_after_execute:
                 conn.commit()
 
@@ -196,7 +196,7 @@ class PgDb(DbBase):
         params = _jsonify_dicts(query.many_params)
         with self.conn_wrapper as conn:
             with conn.cursor() as cur:
-                cur.executemany(query.sql, params)  # pyright:ignore[reportArgumentType]
+                cur.executemany(query.sql, params)  # ty: ignore[invalid-argument-type]
             if self._commit_after_execute:
                 conn.commit()
 
@@ -208,9 +208,9 @@ class PgDb(DbBase):
         with self.conn_wrapper as conn:
             with conn.cursor() as cur:
                 if isinstance(query, QuerySingle):
-                    cur.execute(query.sql, query.params)  # pyright:ignore[reportArgumentType]
+                    cur.execute(query.sql, query.params)  # ty: ignore[invalid-argument-type]
                 else:
-                    cur.executemany(query.sql, query.many_params, returning=True)  # pyright:ignore[reportArgumentType]
+                    cur.executemany(query.sql, query.many_params, returning=True)  # ty: ignore[invalid-argument-type]
 
                 if cur.description is None:
                     return []
@@ -235,7 +235,7 @@ class PgDb(DbBase):
         table_names = ", ".join(tables)
         with self.conn_wrapper as conn:
             with conn.cursor() as cursor:
-                cursor.execute(f"TRUNCATE TABLE {table_names} CASCADE")  # pyright:ignore[reportArgumentType]
+                cursor.execute(f"TRUNCATE TABLE {table_names} CASCADE")  # ty: ignore[invalid-argument-type]
                 if self._commit_after_execute:
                     conn.commit()
 
@@ -251,7 +251,7 @@ class PgDb(DbBase):
         table_names = ", ".join(tables)
         with self.conn_wrapper as conn:
             with conn.cursor() as cursor:
-                cursor.execute(f"DROP TABLE {table_names} CASCADE")  # pyright:ignore[reportArgumentType]
+                cursor.execute(f"DROP TABLE {table_names} CASCADE")  # ty: ignore[invalid-argument-type]
                 if self._commit_after_execute:
                     conn.commit()
 
@@ -259,7 +259,7 @@ class PgDb(DbBase):
         with self.conn_wrapper as conn:
             with conn.cursor() as cursor:
                 # Get all table names from public schema
-                cursor.execute(f"SELECT tablename FROM pg_tables WHERE schemaname = '{schema}'")  # pyright:ignore[reportArgumentType]
+                cursor.execute(f"SELECT tablename FROM pg_tables WHERE schemaname = '{schema}'")  # ty: ignore[invalid-argument-type]
                 tables = cursor.fetchall()
                 if not tables:
                     return None
@@ -294,7 +294,7 @@ class PgDbTransaction:
 
         # Create a PgDb that uses this single connection (no auto-commit)
         tx_db = PgDb(conn)
-        tx_db._commit_after_execute = False  # pyright: ignore[reportPrivateUsage]
+        tx_db._commit_after_execute = False
         self._db = tx_db
 
         self._tx = conn.transaction()
@@ -408,7 +408,7 @@ class AsyncPgDb(AsyncDbBase):
         Execute a query without returning results.
         """
         async with self.conn_wrapper as conn:
-            await conn.execute(query.sql, query.params)  # pyright:ignore[reportArgumentType]
+            await conn.execute(query.sql, query.params)  # ty: ignore[invalid-argument-type]
             if self._commit_after_execute:
                 await conn.commit()
 
@@ -420,7 +420,7 @@ class AsyncPgDb(AsyncDbBase):
         params = _jsonify_dicts(query.many_params)
         async with self.conn_wrapper as conn:
             async with conn.cursor() as cur:
-                await cur.executemany(query.sql, params)  # pyright:ignore[reportArgumentType]
+                await cur.executemany(query.sql, params)  # ty: ignore[invalid-argument-type]
             if self._commit_after_execute:
                 await conn.commit()
 
@@ -432,9 +432,9 @@ class AsyncPgDb(AsyncDbBase):
         async with self.conn_wrapper as conn:
             async with conn.cursor() as cur:
                 if isinstance(query, QuerySingle):
-                    await cur.execute(query.sql, query.params)  # pyright:ignore[reportArgumentType]
+                    await cur.execute(query.sql, query.params)  # ty: ignore[invalid-argument-type]
                 else:
-                    await cur.executemany(query.sql, query.many_params, returning=True)  # pyright:ignore[reportArgumentType]
+                    await cur.executemany(query.sql, query.many_params, returning=True)  # ty: ignore[invalid-argument-type]
 
                 if cur.description is None:
                     return []
@@ -460,7 +460,7 @@ class AsyncPgDb(AsyncDbBase):
         table_names = ", ".join(tables)
         async with self.conn_wrapper as conn:
             async with conn.cursor() as cursor:
-                await cursor.execute(f"TRUNCATE TABLE {table_names} CASCADE")  # pyright:ignore[reportArgumentType]
+                await cursor.execute(f"TRUNCATE TABLE {table_names} CASCADE")  # ty: ignore[invalid-argument-type]
                 if self._commit_after_execute:
                     await conn.commit()
 
@@ -476,7 +476,7 @@ class AsyncPgDb(AsyncDbBase):
         table_names = ", ".join(tables)
         async with self.conn_wrapper as conn:
             async with conn.cursor() as cursor:
-                await cursor.execute(f"DROP TABLE {table_names} CASCADE")  # pyright:ignore[reportArgumentType]
+                await cursor.execute(f"DROP TABLE {table_names} CASCADE")  # ty: ignore[invalid-argument-type]
                 if self._commit_after_execute:
                     await conn.commit()
 
@@ -484,7 +484,7 @@ class AsyncPgDb(AsyncDbBase):
         async with self.conn_wrapper as conn:
             async with conn.cursor() as cursor:
                 # Get all table names from public schema
-                await cursor.execute(f"SELECT tablename FROM pg_tables WHERE schemaname = '{schema}'")  # pyright:ignore[reportArgumentType]
+                await cursor.execute(f"SELECT tablename FROM pg_tables WHERE schemaname = '{schema}'")  # ty: ignore[invalid-argument-type]
                 tables = await cursor.fetchall()
                 if not tables:
                     return None
@@ -519,7 +519,7 @@ class AsyncPgDbTransaction:
 
         # Create an AsyncPgDb that uses this single connection (no auto-commit)
         tx_db = AsyncPgDb(conn)
-        tx_db._commit_after_execute = False  # pyright: ignore[reportPrivateUsage]
+        tx_db._commit_after_execute = False
         self._db = tx_db
 
         self._tx = conn.transaction()

@@ -129,7 +129,7 @@ class Column[T: PyType](ColumnBase):
             values: Annotated[list[str], MyTable.my_col.many()]
         ```
         """
-        return ManyColumn[Self](self)
+        return ManyColumn(self)
 
 
 class Text(Column[str]):
