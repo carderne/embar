@@ -1,3 +1,9 @@
+# TODO: Remove ty: ignore comments once ty supports method calls on typevars
+# bounded by unions. Currently `.close()` and `.open()` on `C: Connection | ConnectionPool`
+# trigger false positive invalid-argument-type / possibly-missing-attribute errors.
+# Tracked in: https://github.com/astral-sh/ty/issues/1503
+#              https://github.com/astral-sh/ty/issues/2585
+
 """Postgres database clients for sync and async operations."""
 
 import types
@@ -41,7 +47,7 @@ class ConnectionWrapper[C: Connection | ConnectionPool]:
             return self.conn_or_pool
 
         # Ensure pool is open (idempotent if already open)
-        self.conn_or_pool.open()
+        self.conn_or_pool.open()  # ty: ignore[invalid-argument-type, possibly-missing-attribute]
 
         self._cm = self.conn_or_pool.connection()
         return self._cm.__enter__()
@@ -57,7 +63,7 @@ class ConnectionWrapper[C: Connection | ConnectionPool]:
         return None
 
     def close(self):
-        self.conn_or_pool.close()
+        self.conn_or_pool.close()  # ty: ignore[invalid-argument-type]
 
 
 class AsyncConnectionWrapper[C: AsyncConnection | AsyncConnectionPool]:
@@ -72,7 +78,7 @@ class AsyncConnectionWrapper[C: AsyncConnection | AsyncConnectionPool]:
             return self.conn_or_pool
 
         # Ensure pool is open (must be awaited for async pools)
-        await self.conn_or_pool.open()
+        await self.conn_or_pool.open()  # ty: ignore[invalid-argument-type, possibly-missing-attribute]
 
         self._cm = self.conn_or_pool.connection()
         return await self._cm.__aenter__()
@@ -88,7 +94,7 @@ class AsyncConnectionWrapper[C: AsyncConnection | AsyncConnectionPool]:
         return None
 
     async def close(self):
-        await self.conn_or_pool.close()
+        await self.conn_or_pool.close()  # ty: ignore[invalid-argument-type]
 
 
 @final
