@@ -1,7 +1,7 @@
 """Update query builder."""
 
 from collections.abc import Generator, Mapping, Sequence
-from typing import Any, Self, cast, overload
+from typing import Any, Self, cast
 
 from pydantic import BaseModel, TypeAdapter
 
@@ -91,22 +91,16 @@ class UpdateQueryReady[T: Table, Db: AllDbBase]:
 
         return awaitable().__await__()
 
-    @overload
-    def run(self: UpdateQueryReady[T, DbBase]) -> None: ...
-    @overload
-    def run(self: UpdateQueryReady[T, AsyncDbBase]) -> UpdateQueryReady[T, Db]: ...
-
-    def run(self) -> None | UpdateQueryReady[T, Db]:
+    def run(self) -> None:
         """
         Run the query against the underlying DB.
 
         Convenience method for those not using async.
-        But still works if awaited.
+        For async, use `await query` instead.
         """
         if isinstance(self._db, DbBase):
             query = self.sql()
-            return self._db.execute(query)
-        return self
+            self._db.execute(query)
 
     def sql(self) -> QuerySingle:
         """
@@ -185,27 +179,21 @@ class UpdateQueryReturning[T: Table, Db: AllDbBase]:
 
         return awaitable().__await__()
 
-    @overload
-    def run(self: UpdateQueryReturning[T, DbBase]) -> list[T]: ...
-    @overload
-    def run(self: UpdateQueryReturning[T, AsyncDbBase]) -> UpdateQueryReturning[T, Db]: ...
-
-    def run(self) -> list[T] | UpdateQueryReturning[T, Db]:
+    def run(self) -> list[T]:
         """
         Run the query against the underlying DB.
 
         Convenience method for those not using async.
-        But still works if awaited.
+        For async, use `await query` instead.
         """
-        if isinstance(self._db, DbBase):
-            query = self.sql()
-            model = self._get_model()
-            model = cast(type[T], model)
-            adapter = TypeAdapter(list[model])
-            data = self._db.fetch(query)
-            results = adapter.validate_python(data)
-            return results
-        return self
+        query = self.sql()
+        model = self._get_model()
+        model = cast(type[T], model)
+        adapter = TypeAdapter(list[model])
+        db = cast(DbBase, self._db)
+        data = db.fetch(query)
+        results = adapter.validate_python(data)
+        return results
 
     def sql(self) -> QuerySingle:
         """
