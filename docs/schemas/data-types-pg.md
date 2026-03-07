@@ -9,11 +9,11 @@ Embar provides comprehensive support for PostgreSQL data types. All types are im
 Standard integer type.
 
 ```{.python continuation}
-from embar.column.common import Integer
+from embar.column.common import Integer, integer
 from embar.table import Table
 
 class Product(Table):
-    quantity: Integer = Integer()
+    quantity: Integer = integer()
 ```
 
 Generates:
@@ -26,10 +26,10 @@ Generates:
 Small integer type for values from -32768 to 32767.
 
 ```{.python continuation}
-from embar.column.pg import SmallInt
+from embar.column.pg import SmallInt, smallint
 
 class Product(Table):
-    stock: SmallInt = SmallInt()
+    stock: SmallInt = smallint()
 ```
 
 Generates:
@@ -42,10 +42,10 @@ Generates:
 Large integer type for values beyond the standard integer range.
 
 ```{.python continuation}
-from embar.column.pg import BigInt
+from embar.column.pg import BigInt, bigint
 
 class Analytics(Table):
-    views: BigInt = BigInt()
+    views: BigInt = bigint()
 ```
 
 Generates:
@@ -62,10 +62,10 @@ Serial types are auto-incrementing integers.
 Auto-incrementing integer.
 
 ```{.python continuation}
-from embar.column.pg import Serial
+from embar.column.pg import Serial, serial
 
 class User(Table):
-    id: Serial = Serial(primary=True)
+    id: Serial = serial(primary=True)
 ```
 
 Generates:
@@ -78,10 +78,10 @@ Generates:
 Auto-incrementing small integer.
 
 ```{.python continuation}
-from embar.column.pg import SmallSerial
+from embar.column.pg import SmallSerial, smallserial
 
 class Tag(Table):
-    id: SmallSerial = SmallSerial(primary=True)
+    id: SmallSerial = smallserial(primary=True)
 ```
 
 Generates:
@@ -94,10 +94,10 @@ Generates:
 Auto-incrementing big integer.
 
 ```{.python continuation}
-from embar.column.pg import BigSerial
+from embar.column.pg import BigSerial, bigserial
 
 class Event(Table):
-    id: BigSerial = BigSerial(primary=True)
+    id: BigSerial = bigserial(primary=True)
 ```
 
 Generates:
@@ -112,10 +112,10 @@ Generates:
 Variable-length text with no limit.
 
 ```{.python continuation}
-from embar.column.common import Text
+from embar.column.common import Text, text
 
 class Post(Table):
-    content: Text = Text()
+    content: Text = text()
 ```
 
 Generates:
@@ -128,10 +128,10 @@ Generates:
 Variable-length text with optional length limit.
 
 ```{.python continuation}
-from embar.column.pg import Varchar
+from embar.column.pg import Varchar, varchar
 
 class User(Table):
-    username: Varchar = Varchar(length=50)
+    username: Varchar = varchar(length=50)
 ```
 
 Generates:
@@ -143,7 +143,7 @@ Without a length limit:
 
 ```{.python continuation}
 class User(Table):
-    bio: Varchar = Varchar()
+    bio: Varchar = varchar()
 ```
 
 Generates:
@@ -156,10 +156,10 @@ Generates:
 Fixed-length character type.
 
 ```{.python continuation}
-from embar.column.pg import Char
+from embar.column.pg import Char, char_col
 
 class Country(Table):
-    code: Char = Char(length=2)
+    code: Char = char_col(length=2)
 ```
 
 Generates:
@@ -174,10 +174,10 @@ Generates:
 Arbitrary precision decimal type with configurable precision and scale.
 
 ```{.python continuation}
-from embar.column.pg import Numeric
+from embar.column.pg import Numeric, numeric
 
 class Product(Table):
-    price: Numeric = Numeric(precision=10, scale=2)
+    price: Numeric = numeric(precision=10, scale=2)
 ```
 
 Generates:
@@ -189,7 +189,7 @@ With precision only:
 
 ```{.python continuation}
 class Product(Table):
-    score: Numeric = Numeric(precision=5)
+    score: Numeric = numeric(precision=5)
 ```
 
 Generates:
@@ -202,10 +202,10 @@ Generates:
 Alias for Numeric (DECIMAL is an alias for NUMERIC in PostgreSQL).
 
 ```{.python continuation}
-from embar.column.pg import PgDecimal
+from embar.column.pg import PgDecimal, pg_decimal
 
 class Invoice(Table):
-    total: PgDecimal = PgDecimal(precision=12, scale=2)
+    total: PgDecimal = pg_decimal(precision=12, scale=2)
 ```
 
 Generates:
@@ -218,10 +218,10 @@ Generates:
 Real floating point type.
 
 ```{.python continuation}
-from embar.column.common import Float
+from embar.column.common import Float, float_col
 
 class Measurement(Table):
-    temperature: Float = Float()
+    temperature: Float = float_col()
 ```
 
 Generates:
@@ -234,10 +234,10 @@ Generates:
 Double precision floating point type.
 
 ```{.python continuation}
-from embar.column.pg import DoublePrecision
+from embar.column.pg import DoublePrecision, double_precision
 
 class Calculation(Table):
-    result: DoublePrecision = DoublePrecision()
+    result: DoublePrecision = double_precision()
 ```
 
 Generates:
@@ -250,10 +250,10 @@ Generates:
 Boolean type for true/false values.
 
 ```{.python continuation}
-from embar.column.pg import Boolean
+from embar.column.pg import Boolean, boolean
 
 class User(Table):
-    active: Boolean = Boolean(default=True)
+    active: Boolean = boolean(default=True)
 ```
 
 Generates:
@@ -268,10 +268,10 @@ Generates:
 JSON data stored as text.
 
 ```{.python continuation}
-from embar.column.pg import Json
+from embar.column.pg import Json, json_col
 
 class Config(Table):
-    settings: Json = Json()
+    settings: Json = json_col()
 ```
 
 Generates:
@@ -287,10 +287,10 @@ Binary JSON with indexing support. Recommended over Json for most use cases.
 import asyncio
 
 from embar.db.pg import AsyncPgDb
-from embar.column.pg import Jsonb
+from embar.column.pg import Jsonb, jsonb
 
 class User(Table):
-    metadata: Jsonb = Jsonb()
+    metadata: Jsonb = jsonb()
 
 # Usage
 async def main():
@@ -312,10 +312,10 @@ Calendar date (year, month, day).
 
 ```{.python continuation}
 from datetime import date
-from embar.column.pg import Date
+from embar.column.pg import Date, date_col
 
 class Event(Table):
-    event_date: Date = Date()
+    event_date: Date = date_col()
 
 # Usage
 event = Event(event_date=date(2025, 1, 15))
@@ -332,10 +332,10 @@ Time of day without date.
 
 ```{.python continuation}
 from datetime import time
-from embar.column.pg import Time
+from embar.column.pg import Time, time_col
 
 class Schedule(Table):
-    start_time: Time = Time()
+    start_time: Time = time_col()
 
 # Usage
 schedule = Schedule(start_time=time(9, 30))
@@ -352,10 +352,10 @@ Date and time without timezone.
 
 ```{.python continuation}
 from datetime import datetime
-from embar.column.pg import Timestamp
+from embar.column.pg import Timestamp, timestamp
 
 class Post(Table):
-    created_at: Timestamp = Timestamp()
+    created_at: Timestamp = timestamp()
 
 # Usage
 post = Post(created_at=datetime.now())
@@ -372,10 +372,10 @@ Time interval (duration).
 
 ```{.python continuation}
 from datetime import timedelta
-from embar.column.pg import Interval
+from embar.column.pg import Interval, interval
 
 class Task(Table):
-    duration: Interval = Interval()
+    duration: Interval = interval()
 
 # Usage
 task = Task(duration=timedelta(hours=2, minutes=30))
@@ -392,7 +392,7 @@ PostgreSQL enums require defining both the enum type and the column type.
 
 ```{.python continuation}
 from enum import auto
-from embar.column.pg import EmbarEnum, EnumCol, PgEnum
+from embar.column.pg import EmbarEnum, EnumCol, PgEnum, enum_col
 
 class StatusEnum(EmbarEnum):
     PENDING = auto()
@@ -404,7 +404,7 @@ class StatusPgEnum(PgEnum[StatusEnum]):
     enum: type[StatusEnum] = StatusEnum
 
 class Task(Table):
-    status: EnumCol[StatusEnum] = EnumCol(StatusPgEnum)
+    status: EnumCol[StatusEnum] = enum_col(StatusPgEnum)
 
 # Usage
 async def main():
@@ -439,27 +439,27 @@ All column types support these options:
 
 ```{.python continuation}
 class User(Table):
-    id: Integer = Integer(primary=True)
+    id: Integer = integer(primary=True)
 ```
 
 ### Not Null
 
 ```{.python continuation}
 class User(Table):
-    email: Text = Text(not_null=True)
+    email: Text = text(not_null=True)
 ```
 
 ### Default Values
 
 ```{.python continuation}
 class User(Table):
-    status: Text = Text(default="active")
-    created_at: Timestamp = Timestamp(default=datetime.now())
+    status: Text = text(default="active")
+    created_at: Timestamp = timestamp(default=datetime.now())
 ```
 
 ### Custom Column Name
 
 ```{.python continuation}
 class User(Table):
-    email: Text = Text("user_email")
+    email: Text = text("user_email")
 ```

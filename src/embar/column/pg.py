@@ -5,12 +5,13 @@ from decimal import Decimal
 from enum import Enum
 from typing import Any, override
 
-from embar.column.base import EnumBase
-from embar.column.common import Column, Float, Integer, Text
+from embar.column.base import EnumBase, OnDelete
+from embar.column.common import Column, Float, Integer, Text, float_col, integer, text
 from embar.custom_types import Type
 
 # Re-export the common types as well as any new ones defined below
 __all__ = [
+    # Classes (used as type annotations)
     "BigInt",
     "BigSerial",
     "Boolean",
@@ -33,6 +34,29 @@ __all__ = [
     "Varchar",
     "EnumCol",
     "Vector",
+    # Factory functions (used as field values in Table definitions)
+    "float_col",
+    "integer",
+    "text",
+    "serial",
+    "boolean",
+    "timestamp",
+    "jsonb",
+    "smallint",
+    "bigint",
+    "smallserial",
+    "bigserial",
+    "varchar",
+    "char_col",
+    "numeric",
+    "pg_decimal",
+    "double_precision",
+    "json_col",
+    "time_col",
+    "date_col",
+    "interval",
+    "enum_col",
+    "vector",
 ]
 
 
@@ -299,7 +323,7 @@ class PgEnum[E: EmbarEnum](EnumBase):
     ```python
     from enum import auto
     from embar.table import Table
-    from embar.column.pg import EmbarEnum, EnumCol, PgEnum
+    from embar.column.pg import EmbarEnum, EnumCol, PgEnum, enum_col
     class StatusEnum(EmbarEnum):
        PENDING = auto()
        DONE = auto()
@@ -307,7 +331,7 @@ class PgEnum[E: EmbarEnum](EnumBase):
         name: str = "status_enum"
         enum: type[StatusEnum] = StatusEnum
     class TableWithStatus(Table):
-        status: EnumCol[StatusEnum] = EnumCol(StatusPgEnum)
+        status: EnumCol[StatusEnum] = enum_col(StatusPgEnum)
     ```
     """
 
@@ -373,3 +397,252 @@ class Vector(Column[list[float]]):
         """
         self._extra_args: tuple[int] | tuple[int, int] | None = (length,)
         super().__init__(name=name, default=default, primary=primary, not_null=not_null)
+
+
+# ---------------------------------------------------------------------------
+# Factory functions (field specifiers for @dataclass_transform)
+# ---------------------------------------------------------------------------
+
+from typing import Callable  # noqa: E402
+
+
+def serial(
+    name: str | None = None,
+    default: int | None = None,
+    *,
+    primary: bool = False,
+    not_null: bool = False,
+    fk: Callable[[], Column[int]] | None = None,
+    on_delete: OnDelete | None = None,
+) -> Serial:
+    """Create a :class:`Serial` column."""
+    col = Serial(name=name, default=default, primary=primary, not_null=not_null)
+    if fk is not None:
+        col.fk(fk, on_delete)
+    return col
+
+
+def boolean(
+    name: str | None = None,
+    default: bool | None = None,
+    *,
+    primary: bool = False,
+    not_null: bool = False,
+) -> Boolean:
+    """Create a :class:`Boolean` column."""
+    return Boolean(name=name, default=default, primary=primary, not_null=not_null)
+
+
+def timestamp(
+    name: str | None = None,
+    default: datetime | None = None,
+    *,
+    primary: bool = False,
+    not_null: bool = False,
+) -> Timestamp:
+    """Create a :class:`Timestamp` column."""
+    return Timestamp(name=name, default=default, primary=primary, not_null=not_null)
+
+
+def jsonb(
+    name: str | None = None,
+    default: dict[str, Any] | None = None,
+    *,
+    primary: bool = False,
+    not_null: bool = False,
+) -> Jsonb:
+    """Create a :class:`Jsonb` column."""
+    return Jsonb(name=name, default=default, primary=primary, not_null=not_null)
+
+
+def smallint(
+    name: str | None = None,
+    default: int | None = None,
+    *,
+    primary: bool = False,
+    not_null: bool = False,
+    fk: Callable[[], Column[int]] | None = None,
+    on_delete: OnDelete | None = None,
+) -> SmallInt:
+    """Create a :class:`SmallInt` column."""
+    col = SmallInt(name=name, default=default, primary=primary, not_null=not_null)
+    if fk is not None:
+        col.fk(fk, on_delete)
+    return col
+
+
+def bigint(
+    name: str | None = None,
+    default: int | None = None,
+    *,
+    primary: bool = False,
+    not_null: bool = False,
+    fk: Callable[[], Column[int]] | None = None,
+    on_delete: OnDelete | None = None,
+) -> BigInt:
+    """Create a :class:`BigInt` column."""
+    col = BigInt(name=name, default=default, primary=primary, not_null=not_null)
+    if fk is not None:
+        col.fk(fk, on_delete)
+    return col
+
+
+def smallserial(
+    name: str | None = None,
+    default: int | None = None,
+    *,
+    primary: bool = False,
+    not_null: bool = False,
+) -> SmallSerial:
+    """Create a :class:`SmallSerial` column."""
+    return SmallSerial(name=name, default=default, primary=primary, not_null=not_null)
+
+
+def bigserial(
+    name: str | None = None,
+    default: int | None = None,
+    *,
+    primary: bool = False,
+    not_null: bool = False,
+) -> BigSerial:
+    """Create a :class:`BigSerial` column."""
+    return BigSerial(name=name, default=default, primary=primary, not_null=not_null)
+
+
+def varchar(
+    name: str | None = None,
+    default: str | None = None,
+    *,
+    primary: bool = False,
+    not_null: bool = False,
+    length: int | None = None,
+    fk: Callable[[], Column[str]] | None = None,
+    on_delete: OnDelete | None = None,
+) -> Varchar:
+    """Create a :class:`Varchar` column."""
+    col = Varchar(name=name, default=default, primary=primary, not_null=not_null, length=length)
+    if fk is not None:
+        col.fk(fk, on_delete)
+    return col
+
+
+def char_col(
+    name: str | None = None,
+    default: str | None = None,
+    *,
+    primary: bool = False,
+    not_null: bool = False,
+    length: int | None = None,
+    fk: Callable[[], Column[str]] | None = None,
+    on_delete: OnDelete | None = None,
+) -> Char:
+    """Create a :class:`Char` column."""
+    col = Char(name=name, default=default, primary=primary, not_null=not_null, length=length)
+    if fk is not None:
+        col.fk(fk, on_delete)
+    return col
+
+
+def numeric(
+    name: str | None = None,
+    default: Decimal | None = None,
+    *,
+    primary: bool = False,
+    not_null: bool = False,
+    precision: int | None = None,
+    scale: int | None = None,
+) -> Numeric:
+    """Create a :class:`Numeric` column."""
+    return Numeric(name=name, default=default, primary=primary, not_null=not_null, precision=precision, scale=scale)
+
+
+def pg_decimal(
+    name: str | None = None,
+    default: Decimal | None = None,
+    *,
+    primary: bool = False,
+    not_null: bool = False,
+    precision: int | None = None,
+    scale: int | None = None,
+) -> PgDecimal:
+    """Create a :class:`PgDecimal` column."""
+    return PgDecimal(name=name, default=default, primary=primary, not_null=not_null, precision=precision, scale=scale)
+
+
+def double_precision(
+    name: str | None = None,
+    default: float | None = None,
+    *,
+    primary: bool = False,
+    not_null: bool = False,
+) -> DoublePrecision:
+    """Create a :class:`DoublePrecision` column."""
+    return DoublePrecision(name=name, default=default, primary=primary, not_null=not_null)
+
+
+def json_col(
+    name: str | None = None,
+    default: dict[str, Any] | None = None,
+    *,
+    primary: bool = False,
+    not_null: bool = False,
+) -> Json:
+    """Create a :class:`Json` column."""
+    return Json(name=name, default=default, primary=primary, not_null=not_null)
+
+
+def time_col(
+    name: str | None = None,
+    default: time | None = None,
+    *,
+    primary: bool = False,
+    not_null: bool = False,
+) -> Time:
+    """Create a :class:`Time` column."""
+    return Time(name=name, default=default, primary=primary, not_null=not_null)
+
+
+def date_col(
+    name: str | None = None,
+    default: date | None = None,
+    *,
+    primary: bool = False,
+    not_null: bool = False,
+) -> Date:
+    """Create a :class:`Date` column."""
+    return Date(name=name, default=default, primary=primary, not_null=not_null)
+
+
+def interval(
+    name: str | None = None,
+    default: timedelta | None = None,
+    *,
+    primary: bool = False,
+    not_null: bool = False,
+) -> Interval:
+    """Create an :class:`Interval` column."""
+    return Interval(name=name, default=default, primary=primary, not_null=not_null)
+
+
+def enum_col[E: EmbarEnum](
+    pg_enum: type[PgEnum[E]],
+    name: str | None = None,
+    default: E | None = None,
+    *,
+    primary: bool = False,
+    not_null: bool = False,
+) -> EnumCol[E]:
+    """Create an :class:`EnumCol` column."""
+    return EnumCol(pg_enum, name=name, default=default, primary=primary, not_null=not_null)
+
+
+def vector(
+    length: int,
+    name: str | None = None,
+    default: list[float] | None = None,
+    *,
+    primary: bool = False,
+    not_null: bool = False,
+) -> Vector:
+    """Create a :class:`Vector` column."""
+    return Vector(length, name=name, default=default, primary=primary, not_null=not_null)

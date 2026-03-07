@@ -10,14 +10,14 @@ Use Python's template strings with the `t` prefix to write raw SQL:
 import asyncio
 import psycopg
 
-from embar.column.common import Integer, Text
+from embar.column.common import Integer, Text, integer, text
 from embar.db.pg import AsyncPgDb
 from embar.table import Table
 
 class User(Table):
-    id: Integer = Integer(primary=True)
-    status: Text = Text()
-    email: Text = Text()
+    id: Integer = integer(primary=True)
+    status: Text = text()
+    email: Text = text()
 
 async def get_db(tables: list[Table] = None):
     if tables is None:
@@ -140,9 +140,9 @@ class MessageWithUser(BaseModel):
     created_at: Annotated[datetime, datetime]
 
 class Message(Table):
-    id: Integer = Integer(primary=True)
-    user_id: Integer = Integer().fk(lambda: User.id)
-    content: Text = Text()
+    id: Integer = integer(primary=True)
+    user_id: Integer = integer(fk=lambda: User.id)
+    content: Text = text()
 
 async def nested():
     db = await get_db([User, Message])
@@ -173,9 +173,9 @@ class UserWithCount(BaseModel):
     message_count: Annotated[int, Sql(t"COUNT({Message.id})")]
 
 class Message(Table):
-    id: Integer = Integer(primary=True)
-    user_id: Integer = Integer().fk(lambda: User.id)
-    content: Text = Text()
+    id: Integer = integer(primary=True)
+    user_id: Integer = integer(fk=lambda: User.id)
+    content: Text = text()
 
 async def select():
     db = await get_db([User, Message])

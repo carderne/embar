@@ -50,13 +50,13 @@ def _topological_sort_tables(tables: Sequence[type[Table]]) -> list[type[Table]]
     Tables are returned in the order they should be created.
 
     ```python
-    from embar.column.common import Integer
+    from embar.column.common import Integer, integer
     from embar.table import Table
     from embar.db._util import _topological_sort_tables
     class User(Table):
-        id: Integer = Integer()
+        id: Integer = integer()
     class Message(Table):
-        user_id: Integer = Integer().fk(lambda: User.id)
+        user_id: Integer = integer(fk=lambda: User.id)
     sorted = _topological_sort_tables([Message, User])
     assert sorted[0] == User
     assert sorted[1] == Message

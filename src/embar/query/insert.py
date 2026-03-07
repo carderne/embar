@@ -110,11 +110,11 @@ class InsertQueryReady[T: Table, Db: AllDbBase]:
         Create the SQL query and binding parameters (psycopg format) for the query.
 
         ```python
-        from embar.column.common import Text
+        from embar.column.common import Text, text
         from embar.table import Table
         from embar.query.insert import InsertQueryReady
         class MyTable(Table):
-            my_col: Text = Text()
+            my_col: Text = text()
         row = MyTable(my_col="foo")
         insert = InsertQueryReady(db=None, table=MyTable, items=[row])
         query = insert.sql()
