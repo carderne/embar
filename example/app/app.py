@@ -4,7 +4,7 @@ from typing import Annotated, TypedDict
 
 from pydantic import BaseModel
 
-from embar.column.pg import Integer
+from embar.column.pg import Integer, integer
 from embar.config import EmbarConfig
 from embar.constraint import Index
 from embar.query.where import Eq, Like, Or
@@ -89,9 +89,9 @@ async def app():
     await db.update(Message).set(MessageUpdate(content="Goodbye")).where(Eq(Message.id, 1))
 
     # Add indexes
-    class MessageIndexed(Table):  # pyright:ignore[reportUnusedClass]
+    class MessageIndexed(Table):
         embar_config: EmbarConfig = EmbarConfig(constraints=[Index("message_idx").on(lambda: Message.user_id)])
-        user_id: Integer = Integer().fk(lambda: User.id)
+        user_id: Integer = integer(fk=lambda: User.id)
 
     # Run raw SQL
     await db.sql(t"DELETE FROM {Message}")

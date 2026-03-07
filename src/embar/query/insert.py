@@ -1,7 +1,7 @@
 """Insert query builder."""
 
 from collections.abc import Generator, Sequence
-from typing import Any, Self, cast, overload
+from typing import Any, Self, cast
 
 from pydantic import BaseModel, TypeAdapter
 
@@ -94,33 +94,27 @@ class InsertQueryReady[T: Table, Db: AllDbBase]:
 
         return awaitable().__await__()
 
-    @overload
-    def run(self: InsertQueryReady[T, DbBase]) -> None: ...
-    @overload
-    def run(self: InsertQueryReady[T, AsyncDbBase]) -> InsertQueryReady[T, Db]: ...
-
-    def run(self) -> InsertQueryReady[T, Db] | None:
+    def run(self) -> None:
         """
         Run the query against the underlying DB.
 
         Convenience method for those not using async.
-        But still works if awaited.
+        For async, use `await query` instead.
         """
         if isinstance(self._db, DbBase):
             query = self.sql()
-            return self._db.executemany(query)
-        return self
+            self._db.executemany(query)
 
     def sql(self) -> QueryMany:
         """
         Create the SQL query and binding parameters (psycopg format) for the query.
 
         ```python
-        from embar.column.common import Text
+        from embar.column.common import Text, text
         from embar.table import Table
         from embar.query.insert import InsertQueryReady
         class MyTable(Table):
-            my_col: Text = Text()
+            my_col: Text = text()
         row = MyTable(my_col="foo")
         insert = InsertQueryReady(db=None, table=MyTable, items=[row])
         query = insert.sql()
@@ -194,27 +188,21 @@ class InsertQueryReturning[T: Table, Db: AllDbBase]:
 
         return awaitable().__await__()
 
-    @overload
-    def run(self: InsertQueryReturning[T, DbBase]) -> list[T]: ...
-    @overload
-    def run(self: InsertQueryReturning[T, AsyncDbBase]) -> InsertQueryReturning[T, Db]: ...
-
-    def run(self) -> Sequence[T] | InsertQueryReturning[T, Db]:
+    def run(self) -> list[T]:
         """
         Run the query against the underlying DB.
 
         Convenience method for those not using async.
-        But still works if awaited.
+        For async, use `await query` instead.
         """
-        if isinstance(self._db, DbBase):
-            query = self.sql()
-            model = self._get_model()
-            model = cast(type[T], model)
-            adapter = TypeAdapter(list[model])
-            data = self._db.fetch(query)
-            results = adapter.validate_python(data)
-            return results
-        return self
+        query = self.sql()
+        model = self._get_model()
+        model = cast(type[T], model)
+        adapter = TypeAdapter(list[model])
+        db = cast(DbBase, self._db)
+        data = db.fetch(query)
+        results = adapter.validate_python(data)
+        return results
 
     def sql(self) -> QueryMany:
         """

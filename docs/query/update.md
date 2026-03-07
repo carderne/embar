@@ -11,15 +11,15 @@ import asyncio
 import psycopg
 
 from typing import TypedDict
-from embar.column.common import Integer, Text
+from embar.column.common import Integer, Text, integer, text
 from embar.db.pg import AsyncPgDb
 from embar.query.where import Eq
 from embar.table import Table
 
 class Message(Table):
-    id: Integer = Integer()
-    user_id: Integer = Integer()
-    content: Text = Text()
+    id: Integer = integer()
+    user_id: Integer = integer()
+    content: Text = text()
 
 class MessageUpdate(TypedDict, total=False):
     id: int

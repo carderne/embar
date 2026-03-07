@@ -58,7 +58,7 @@ uv add embar
 
 ```python
 # schema.py
-from embar.column.common import Integer, Text
+from embar.column.common import Integer, Text, integer, text
 from embar.config import EmbarConfig
 from embar.table import Table
 
@@ -66,15 +66,15 @@ class User(Table):
     # If you don't provide a table name, it is generated from your class name
     embar_config: EmbarConfig = EmbarConfig(table_name="users")
 
-    id: Integer = Integer(primary=True)
+    id: Integer = integer(primary=True)
     # Columns will also generate their own name if not provided
-    email: Text = Text("user_email", default="text", not_null=True)
+    email: Text = text("user_email", default="text", not_null=True)
 
 class Message(Table):
-    id: Integer = Integer()
+    id: Integer = integer()
     # Foreign key constraints are easy to add
-    user_id: Integer = Integer().fk(lambda: User.id)
-    content: Text = Text()
+    user_id: Integer = integer(fk=lambda: User.id)
+    content: Text = text()
 ```
 
 ### Create client and apply migrations
@@ -225,7 +225,7 @@ class MessageIndexed(Table):
     embar_config: EmbarConfig = EmbarConfig(
         constraints=[Index("message_idx").on(lambda: MessageIndexed.user_id)]
     )
-    user_id: Integer = Integer().fk(lambda: User.id)
+    user_id: Integer = integer(fk=lambda: User.id)
 ```
 
 ### Run raw SQL

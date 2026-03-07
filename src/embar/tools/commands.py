@@ -25,7 +25,7 @@ def _cmd_schema(config_path: str | None = None):
     """Generate migration and save to file."""
     config = load_config(config_path)
 
-    db = PgDb(None)  # pyright:ignore[reportArgumentType]
+    db = PgDb(None)  # ty: ignore[invalid-argument-type]
     schema = importlib.import_module(config.schema_path)
     new_schema = db.migrates(schema).ddls
 

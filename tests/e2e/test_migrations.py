@@ -9,16 +9,16 @@ import psycopg
 import pytest
 
 from embar.tools.commands import (
-    _cmd_generate as cmd_generate,  # pyright: ignore[reportPrivateUsage]
+    _cmd_generate as cmd_generate,
 )
 from embar.tools.commands import (
-    _cmd_migrate as cmd_migrate,  # pyright: ignore[reportPrivateUsage]
+    _cmd_migrate as cmd_migrate,
 )
 from embar.tools.commands import (
-    _cmd_pull as cmd_pull,  # pyright: ignore[reportPrivateUsage]
+    _cmd_pull as cmd_pull,
 )
 from embar.tools.commands import (
-    _cmd_push as cmd_push,  # pyright: ignore[reportPrivateUsage]
+    _cmd_push as cmd_push,
 )
 
 from .container import PostgresContainer
@@ -80,9 +80,9 @@ def test_config_path(clean_db: PostgresContainer, temp_migrations_dir: str):
 
 
 def mock_llm(
-    api_key: str,  # pyright: ignore[reportUnusedParameter]
+    api_key: str,
     prompt: str,
-    max_tokens: int = 2000,  # pyright: ignore[reportUnusedParameter]
+    max_tokens: int = 2000,
 ) -> str:
     """Mock LLM that returns static SQL based on prompt content."""
     prompt_lower = prompt.lower()

@@ -10,15 +10,15 @@ To delete rows, use `.delete()` with a `.where()` clause to specify which rows t
 import asyncio
 import psycopg
 
-from embar.column.common import Integer, Text
+from embar.column.common import Integer, Text, integer, text
 from embar.db.pg import AsyncPgDb
 from embar.query.where import Eq
 from embar.table import Table
 
 class Message(Table):
-    id: Integer = Integer(primary=True)
-    user_id: Integer = Integer()
-    content: Text = Text()
+    id: Integer = integer(primary=True)
+    user_id: Integer = integer()
+    content: Text = text()
 
 async def get_db():
     database_url = "postgres://pg:pw@localhost:25432/db"
