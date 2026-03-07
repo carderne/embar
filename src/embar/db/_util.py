@@ -71,7 +71,7 @@ def _topological_sort_tables(tables: Sequence[type[Table]]) -> list[type[Table]]
     name_to_table: dict[str, type[Table]] = {table.get_name(): table for table in tables}
 
     for table in tables:
-        for column in table._fields.values():  # pyright:ignore[reportPrivateUsage]
+        for column in table._fields.values():
             if column.info.ref is not None:
                 ref_column = column.info.ref
                 ref_table_name = ref_column.table_name

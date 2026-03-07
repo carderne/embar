@@ -9,7 +9,7 @@ import mkdocs_gen_files
 
 
 def main():
-    nav = mkdocs_gen_files.Nav()  # pyright:ignore[reportPrivateImportUsage]
+    nav = mkdocs_gen_files.Nav()
 
     root = Path(__file__).parent.parent
     src = root / "src"
