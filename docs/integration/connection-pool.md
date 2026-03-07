@@ -11,7 +11,7 @@ from psycopg_pool import ConnectionPool
 from pydantic import BaseModel
 from typing import Annotated
 
-from embar.column.common import Integer, Text
+from embar.column.common import Integer, Text, integer, text
 from embar.config import EmbarConfig
 from embar.db.pg import PgDb
 from embar.table import Table
@@ -19,8 +19,8 @@ from embar.table import Table
 
 class User(Table):
     embar_config: EmbarConfig = EmbarConfig(table_name="users")
-    id: Integer = Integer(primary=True)
-    name: Text = Text()
+    id: Integer = integer(primary=True)
+    name: Text = text()
 
 
 # Create a connection pool

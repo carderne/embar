@@ -256,10 +256,10 @@ class RawSqlOrder(ClauseBase):
     from embar.query.order_by import RawSqlOrder
     from embar.sql import Sql
     from embar.table import Table
-    from embar.column.common import Integer
+    from embar.column.common import Integer, integer
 
     class User(Table):
-        id: Integer = Integer()
+        id: Integer = integer()
 
     raw = RawSqlOrder(Sql(t"{User.id} DESC"))
     sql = raw.sql(lambda: 0)

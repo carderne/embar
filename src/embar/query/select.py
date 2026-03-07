@@ -184,13 +184,13 @@ class SelectQueryReady[M: BaseModel, T: Table, Db: AllDbBase]:
         ```python
         from embar.db.pg import PgDb
         from embar.table import Table
-        from embar.column.common import Integer, Text
+        from embar.column.common import Integer, Text, integer, text
         from embar.query.where import Gt
 
         class User(Table):
-            id: Integer = Integer(primary=True)
-            age: Integer = Integer()
-            name: Text = Text()
+            id: Integer = integer(primary=True)
+            age: Integer = integer()
+            name: Text = text()
 
         db = PgDb(None)
 
@@ -218,14 +218,14 @@ class SelectQueryReady[M: BaseModel, T: Table, Db: AllDbBase]:
         ```python
         from embar.db.pg import PgDb
         from embar.table import Table
-        from embar.column.common import Integer, Text
+        from embar.column.common import Integer, Text, integer, text
         from embar.query.order_by import Asc, Desc
         from embar.sql import Sql
 
         class User(Table):
-            id: Integer = Integer(primary=True)
-            age: Integer = Integer()
-            name: Text = Text()
+            id: Integer = integer(primary=True)
+            age: Integer = integer()
+            name: Text = text()
 
         db = PgDb(None)
 
@@ -281,12 +281,12 @@ class SelectQueryReady[M: BaseModel, T: Table, Db: AllDbBase]:
         ```python
         from embar.db.pg import PgDb
         from embar.table import Table
-        from embar.column.common import Integer, Text
+        from embar.column.common import Integer, Text, integer, text
 
         class User(Table):
-            id: Integer = Integer(primary=True)
-            age: Integer = Integer()
-            name: Text = Text()
+            id: Integer = integer(primary=True)
+            age: Integer = integer()
+            name: Text = text()
 
         db = PgDb(None)
 

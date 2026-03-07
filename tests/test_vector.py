@@ -4,8 +4,8 @@ from typing import Annotated
 
 from pydantic import BaseModel
 
-from embar.column.common import Integer
-from embar.column.pg import Vector
+from embar.column.common import Integer, integer
+from embar.column.pg import Vector, vector
 from embar.config import EmbarConfig
 from embar.db.pg import PgDb
 from embar.query.vector import CosineDistance, L2Distance
@@ -16,9 +16,9 @@ from embar.table import Table
 class Embedding(Table):
     embar_config: EmbarConfig = EmbarConfig(table_name="embeddings")
 
-    id: Integer = Integer(primary=True)
-    vec_a: Vector = Vector(3)
-    vec_b: Vector = Vector(3)
+    id: Integer = integer(primary=True)
+    vec_a: Vector = vector(3)
+    vec_b: Vector = vector(3)
 
 
 def test_order_by_l2distance_with_literal(db_dummy: PgDb):

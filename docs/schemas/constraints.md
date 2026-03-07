@@ -7,7 +7,7 @@ Constraints are defined in the table's `embar_config` and passed as a list. They
 Indexes improve query performance on frequently searched columns. Create them with the `Index` class:
 
 ```{.python}
-from embar.column.common import Integer, Text
+from embar.column.common import Integer, Text, integer, text
 from embar.config import EmbarConfig
 from embar.constraint import Index
 from embar.table import Table
@@ -17,8 +17,8 @@ class User(Table):
         constraints=[Index("email_idx").on(lambda: User.email)]
     )
 
-    id: Integer = Integer(primary=True)
-    email: Text = Text()
+    id: Integer = integer(primary=True)
+    email: Text = text()
 ```
 
 This generates:
@@ -42,9 +42,9 @@ class User(Table):
         ]
     )
 
-    id: Integer = Integer(primary=True)
-    first_name: Text = Text()
-    last_name: Text = Text()
+    id: Integer = integer(primary=True)
+    first_name: Text = text()
+    last_name: Text = text()
 ```
 
 This generates:
@@ -69,9 +69,9 @@ class User(Table):
         ]
     )
 
-    id: Integer = Integer(primary=True)
-    email: Text = Text()
-    status: Text = Text()
+    id: Integer = integer(primary=True)
+    email: Text = text()
+    status: Text = text()
 ```
 
 This generates:
@@ -94,8 +94,8 @@ class User(Table):
         constraints=[UniqueIndex("email_unique").on(lambda: User.email)]
     )
 
-    id: Integer = Integer(primary=True)
-    email: Text = Text()
+    id: Integer = integer(primary=True)
+    email: Text = text()
 ```
 
 This generates:
@@ -119,9 +119,9 @@ class User(Table):
         ]
     )
 
-    id: Integer = Integer(primary=True)
-    org_id: Integer = Integer()
-    email: Text = Text()
+    id: Integer = integer(primary=True)
+    org_id: Integer = integer()
+    email: Text = text()
 ```
 
 This ensures that each email is unique within an organization, but the same email can exist in different organizations.
@@ -146,10 +146,10 @@ class Message(Table):
         ]
     )
 
-    id: Integer = Integer(primary=True)
-    user_id: Integer = Integer()
-    content: Text = Text()
-    created_at: Integer = Integer()
+    id: Integer = integer(primary=True)
+    user_id: Integer = integer()
+    content: Text = text()
+    created_at: Integer = integer()
 ```
 
 This generates three separate SQL statements during migration.

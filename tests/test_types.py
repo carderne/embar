@@ -11,8 +11,8 @@ from .schemas.schema import Message, User
 def test_fail_if_missing_table_fields():
     with pytest.raises(TypeError) as exc:
         # fmt: off
-        User(
-            email="",  # ty: ignore[missing-argument]
+        User(  # ty: ignore[missing-argument]
+            email="",
         )
         # fmt: on
     error_str = str(exc.value)

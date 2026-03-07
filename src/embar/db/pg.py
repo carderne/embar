@@ -235,7 +235,7 @@ class PgDb(DbBase):
         table_names = ", ".join(tables)
         with self.conn_wrapper as conn:
             with conn.cursor() as cursor:
-                cursor.execute(f"TRUNCATE TABLE {table_names} CASCADE")  # ty: ignore[invalid-argument-type]
+                cursor.execute(f"TRUNCATE TABLE {table_names} CASCADE")  # ty: ignore[no-matching-overload]
                 if self._commit_after_execute:
                     conn.commit()
 
@@ -251,7 +251,7 @@ class PgDb(DbBase):
         table_names = ", ".join(tables)
         with self.conn_wrapper as conn:
             with conn.cursor() as cursor:
-                cursor.execute(f"DROP TABLE {table_names} CASCADE")  # ty: ignore[invalid-argument-type]
+                cursor.execute(f"DROP TABLE {table_names} CASCADE")  # ty: ignore[no-matching-overload]
                 if self._commit_after_execute:
                     conn.commit()
 
@@ -259,7 +259,7 @@ class PgDb(DbBase):
         with self.conn_wrapper as conn:
             with conn.cursor() as cursor:
                 # Get all table names from public schema
-                cursor.execute(f"SELECT tablename FROM pg_tables WHERE schemaname = '{schema}'")  # ty: ignore[invalid-argument-type]
+                cursor.execute(f"SELECT tablename FROM pg_tables WHERE schemaname = '{schema}'")  # ty: ignore[no-matching-overload]
                 tables = cursor.fetchall()
                 if not tables:
                     return None
@@ -460,7 +460,7 @@ class AsyncPgDb(AsyncDbBase):
         table_names = ", ".join(tables)
         async with self.conn_wrapper as conn:
             async with conn.cursor() as cursor:
-                await cursor.execute(f"TRUNCATE TABLE {table_names} CASCADE")  # ty: ignore[invalid-argument-type]
+                await cursor.execute(f"TRUNCATE TABLE {table_names} CASCADE")  # ty: ignore[no-matching-overload]
                 if self._commit_after_execute:
                     await conn.commit()
 
@@ -476,7 +476,7 @@ class AsyncPgDb(AsyncDbBase):
         table_names = ", ".join(tables)
         async with self.conn_wrapper as conn:
             async with conn.cursor() as cursor:
-                await cursor.execute(f"DROP TABLE {table_names} CASCADE")  # ty: ignore[invalid-argument-type]
+                await cursor.execute(f"DROP TABLE {table_names} CASCADE")  # ty: ignore[no-matching-overload]
                 if self._commit_after_execute:
                     await conn.commit()
 
@@ -484,7 +484,7 @@ class AsyncPgDb(AsyncDbBase):
         async with self.conn_wrapper as conn:
             async with conn.cursor() as cursor:
                 # Get all table names from public schema
-                await cursor.execute(f"SELECT tablename FROM pg_tables WHERE schemaname = '{schema}'")  # ty: ignore[invalid-argument-type]
+                await cursor.execute(f"SELECT tablename FROM pg_tables WHERE schemaname = '{schema}'")  # ty: ignore[no-matching-overload]
                 tables = await cursor.fetchall()
                 if not tables:
                     return None

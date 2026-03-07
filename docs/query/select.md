@@ -9,13 +9,13 @@ Setup.
 import asyncio
 import psycopg
 
-from embar.column.common import Integer, Text
+from embar.column.common import Integer, Text, integer, text
 from embar.db.pg import AsyncPgDb
 from embar.table import Table
 
 class User(Table):
-    id: Integer = Integer(primary=True)
-    email: Text = Text()
+    id: Integer = integer(primary=True)
+    email: Text = text()
 
 async def get_db(tables: list[Table] = None):
     if tables is None:
@@ -106,9 +106,9 @@ Join related tables using `.left_join()`, `.right_join()`, `.inner_join()`, `.fu
 from embar.query.where import Eq
 
 class Message(Table):
-    id: Integer = Integer(primary=True)
-    user_id: Integer = Integer().fk(lambda: User.id)
-    content: Text = Text()
+    id: Integer = integer(primary=True)
+    user_id: Integer = integer(fk=lambda: User.id)
+    content: Text = text()
 
 class UserWithMessages(BaseModel):
     id: Annotated[int, User.id]

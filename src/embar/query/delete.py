@@ -66,10 +66,10 @@ class DeleteQueryReady[T: Table, Db: AllDbBase]:
         ```python
         from embar.db.pg import PgDb
         from embar.table import Table
-        from embar.column.common import Integer
+        from embar.column.common import Integer, integer
 
         class User(Table):
-            id: Integer = Integer(primary=True)
+            id: Integer = integer(primary=True)
 
         db = PgDb(None)
 

@@ -16,14 +16,14 @@ Use `Vector` to store embeddings with a fixed dimension:
 import asyncio
 import psycopg
 
-from embar.column.common import Integer
-from embar.column.pg import Vector
+from embar.column.common import Integer, integer
+from embar.column.pg import Vector, vector
 from embar.db.pg import AsyncPgDb
 from embar.table import Table
 
 class Document(Table):
-    id: Integer = Integer()
-    embedding: Vector = Vector(3)  # 3-dimensional vector
+    id: Integer = integer()
+    embedding: Vector = vector(3)  # 3-dimensional vector
 
 async def get_db():
     database_url = "postgres://pg:pw@localhost:25432/db"

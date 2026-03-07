@@ -10,7 +10,7 @@ from typing import Any, Self, dataclass_transform
 from pydantic_core import core_schema
 
 from embar.column.base import ColumnBase
-from embar.column.common import Column, Integer, Text
+from embar.column.common import Column, Integer, Text, integer, text, float_col
 from embar.config import EmbarConfig
 from embar.custom_types import Undefined
 from embar.model import SelectAll
@@ -18,7 +18,7 @@ from embar.query.many import ManyTable, OneTable
 from embar.table_base import TableBase
 
 
-@dataclass_transform(kw_only_default=True, field_specifiers=(Integer, Text, Integer.fk))
+@dataclass_transform(kw_only_default=True, field_specifiers=(integer, text, float_col))
 class Table(TableBase):
     """
     All table definitions inherit from `Table`.
@@ -45,7 +45,7 @@ class Table(TableBase):
         """
         Minimal replication of `dataclass` behaviour.
         """
-        columns: dict[str, type[Column[Any]]] = {  # ty: ignore[invalid-assignment]
+        columns: dict[str, type[Column[Any]]] = {
             name: attr for name, attr in type(self).__dict__.items() if isinstance(attr, ColumnBase)
         }
 
@@ -57,8 +57,8 @@ class Table(TableBase):
         # Handle defaults for missing fields
         missing = set(columns.keys()) - set(kwargs.keys())
         for name in list(missing):
-            if columns[name].default is not None:  # ty: ignore[unresolved-attribute]
-                setattr(self, name, columns[name].default)  # ty: ignore[unresolved-attribute]
+            if columns[name].default is not None:
+                setattr(self, name, columns[name].default)
                 missing.remove(name)
 
         if missing:

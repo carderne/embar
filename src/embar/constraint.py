@@ -15,7 +15,7 @@ class Index:
     Creates a database index on one or more columns.
 
     ```python
-    from embar.column.common import Integer
+    from embar.column.common import Integer, integer
     from embar.config import EmbarConfig
     from embar.constraint import Index
     from embar.table import Table
@@ -23,7 +23,7 @@ class Index:
         embar_config: EmbarConfig = EmbarConfig(
             constraints=[Index("my_idx").on(lambda: MyTable.id)]
         )
-        id: Integer = Integer()
+        id: Integer = integer()
     ```
     """
 
