@@ -45,7 +45,7 @@ class Table(TableBase):
         """
         Minimal replication of `dataclass` behaviour.
         """
-        columns: dict[str, type[Column[Any]]] = {  # pyright:ignore[reportAssignmentType]
+        columns: dict[str, type[Column[Any]]] = {
             name: attr for name, attr in type(self).__dict__.items() if isinstance(attr, ColumnBase)
         }
 
@@ -57,8 +57,8 @@ class Table(TableBase):
         # Handle defaults for missing fields
         missing = set(columns.keys()) - set(kwargs.keys())
         for name in list(missing):
-            if columns[name].default is not None:  # pyright:ignore[reportGeneralTypeIssues]
-                setattr(self, name, columns[name].default)  # pyright:ignore[reportGeneralTypeIssues]
+            if columns[name].default is not None:
+                setattr(self, name, columns[name].default)
                 missing.remove(name)
 
         if missing:

@@ -89,7 +89,7 @@ async def app():
     await db.update(Message).set(MessageUpdate(content="Goodbye")).where(Eq(Message.id, 1))
 
     # Add indexes
-    class MessageIndexed(Table):  # pyright:ignore[reportUnusedClass]
+    class MessageIndexed(Table):
         embar_config: EmbarConfig = EmbarConfig(constraints=[Index("message_idx").on(lambda: Message.user_id)])
         user_id: Integer = Integer().fk(lambda: User.id)
 
