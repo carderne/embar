@@ -3,11 +3,23 @@
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from enum import Enum
-from typing import Any, override
+from typing import Any, Callable, TypeAlias, overload, override
 
 from embar.column.base import EnumBase, OnDelete
-from embar.column.common import Column, Float, Integer, Text, float_col, integer, text
-from embar.custom_types import Type
+from embar.column.common import (
+    Column,
+    Float,
+    Integer,
+    Null,
+    NullFloat,
+    NullInteger,
+    NullText,
+    Text,
+    float_col,
+    integer,
+    text,
+)
+from embar.custom_types import NO_DEFAULT, Type, _NoDefaultType
 
 # Re-export the common types as well as any new ones defined below
 __all__ = [
@@ -24,6 +36,18 @@ __all__ = [
     "Interval",
     "Json",
     "Jsonb",
+    "Null",
+    "NullBigInt",
+    "NullBoolean",
+    "NullDate",
+    "NullDoublePrecision",
+    "NullFloat",
+    "NullInteger",
+    "NullInterval",
+    "NullSmallInt",
+    "NullText",
+    "NullTimestamp",
+    "NullVarchar",
     "Numeric",
     "Serial",
     "SmallInt",
@@ -146,7 +170,7 @@ class Varchar(Column[str]):
     def __init__(
         self,
         name: str | None = None,
-        default: str | None = None,
+        default: str | _NoDefaultType = NO_DEFAULT,
         primary: bool = False,
         not_null: bool = False,
         length: int | None = None,
@@ -169,7 +193,7 @@ class Char(Column[str]):
     def __init__(
         self,
         name: str | None = None,
-        default: str | None = None,
+        default: str | _NoDefaultType = NO_DEFAULT,
         primary: bool = False,
         not_null: bool = False,
         length: int | None = None,
@@ -195,7 +219,7 @@ class Numeric(Column[Decimal]):
     def __init__(
         self,
         name: str | None = None,
-        default: Decimal | None = None,
+        default: Decimal | _NoDefaultType = NO_DEFAULT,
         primary: bool = False,
         not_null: bool = False,
         precision: int | None = None,
@@ -228,7 +252,7 @@ class PgDecimal(Column[Decimal]):
     def __init__(
         self,
         name: str | None = None,
-        default: Decimal | None = None,
+        default: Decimal | _NoDefaultType = NO_DEFAULT,
         primary: bool = False,
         not_null: bool = False,
         precision: int | None = None,
@@ -359,7 +383,7 @@ class EnumCol[E: EmbarEnum](Column[str]):
         self,
         pg_enum: type[PgEnum[E]],
         name: str | None = None,
-        default: E | None = None,
+        default: E | _NoDefaultType = NO_DEFAULT,
         primary: bool = False,
         not_null: bool = False,
     ):
@@ -388,7 +412,7 @@ class Vector(Column[list[float]]):
         self,
         length: int,
         name: str | None = None,
-        default: list[float] | None = None,
+        default: list[float] | _NoDefaultType = NO_DEFAULT,
         primary: bool = False,
         not_null: bool = False,
     ):
@@ -400,234 +424,889 @@ class Vector(Column[list[float]]):
 
 
 # ---------------------------------------------------------------------------
-# Factory functions (field specifiers for @dataclass_transform)
+# Nullable type aliases for Postgres-specific column types
 # ---------------------------------------------------------------------------
 
-from typing import Callable  # noqa: E402
+NullBoolean: TypeAlias = Null[bool]
+"""A nullable boolean column. Alias for ``Null[bool]``."""
+
+NullTimestamp: TypeAlias = Null[datetime]
+"""A nullable timestamp column. Alias for ``Null[datetime]``."""
+
+NullSmallInt: TypeAlias = Null[int]
+"""A nullable small integer column. Alias for ``Null[int]``."""
+
+NullBigInt: TypeAlias = Null[int]
+"""A nullable big integer column. Alias for ``Null[int]``."""
+
+NullVarchar: TypeAlias = Null[str]
+"""A nullable varchar column. Alias for ``Null[str]``."""
+
+NullDoublePrecision: TypeAlias = Null[float]
+"""A nullable double precision column. Alias for ``Null[float]``."""
+
+NullDate: TypeAlias = Null[date]
+"""A nullable date column. Alias for ``Null[date]``."""
+
+NullInterval: TypeAlias = Null[timedelta]
+"""A nullable interval column. Alias for ``Null[timedelta]``."""
+
+
+# ---------------------------------------------------------------------------
+# Factory functions (field specifiers for @dataclass_transform)
+#
+# Each function has three overloads where applicable:
+# 1. No default → returns the non-null column type (field is required)
+# 2. default: T  → returns the non-null column type (field is optional)
+# 3. default: None → returns Null[T] (field is nullable and optional)
+# ---------------------------------------------------------------------------
+
+
+@overload
+def serial(
+    name: str | None = ...,
+    *,
+    primary: bool = ...,
+    not_null: bool = ...,
+    fk: Callable[[], Column[int]] | None = ...,
+    on_delete: OnDelete | None = ...,
+) -> Serial: ...
+
+
+@overload
+def serial(
+    name: str | None = ...,
+    *,
+    default: int,
+    primary: bool = ...,
+    not_null: bool = ...,
+    fk: Callable[[], Column[int]] | None = ...,
+    on_delete: OnDelete | None = ...,
+) -> Serial: ...
+
+
+@overload
+def serial(
+    name: str | None = ...,
+    *,
+    default: None,
+    primary: bool = ...,
+    not_null: bool = ...,
+    fk: Callable[[], Column[int]] | None = ...,
+    on_delete: OnDelete | None = ...,
+) -> Null[int]: ...
 
 
 def serial(
     name: str | None = None,
-    default: int | None = None,
     *,
+    default: int | None | _NoDefaultType = NO_DEFAULT,
     primary: bool = False,
     not_null: bool = False,
     fk: Callable[[], Column[int]] | None = None,
     on_delete: OnDelete | None = None,
-) -> Serial:
+) -> Serial | Null[int]:
     """Create a :class:`Serial` column."""
-    col = Serial(name=name, default=default, primary=primary, not_null=not_null)
+    col: Serial | Null[int]
+    if default is None:
+        col = Null[int](sql_type="SERIAL", py_type=int, name=name, default=default, primary=primary, not_null=not_null)
+    else:
+        col = Serial(name=name, default=default, primary=primary, not_null=not_null)
     if fk is not None:
         col.fk(fk, on_delete)
     return col
+
+
+@overload
+def boolean(
+    name: str | None = ...,
+    *,
+    primary: bool = ...,
+    not_null: bool = ...,
+) -> Boolean: ...
+
+
+@overload
+def boolean(
+    name: str | None = ...,
+    *,
+    default: bool,
+    primary: bool = ...,
+    not_null: bool = ...,
+) -> Boolean: ...
+
+
+@overload
+def boolean(
+    name: str | None = ...,
+    *,
+    default: None,
+    primary: bool = ...,
+    not_null: bool = ...,
+) -> NullBoolean: ...
 
 
 def boolean(
     name: str | None = None,
-    default: bool | None = None,
     *,
+    default: bool | None | _NoDefaultType = NO_DEFAULT,
     primary: bool = False,
     not_null: bool = False,
-) -> Boolean:
+) -> Boolean | NullBoolean:
     """Create a :class:`Boolean` column."""
+    if default is None:
+        return Null[bool](
+            sql_type="BOOLEAN", py_type=bool, name=name, default=default, primary=primary, not_null=not_null
+        )
     return Boolean(name=name, default=default, primary=primary, not_null=not_null)
+
+
+@overload
+def timestamp(
+    name: str | None = ...,
+    *,
+    primary: bool = ...,
+    not_null: bool = ...,
+) -> Timestamp: ...
+
+
+@overload
+def timestamp(
+    name: str | None = ...,
+    *,
+    default: datetime,
+    primary: bool = ...,
+    not_null: bool = ...,
+) -> Timestamp: ...
+
+
+@overload
+def timestamp(
+    name: str | None = ...,
+    *,
+    default: None,
+    primary: bool = ...,
+    not_null: bool = ...,
+) -> NullTimestamp: ...
 
 
 def timestamp(
     name: str | None = None,
-    default: datetime | None = None,
     *,
+    default: datetime | None | _NoDefaultType = NO_DEFAULT,
     primary: bool = False,
     not_null: bool = False,
-) -> Timestamp:
+) -> Timestamp | NullTimestamp:
     """Create a :class:`Timestamp` column."""
+    if default is None:
+        return Null[datetime](
+            sql_type="TIMESTAMP", py_type=str, name=name, default=default, primary=primary, not_null=not_null
+        )
     return Timestamp(name=name, default=default, primary=primary, not_null=not_null)
+
+
+@overload
+def jsonb(
+    name: str | None = ...,
+    *,
+    primary: bool = ...,
+    not_null: bool = ...,
+) -> Jsonb: ...
+
+
+@overload
+def jsonb(
+    name: str | None = ...,
+    *,
+    default: dict[str, Any],
+    primary: bool = ...,
+    not_null: bool = ...,
+) -> Jsonb: ...
+
+
+@overload
+def jsonb(
+    name: str | None = ...,
+    *,
+    default: None,
+    primary: bool = ...,
+    not_null: bool = ...,
+) -> Null[dict[str, Any]]: ...
 
 
 def jsonb(
     name: str | None = None,
-    default: dict[str, Any] | None = None,
     *,
+    default: dict[str, Any] | None | _NoDefaultType = NO_DEFAULT,
     primary: bool = False,
     not_null: bool = False,
-) -> Jsonb:
+) -> Jsonb | Null[dict[str, Any]]:
     """Create a :class:`Jsonb` column."""
+    if default is None:
+        return Null[dict[str, Any]](
+            sql_type="JSONB", py_type=dict, name=name, default=default, primary=primary, not_null=not_null
+        )
     return Jsonb(name=name, default=default, primary=primary, not_null=not_null)
+
+
+@overload
+def smallint(
+    name: str | None = ...,
+    *,
+    primary: bool = ...,
+    not_null: bool = ...,
+    fk: Callable[[], Column[int]] | None = ...,
+    on_delete: OnDelete | None = ...,
+) -> SmallInt: ...
+
+
+@overload
+def smallint(
+    name: str | None = ...,
+    *,
+    default: int,
+    primary: bool = ...,
+    not_null: bool = ...,
+    fk: Callable[[], Column[int]] | None = ...,
+    on_delete: OnDelete | None = ...,
+) -> SmallInt: ...
+
+
+@overload
+def smallint(
+    name: str | None = ...,
+    *,
+    default: None,
+    primary: bool = ...,
+    not_null: bool = ...,
+    fk: Callable[[], Column[int]] | None = ...,
+    on_delete: OnDelete | None = ...,
+) -> NullSmallInt: ...
 
 
 def smallint(
     name: str | None = None,
-    default: int | None = None,
     *,
+    default: int | None | _NoDefaultType = NO_DEFAULT,
     primary: bool = False,
     not_null: bool = False,
     fk: Callable[[], Column[int]] | None = None,
     on_delete: OnDelete | None = None,
-) -> SmallInt:
+) -> SmallInt | NullSmallInt:
     """Create a :class:`SmallInt` column."""
-    col = SmallInt(name=name, default=default, primary=primary, not_null=not_null)
+    col: SmallInt | Null[int]
+    if default is None:
+        col = Null[int](
+            sql_type="SMALLINT", py_type=int, name=name, default=default, primary=primary, not_null=not_null
+        )
+    else:
+        col = SmallInt(name=name, default=default, primary=primary, not_null=not_null)
     if fk is not None:
         col.fk(fk, on_delete)
     return col
+
+
+@overload
+def bigint(
+    name: str | None = ...,
+    *,
+    primary: bool = ...,
+    not_null: bool = ...,
+    fk: Callable[[], Column[int]] | None = ...,
+    on_delete: OnDelete | None = ...,
+) -> BigInt: ...
+
+
+@overload
+def bigint(
+    name: str | None = ...,
+    *,
+    default: int,
+    primary: bool = ...,
+    not_null: bool = ...,
+    fk: Callable[[], Column[int]] | None = ...,
+    on_delete: OnDelete | None = ...,
+) -> BigInt: ...
+
+
+@overload
+def bigint(
+    name: str | None = ...,
+    *,
+    default: None,
+    primary: bool = ...,
+    not_null: bool = ...,
+    fk: Callable[[], Column[int]] | None = ...,
+    on_delete: OnDelete | None = ...,
+) -> NullBigInt: ...
 
 
 def bigint(
     name: str | None = None,
-    default: int | None = None,
     *,
+    default: int | None | _NoDefaultType = NO_DEFAULT,
     primary: bool = False,
     not_null: bool = False,
     fk: Callable[[], Column[int]] | None = None,
     on_delete: OnDelete | None = None,
-) -> BigInt:
+) -> BigInt | NullBigInt:
     """Create a :class:`BigInt` column."""
-    col = BigInt(name=name, default=default, primary=primary, not_null=not_null)
+    col: BigInt | Null[int]
+    if default is None:
+        col = Null[int](sql_type="BIGINT", py_type=int, name=name, default=default, primary=primary, not_null=not_null)
+    else:
+        col = BigInt(name=name, default=default, primary=primary, not_null=not_null)
     if fk is not None:
         col.fk(fk, on_delete)
     return col
+
+
+@overload
+def smallserial(
+    name: str | None = ...,
+    *,
+    primary: bool = ...,
+    not_null: bool = ...,
+) -> SmallSerial: ...
+
+
+@overload
+def smallserial(
+    name: str | None = ...,
+    *,
+    default: int,
+    primary: bool = ...,
+    not_null: bool = ...,
+) -> SmallSerial: ...
+
+
+@overload
+def smallserial(
+    name: str | None = ...,
+    *,
+    default: None,
+    primary: bool = ...,
+    not_null: bool = ...,
+) -> Null[int]: ...
 
 
 def smallserial(
     name: str | None = None,
-    default: int | None = None,
     *,
+    default: int | None | _NoDefaultType = NO_DEFAULT,
     primary: bool = False,
     not_null: bool = False,
-) -> SmallSerial:
+) -> SmallSerial | Null[int]:
     """Create a :class:`SmallSerial` column."""
+    if default is None:
+        return Null[int](
+            sql_type="SMALLSERIAL", py_type=int, name=name, default=default, primary=primary, not_null=not_null
+        )
     return SmallSerial(name=name, default=default, primary=primary, not_null=not_null)
+
+
+@overload
+def bigserial(
+    name: str | None = ...,
+    *,
+    primary: bool = ...,
+    not_null: bool = ...,
+) -> BigSerial: ...
+
+
+@overload
+def bigserial(
+    name: str | None = ...,
+    *,
+    default: int,
+    primary: bool = ...,
+    not_null: bool = ...,
+) -> BigSerial: ...
+
+
+@overload
+def bigserial(
+    name: str | None = ...,
+    *,
+    default: None,
+    primary: bool = ...,
+    not_null: bool = ...,
+) -> Null[int]: ...
 
 
 def bigserial(
     name: str | None = None,
-    default: int | None = None,
     *,
+    default: int | None | _NoDefaultType = NO_DEFAULT,
     primary: bool = False,
     not_null: bool = False,
-) -> BigSerial:
+) -> BigSerial | Null[int]:
     """Create a :class:`BigSerial` column."""
+    if default is None:
+        return Null[int](
+            sql_type="BIGSERIAL", py_type=int, name=name, default=default, primary=primary, not_null=not_null
+        )
     return BigSerial(name=name, default=default, primary=primary, not_null=not_null)
+
+
+@overload
+def varchar(
+    name: str | None = ...,
+    *,
+    primary: bool = ...,
+    not_null: bool = ...,
+    length: int | None = ...,
+    fk: Callable[[], Column[str]] | None = ...,
+    on_delete: OnDelete | None = ...,
+) -> Varchar: ...
+
+
+@overload
+def varchar(
+    name: str | None = ...,
+    *,
+    default: str,
+    primary: bool = ...,
+    not_null: bool = ...,
+    length: int | None = ...,
+    fk: Callable[[], Column[str]] | None = ...,
+    on_delete: OnDelete | None = ...,
+) -> Varchar: ...
+
+
+@overload
+def varchar(
+    name: str | None = ...,
+    *,
+    default: None,
+    primary: bool = ...,
+    not_null: bool = ...,
+    length: int | None = ...,
+    fk: Callable[[], Column[str]] | None = ...,
+    on_delete: OnDelete | None = ...,
+) -> NullVarchar: ...
 
 
 def varchar(
     name: str | None = None,
-    default: str | None = None,
     *,
+    default: str | None | _NoDefaultType = NO_DEFAULT,
     primary: bool = False,
     not_null: bool = False,
     length: int | None = None,
     fk: Callable[[], Column[str]] | None = None,
     on_delete: OnDelete | None = None,
-) -> Varchar:
+) -> Varchar | NullVarchar:
     """Create a :class:`Varchar` column."""
-    col = Varchar(name=name, default=default, primary=primary, not_null=not_null, length=length)
+    col: Varchar | Null[str]
+    if default is None:
+        col = Null[str](sql_type="VARCHAR", py_type=str, name=name, default=default, primary=primary, not_null=not_null)
+        if length is not None:
+            col._extra_args = (length,)
+    else:
+        col = Varchar(name=name, default=default, primary=primary, not_null=not_null, length=length)
     if fk is not None:
         col.fk(fk, on_delete)
     return col
+
+
+@overload
+def char_col(
+    name: str | None = ...,
+    *,
+    primary: bool = ...,
+    not_null: bool = ...,
+    length: int | None = ...,
+    fk: Callable[[], Column[str]] | None = ...,
+    on_delete: OnDelete | None = ...,
+) -> Char: ...
+
+
+@overload
+def char_col(
+    name: str | None = ...,
+    *,
+    default: str,
+    primary: bool = ...,
+    not_null: bool = ...,
+    length: int | None = ...,
+    fk: Callable[[], Column[str]] | None = ...,
+    on_delete: OnDelete | None = ...,
+) -> Char: ...
+
+
+@overload
+def char_col(
+    name: str | None = ...,
+    *,
+    default: None,
+    primary: bool = ...,
+    not_null: bool = ...,
+    length: int | None = ...,
+    fk: Callable[[], Column[str]] | None = ...,
+    on_delete: OnDelete | None = ...,
+) -> Null[str]: ...
 
 
 def char_col(
     name: str | None = None,
-    default: str | None = None,
     *,
+    default: str | None | _NoDefaultType = NO_DEFAULT,
     primary: bool = False,
     not_null: bool = False,
     length: int | None = None,
     fk: Callable[[], Column[str]] | None = None,
     on_delete: OnDelete | None = None,
-) -> Char:
+) -> Char | Null[str]:
     """Create a :class:`Char` column."""
-    col = Char(name=name, default=default, primary=primary, not_null=not_null, length=length)
+    col: Char | Null[str]
+    if default is None:
+        col = Null[str](sql_type="CHAR", py_type=str, name=name, default=default, primary=primary, not_null=not_null)
+        if length is not None:
+            col._extra_args = (length,)
+    else:
+        col = Char(name=name, default=default, primary=primary, not_null=not_null, length=length)
     if fk is not None:
         col.fk(fk, on_delete)
     return col
 
 
+@overload
+def numeric(
+    name: str | None = ...,
+    *,
+    primary: bool = ...,
+    not_null: bool = ...,
+    precision: int | None = ...,
+    scale: int | None = ...,
+) -> Numeric: ...
+
+
+@overload
+def numeric(
+    name: str | None = ...,
+    *,
+    default: Decimal,
+    primary: bool = ...,
+    not_null: bool = ...,
+    precision: int | None = ...,
+    scale: int | None = ...,
+) -> Numeric: ...
+
+
+@overload
+def numeric(
+    name: str | None = ...,
+    *,
+    default: None,
+    primary: bool = ...,
+    not_null: bool = ...,
+    precision: int | None = ...,
+    scale: int | None = ...,
+) -> Null[Decimal]: ...
+
+
 def numeric(
     name: str | None = None,
-    default: Decimal | None = None,
     *,
+    default: Decimal | None | _NoDefaultType = NO_DEFAULT,
     primary: bool = False,
     not_null: bool = False,
     precision: int | None = None,
     scale: int | None = None,
-) -> Numeric:
+) -> Numeric | Null[Decimal]:
     """Create a :class:`Numeric` column."""
+    if default is None:
+        col: Null[Decimal] = Null[Decimal](
+            sql_type="NUMERIC", py_type=Decimal, name=name, default=default, primary=primary, not_null=not_null
+        )
+        if precision is not None:
+            if scale is not None:
+                col._extra_args = (precision, scale)
+            else:
+                col._extra_args = (precision,)
+        return col
     return Numeric(name=name, default=default, primary=primary, not_null=not_null, precision=precision, scale=scale)
+
+
+@overload
+def pg_decimal(
+    name: str | None = ...,
+    *,
+    primary: bool = ...,
+    not_null: bool = ...,
+    precision: int | None = ...,
+    scale: int | None = ...,
+) -> PgDecimal: ...
+
+
+@overload
+def pg_decimal(
+    name: str | None = ...,
+    *,
+    default: Decimal,
+    primary: bool = ...,
+    not_null: bool = ...,
+    precision: int | None = ...,
+    scale: int | None = ...,
+) -> PgDecimal: ...
+
+
+@overload
+def pg_decimal(
+    name: str | None = ...,
+    *,
+    default: None,
+    primary: bool = ...,
+    not_null: bool = ...,
+    precision: int | None = ...,
+    scale: int | None = ...,
+) -> Null[Decimal]: ...
 
 
 def pg_decimal(
     name: str | None = None,
-    default: Decimal | None = None,
     *,
+    default: Decimal | None | _NoDefaultType = NO_DEFAULT,
     primary: bool = False,
     not_null: bool = False,
     precision: int | None = None,
     scale: int | None = None,
-) -> PgDecimal:
+) -> PgDecimal | Null[Decimal]:
     """Create a :class:`PgDecimal` column."""
+    if default is None:
+        col: Null[Decimal] = Null[Decimal](
+            sql_type="DECIMAL", py_type=Decimal, name=name, default=default, primary=primary, not_null=not_null
+        )
+        if precision is not None:
+            if scale is not None:
+                col._extra_args = (precision, scale)
+            else:
+                col._extra_args = (precision,)
+        return col
     return PgDecimal(name=name, default=default, primary=primary, not_null=not_null, precision=precision, scale=scale)
+
+
+@overload
+def double_precision(
+    name: str | None = ...,
+    *,
+    primary: bool = ...,
+    not_null: bool = ...,
+) -> DoublePrecision: ...
+
+
+@overload
+def double_precision(
+    name: str | None = ...,
+    *,
+    default: float,
+    primary: bool = ...,
+    not_null: bool = ...,
+) -> DoublePrecision: ...
+
+
+@overload
+def double_precision(
+    name: str | None = ...,
+    *,
+    default: None,
+    primary: bool = ...,
+    not_null: bool = ...,
+) -> NullDoublePrecision: ...
 
 
 def double_precision(
     name: str | None = None,
-    default: float | None = None,
     *,
+    default: float | None | _NoDefaultType = NO_DEFAULT,
     primary: bool = False,
     not_null: bool = False,
-) -> DoublePrecision:
+) -> DoublePrecision | NullDoublePrecision:
     """Create a :class:`DoublePrecision` column."""
+    if default is None:
+        return Null[float](
+            sql_type="DOUBLE PRECISION", py_type=float, name=name, default=default, primary=primary, not_null=not_null
+        )
     return DoublePrecision(name=name, default=default, primary=primary, not_null=not_null)
+
+
+@overload
+def json_col(
+    name: str | None = ...,
+    *,
+    primary: bool = ...,
+    not_null: bool = ...,
+) -> Json: ...
+
+
+@overload
+def json_col(
+    name: str | None = ...,
+    *,
+    default: dict[str, Any],
+    primary: bool = ...,
+    not_null: bool = ...,
+) -> Json: ...
+
+
+@overload
+def json_col(
+    name: str | None = ...,
+    *,
+    default: None,
+    primary: bool = ...,
+    not_null: bool = ...,
+) -> Null[dict[str, Any]]: ...
 
 
 def json_col(
     name: str | None = None,
-    default: dict[str, Any] | None = None,
     *,
+    default: dict[str, Any] | None | _NoDefaultType = NO_DEFAULT,
     primary: bool = False,
     not_null: bool = False,
-) -> Json:
+) -> Json | Null[dict[str, Any]]:
     """Create a :class:`Json` column."""
+    if default is None:
+        return Null[dict[str, Any]](
+            sql_type="JSON", py_type=dict, name=name, default=default, primary=primary, not_null=not_null
+        )
     return Json(name=name, default=default, primary=primary, not_null=not_null)
+
+
+@overload
+def time_col(
+    name: str | None = ...,
+    *,
+    primary: bool = ...,
+    not_null: bool = ...,
+) -> Time: ...
+
+
+@overload
+def time_col(
+    name: str | None = ...,
+    *,
+    default: time,
+    primary: bool = ...,
+    not_null: bool = ...,
+) -> Time: ...
+
+
+@overload
+def time_col(
+    name: str | None = ...,
+    *,
+    default: None,
+    primary: bool = ...,
+    not_null: bool = ...,
+) -> Null[time]: ...
 
 
 def time_col(
     name: str | None = None,
-    default: time | None = None,
     *,
+    default: time | None | _NoDefaultType = NO_DEFAULT,
     primary: bool = False,
     not_null: bool = False,
-) -> Time:
+) -> Time | Null[time]:
     """Create a :class:`Time` column."""
+    if default is None:
+        return Null[time](sql_type="TIME", py_type=time, name=name, default=default, primary=primary, not_null=not_null)
     return Time(name=name, default=default, primary=primary, not_null=not_null)
+
+
+@overload
+def date_col(
+    name: str | None = ...,
+    *,
+    primary: bool = ...,
+    not_null: bool = ...,
+) -> Date: ...
+
+
+@overload
+def date_col(
+    name: str | None = ...,
+    *,
+    default: date,
+    primary: bool = ...,
+    not_null: bool = ...,
+) -> Date: ...
+
+
+@overload
+def date_col(
+    name: str | None = ...,
+    *,
+    default: None,
+    primary: bool = ...,
+    not_null: bool = ...,
+) -> NullDate: ...
 
 
 def date_col(
     name: str | None = None,
-    default: date | None = None,
     *,
+    default: date | None | _NoDefaultType = NO_DEFAULT,
     primary: bool = False,
     not_null: bool = False,
-) -> Date:
+) -> Date | NullDate:
     """Create a :class:`Date` column."""
+    if default is None:
+        return Null[date](sql_type="DATE", py_type=date, name=name, default=default, primary=primary, not_null=not_null)
     return Date(name=name, default=default, primary=primary, not_null=not_null)
+
+
+@overload
+def interval(
+    name: str | None = ...,
+    *,
+    primary: bool = ...,
+    not_null: bool = ...,
+) -> Interval: ...
+
+
+@overload
+def interval(
+    name: str | None = ...,
+    *,
+    default: timedelta,
+    primary: bool = ...,
+    not_null: bool = ...,
+) -> Interval: ...
+
+
+@overload
+def interval(
+    name: str | None = ...,
+    *,
+    default: None,
+    primary: bool = ...,
+    not_null: bool = ...,
+) -> NullInterval: ...
 
 
 def interval(
     name: str | None = None,
-    default: timedelta | None = None,
     *,
+    default: timedelta | None | _NoDefaultType = NO_DEFAULT,
     primary: bool = False,
     not_null: bool = False,
-) -> Interval:
+) -> Interval | NullInterval:
     """Create an :class:`Interval` column."""
+    if default is None:
+        return Null[timedelta](
+            sql_type="INTERVAL", py_type=timedelta, name=name, default=default, primary=primary, not_null=not_null
+        )
     return Interval(name=name, default=default, primary=primary, not_null=not_null)
 
 
 def enum_col[E: EmbarEnum](
     pg_enum: type[PgEnum[E]],
     name: str | None = None,
-    default: E | None = None,
+    default: E | _NoDefaultType = NO_DEFAULT,
     *,
     primary: bool = False,
     not_null: bool = False,
@@ -636,13 +1315,51 @@ def enum_col[E: EmbarEnum](
     return EnumCol(pg_enum, name=name, default=default, primary=primary, not_null=not_null)
 
 
+@overload
+def vector(
+    length: int,
+    name: str | None = ...,
+    *,
+    primary: bool = ...,
+    not_null: bool = ...,
+) -> Vector: ...
+
+
+@overload
+def vector(
+    length: int,
+    name: str | None = ...,
+    *,
+    default: list[float],
+    primary: bool = ...,
+    not_null: bool = ...,
+) -> Vector: ...
+
+
+@overload
+def vector(
+    length: int,
+    name: str | None = ...,
+    *,
+    default: None,
+    primary: bool = ...,
+    not_null: bool = ...,
+) -> Null[list[float]]: ...
+
+
 def vector(
     length: int,
     name: str | None = None,
-    default: list[float] | None = None,
     *,
+    default: list[float] | None | _NoDefaultType = NO_DEFAULT,
     primary: bool = False,
     not_null: bool = False,
-) -> Vector:
+) -> Vector | Null[list[float]]:
     """Create a :class:`Vector` column."""
+    if default is None:
+        col: Null[list[float]] = Null[list[float]](
+            sql_type="VECTOR", py_type=list, name=name, default=default, primary=primary, not_null=not_null
+        )
+        col._extra_args = (length,)
+        return col
     return Vector(length, name=name, default=default, primary=primary, not_null=not_null)

@@ -31,9 +31,10 @@ Embar supports three database clients:
 
 The async psycopg3 client is recommended. The others are provided mostly for testing and experimenting locally.
 
-**Embar uses [Template strings](https://docs.python.org/3.14/library/string.templatelib.html#template-strings) and so only supports Python 3.14.**
-
-**Embar is pre-alpha and ready for experimentation but not production use.**
+## NB:
+- Embar uses [Template strings](https://docs.python.org/3.14/library/string.templatelib.html#template-strings) and so **only supports Python 3.14.**
+- Embar is developed with the [ty](https://docs.astral.sh/ty/) type-checker in mind. Other type-checkers may behave differently. We're pushing the limits of the Python type system here.
+- Embar is alpha and ready for experimentation but **not production use.**
 
 **Documentation: [embar.rdrn.me](https://embar.rdrn.me)**
 

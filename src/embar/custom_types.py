@@ -8,6 +8,26 @@ from pydantic import Json
 
 Undefined: Any = ...
 
+
+class _NoDefaultType:
+    """Sentinel to distinguish 'no default' from 'default is None'."""
+
+    _instance: _NoDefaultType | None = None
+
+    def __new__(cls) -> _NoDefaultType:
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+    def __repr__(self) -> str:
+        return "NO_DEFAULT"
+
+    def __bool__(self) -> bool:
+        return False
+
+
+NO_DEFAULT = _NoDefaultType()
+
 type Type = type | TypeAliasType
 
 # All the types that are allowed to ser/de to/from the DB.

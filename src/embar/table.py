@@ -5,12 +5,33 @@ to import table_base.py without triggering table.py, causing a circular loop by 
 """
 
 from textwrap import dedent, indent
-from typing import Any, Self, dataclass_transform
+from typing import Any, Self, dataclass_transform, get_args, get_origin
 
 from pydantic_core import core_schema
 
 from embar.column.base import ColumnBase
-from embar.column.common import Column, float_col, integer, text
+from embar.column.common import Column, Null, float_col, integer, text
+from embar.column.pg import (
+    bigint,
+    bigserial,
+    boolean,
+    char_col,
+    date_col,
+    double_precision,
+    enum_col,
+    interval,
+    json_col,
+    jsonb,
+    numeric,
+    pg_decimal,
+    serial,
+    smallint,
+    smallserial,
+    time_col,
+    timestamp,
+    varchar,
+    vector,
+)
 from embar.config import EmbarConfig
 from embar.custom_types import Undefined
 from embar.model import SelectAll
@@ -18,7 +39,33 @@ from embar.query.many import ManyTable, OneTable
 from embar.table_base import TableBase
 
 
-@dataclass_transform(kw_only_default=True, field_specifiers=(integer, text, float_col))
+@dataclass_transform(
+    kw_only_default=True,
+    field_specifiers=(
+        integer,
+        text,
+        float_col,
+        varchar,
+        serial,
+        boolean,
+        timestamp,
+        jsonb,
+        smallint,
+        bigint,
+        smallserial,
+        bigserial,
+        char_col,
+        numeric,
+        pg_decimal,
+        double_precision,
+        json_col,
+        time_col,
+        date_col,
+        interval,
+        enum_col,
+        vector,
+    ),
+)
 class Table(TableBase):
     """
     All table definitions inherit from `Table`.
@@ -39,7 +86,55 @@ class Table(TableBase):
             cls.embar_config: EmbarConfig = EmbarConfig()
             cls.embar_config.__set_name__(cls, "embar_config")
 
+        cls._validate_column_annotations()
         super().__init_subclass__(**kwargs)
+
+    @classmethod
+    def _validate_column_annotations(cls) -> None:
+        """
+        Validate that column annotations match their field specifiers.
+
+        Checks both the base type (e.g. Text vs Integer) and nullability
+        (e.g. NullText vs Text).
+        """
+        annotations = cls.__annotations__
+        for name, col in cls._fields.items():
+            if name not in annotations:
+                continue
+            ann = annotations[name]
+            origin = get_origin(ann)
+
+            if origin is Null:
+                # Annotation is Null[T] — column must be a Null instance
+                if not isinstance(col, Null):
+                    raise TypeError(
+                        f"{cls.__name__}.{name}: annotation is nullable ({ann}) "
+                        f"but field specifier returns non-nullable {type(col).__name__}"
+                    )
+                # Check that T matches the column's py_type
+                ann_args = get_args(ann)
+                if ann_args and col._py_type != ann_args[0]:
+                    raise TypeError(
+                        f"{cls.__name__}.{name}: annotation is Null[{ann_args[0].__name__}] "
+                        f"but field specifier has py_type={col._py_type.__name__}"
+                    )
+                # Nullable annotation but not_null=True in DB — always wrong
+                if col._not_null:
+                    raise TypeError(
+                        f"{cls.__name__}.{name}: annotation is nullable ({ann}) but field specifier has not_null=True"
+                    )
+            elif isinstance(ann, type) and issubclass(ann, Column):
+                # Annotation is a concrete Column subclass (e.g. Text, Integer)
+                if isinstance(col, Null):
+                    raise TypeError(
+                        f"{cls.__name__}.{name}: annotation is non-nullable ({ann.__name__}) "
+                        f"but field specifier returns nullable Null"
+                    )
+                if not isinstance(col, ann):
+                    raise TypeError(
+                        f"{cls.__name__}.{name}: annotation type is {ann.__name__} "
+                        f"but field specifier returns {type(col).__name__}"
+                    )
 
     def __init__(self, **kwargs: Any) -> None:
         """
@@ -57,7 +152,7 @@ class Table(TableBase):
         # Handle defaults for missing fields
         missing = set(columns.keys()) - set(kwargs.keys())
         for name in list(missing):
-            if columns[name].default is not None:
+            if columns[name].has_default:
                 setattr(self, name, columns[name].default)
                 missing.remove(name)
 
