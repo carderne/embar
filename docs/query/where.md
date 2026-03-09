@@ -10,14 +10,14 @@ Use `Eq` to check equality:
 import asyncio
 import psycopg
 
-from embar.column.common import Integer, Text
+from embar.column.common import Integer, Text, integer, text
 from embar.db.pg import AsyncPgDb
 from embar.query.where import Eq
 from embar.table import Table
 
 class User(Table):
-    id: Integer = Integer(primary=True)
-    email: Text = Text()
+    id: Integer = integer(primary=True)
+    email: Text = text()
 
 async def get_db(tables: list[Table] = None):
     if tables is None:
@@ -404,9 +404,9 @@ Check if a subquery returns any rows:
 from embar.query.where import Exists
 
 class Message(Table):
-    id: Integer = Integer(primary=True)
-    user_id: Integer = Integer().fk(lambda: User.id)
-    content: Text = Text()
+    id: Integer = integer(primary=True)
+    user_id: Integer = integer(fk=lambda: User.id)
+    content: Text = text()
 
 async def exists():
     db = await get_db([User, Message])
@@ -463,9 +463,9 @@ Compare two columns instead of a column and a value:
 
 ```{.python continuation}
 class Order(Table):
-    id: Integer = Integer(primary=True)
-    created_at: Integer = Integer()
-    updated_at: Integer = Integer()
+    id: Integer = integer(primary=True)
+    created_at: Integer = integer()
+    updated_at: Integer = integer()
 
 async def compare():
     db = await get_db([Order])

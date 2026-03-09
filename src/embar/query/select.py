@@ -184,13 +184,13 @@ class SelectQueryReady[M: BaseModel, T: Table, Db: AllDbBase]:
         ```python
         from embar.db.pg import PgDb
         from embar.table import Table
-        from embar.column.common import Integer, Text
+        from embar.column.common import Integer, Text, integer, text
         from embar.query.where import Gt
 
         class User(Table):
-            id: Integer = Integer(primary=True)
-            age: Integer = Integer()
-            name: Text = Text()
+            id: Integer = integer(primary=True)
+            age: Integer = integer()
+            name: Text = text()
 
         db = PgDb(None)
 
@@ -218,14 +218,14 @@ class SelectQueryReady[M: BaseModel, T: Table, Db: AllDbBase]:
         ```python
         from embar.db.pg import PgDb
         from embar.table import Table
-        from embar.column.common import Integer, Text
+        from embar.column.common import Integer, Text, integer, text
         from embar.query.order_by import Asc, Desc
         from embar.sql import Sql
 
         class User(Table):
-            id: Integer = Integer(primary=True)
-            age: Integer = Integer()
-            name: Text = Text()
+            id: Integer = integer(primary=True)
+            age: Integer = integer()
+            name: Text = text()
 
         db = PgDb(None)
 
@@ -281,12 +281,12 @@ class SelectQueryReady[M: BaseModel, T: Table, Db: AllDbBase]:
         ```python
         from embar.db.pg import PgDb
         from embar.table import Table
-        from embar.column.common import Integer, Text
+        from embar.column.common import Integer, Text, integer, text
 
         class User(Table):
-            id: Integer = Integer(primary=True)
-            age: Integer = Integer()
-            name: Text = Text()
+            id: Integer = integer(primary=True)
+            age: Integer = integer()
+            name: Text = text()
 
         db = PgDb(None)
 
@@ -335,28 +335,25 @@ class SelectQueryReady[M: BaseModel, T: Table, Db: AllDbBase]:
         return awaitable().__await__()
 
     @overload
-    def run(self: SelectQueryReady[SelectAll, T, DbBase]) -> Sequence[T]: ...
+    def run(self: SelectQueryReady[SelectAll, T, Db]) -> Sequence[T]: ...
     @overload
-    def run(self: SelectQueryReady[M, T, DbBase]) -> Sequence[M]: ...
-    @overload
-    def run(self: SelectQueryReady[M, T, AsyncDbBase]) -> SelectQueryReady[M, T, Db]: ...
+    def run(self) -> Sequence[M]: ...
 
-    def run(self) -> Sequence[M | T] | SelectQueryReady[M, T, Db]:
+    def run(self) -> Sequence[M | T]:
         """
         Run the query against the underlying DB.
 
         Convenience method for those not using async.
-        But still works if awaited.
+        For async, use `await query` instead.
         """
-        if isinstance(self._db, DbBase):
-            query = self.sql()
-            model = self._get_model()
-            model = cast(type[T] | type[M], model)
-            adapter = TypeAdapter(list[model])
-            data = self._db.fetch(query)
-            results = adapter.validate_python(data)
-            return results
-        return self
+        query = self.sql()
+        model = self._get_model()
+        model = cast(type[T] | type[M], model)
+        adapter = TypeAdapter(list[model])
+        db = cast(DbBase, self._db)
+        data = db.fetch(query)
+        results = adapter.validate_python(data)
+        return results
 
     def _get_model(self) -> type[BaseModel] | type[M]:
         """

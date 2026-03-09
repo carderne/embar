@@ -1,6 +1,6 @@
 from typing import TypedDict
 
-from embar.column.common import Integer, Text
+from embar.column.common import Integer, Text, integer, text
 from embar.config import EmbarConfig
 from embar.table import Table
 
@@ -8,8 +8,8 @@ from embar.table import Table
 class User(Table):
     embar_config: EmbarConfig = EmbarConfig(table_name="users")
 
-    id: Integer = Integer(primary=True)
-    email: Text = Text("user_email", not_null=True)
+    id: Integer = integer(primary=True)
+    email: Text = text("user_email", not_null=True)
 
 
 class UserUpdate(TypedDict, total=False):
@@ -20,9 +20,9 @@ class UserUpdate(TypedDict, total=False):
 
 
 class Message(Table):
-    id: Integer = Integer()
-    user_id: Integer = Integer().fk(lambda: User.id, "cascade")
-    content: Text = Text(default="no message")
+    id: Integer = integer()
+    user_id: Integer = integer(fk=lambda: User.id, on_delete="cascade")
+    content: Text = text(default="no message")
 
 
 class MessageUpdate(TypedDict, total=False):

@@ -10,19 +10,19 @@ Use `db.transaction()` as a context manager to start a transaction:
 import asyncio
 import psycopg
 
-from embar.column.common import Integer, Text
+from embar.column.common import Integer, Text, integer, text
 from embar.db.pg import AsyncPgDb
 from embar.table import Table
 
 class Account(Table):
-    id: Integer = Integer()
-    name: Text = Text()
+    id: Integer = integer()
+    name: Text = text()
 
 class Transfer(Table):
-    id: Integer = Integer()
-    from_account: Integer = Integer()
-    to_account: Integer = Integer()
-    amount: Integer = Integer()
+    id: Integer = integer()
+    from_account: Integer = integer()
+    to_account: Integer = integer()
+    amount: Integer = integer()
 
 async def get_db():
     database_url = "postgres://pg:pw@localhost:25432/db"

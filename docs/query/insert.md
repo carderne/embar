@@ -11,12 +11,12 @@ import asyncio
 import psycopg
 
 from embar.db.pg import AsyncPgDb
-from embar.column.common import Integer, Text
+from embar.column.common import Integer, Text, integer, text
 from embar.table import Table
 
 class User(Table):
-    id: Integer = Integer()
-    email: Text = Text()
+    id: Integer = integer()
+    email: Text = text()
 
 async def get_db(tables: list[Table] = None):
     tables = tables if tables is not None else [User]
@@ -105,9 +105,9 @@ Columns with default values can be omitted when creating instances:
 
 ```{.python continuation}
 class UserStatus(Table):
-    id: Integer = Integer()
-    email: Text = Text(not_null=True)
-    status: Text = Text(default="active")
+    id: Integer = integer()
+    email: Text = text(not_null=True)
+    status: Text = text(default="active")
 
 user = UserStatus(id=30, email="alice@example.com")
 # status will be set to "active" by the database
@@ -143,12 +143,12 @@ When inserting rows with foreign key relationships, insert the parent row first:
 ```{.python continuation}
 
 class UserSimple(Table):
-    id: Integer = Integer(primary=True)
+    id: Integer = integer(primary=True)
 
 class Message(Table):
-    id: Integer = Integer(primary=True)
-    user_id: Integer = Integer().fk(lambda: UserSimple.id)
-    content: Text = Text()
+    id: Integer = integer(primary=True)
+    user_id: Integer = integer(fk=lambda: UserSimple.id)
+    content: Text = text()
 
 async def relations():
     db = await get_db([Message,UserSimple])
@@ -174,12 +174,12 @@ import asyncio
 import psycopg
 
 from embar.db.pg import AsyncPgDb
-from embar.column.common import Integer, Text
+from embar.column.common import Integer, Text, integer, text
 from embar.table import Table
 
 class Product(Table):
-    id: Integer = Integer(primary=True)
-    name: Text = Text()
+    id: Integer = integer(primary=True)
+    name: Text = text()
 
 async def get_db(tables: list[Table] = None):
     tables = tables if tables is not None else [Product]

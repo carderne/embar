@@ -7,12 +7,12 @@ Schemas in Embar are defined as Python classes that inherit from `Table`. Each c
 The simplest table definition:
 
 ```{.python continuation}
-from embar.column.common import Integer, Text
+from embar.column.common import Integer, Text, integer, text
 from embar.table import Table
 
 class User(Table):
-    id: Integer = Integer()
-    email: Text = Text()
+    id: Integer = integer()
+    email: Text = text()
 ```
 
 This creates a table called `user` with two columns: `id` and `email`.
@@ -23,7 +23,7 @@ By default, Embar generates table names from your class name by converting from 
 
 ```{.python continuation}
 class UserProfile(Table):
-    id: Integer = Integer()
+    id: Integer = integer()
 
 # Table name will be "user_profile"
 ```
@@ -36,7 +36,7 @@ from embar.config import EmbarConfig
 class UserProfile(Table):
     embar_config: EmbarConfig = EmbarConfig(table_name="users")
 
-    id: Integer = Integer()
+    id: Integer = integer()
 ```
 
 ## Column Naming
@@ -45,7 +45,7 @@ Like table names, column names are auto-generated from the field name:
 
 ```{.python continuation}
 class User(Table):
-    user_id: Integer = Integer()
+    user_id: Integer = integer()
     # Column name will be "user_id"
 ```
 
@@ -53,7 +53,7 @@ You can provide an explicit name as the first argument:
 
 ```{.python continuation}
 class User(Table):
-    id: Integer = Integer("user_id")
+    id: Integer = integer("user_id")
     # Field name is "id", column name is "user_id"
 ```
 
@@ -80,21 +80,21 @@ Columns accept several configuration options:
 
 ```{.python continuation}
 class User(Table):
-    id: Integer = Integer(primary=True)
+    id: Integer = integer(primary=True)
 ```
 
 ### Not Null
 
 ```{.python continuation}
 class User(Table):
-    email: Text = Text(not_null=True)
+    email: Text = text(not_null=True)
 ```
 
 ### Default Values
 
 ```{.python continuation}
 class User(Table):
-    status: Text = Text(default="active")
+    status: Text = text(default="active")
 ```
 
 When creating a new row, fields with defaults can be omitted:
@@ -108,9 +108,9 @@ user = User()
 
 ```{.python continuation}
 class User(Table):
-    id: Integer = Integer(primary=True)
-    email: Text = Text("user_email", not_null=True)
-    status: Text = Text(default="active", not_null=True)
+    id: Integer = integer(primary=True)
+    email: Text = text("user_email", not_null=True)
+    status: Text = text(default="active", not_null=True)
 ```
 
 ## Foreign Keys
@@ -119,11 +119,11 @@ Foreign keys reference columns in other tables:
 
 ```{.python continuation}
 class User(Table):
-    id: Integer = Integer(primary=True)
+    id: Integer = integer(primary=True)
 
 class Message(Table):
-    id: Integer = Integer(primary=True)
-    user_id: Integer = Integer().fk(lambda: User.id)
+    id: Integer = integer(primary=True)
+    user_id: Integer = integer(fk=lambda: User.id)
 ```
 
 The lambda is required because `User` might not be defined yet when `Message` is being created.
@@ -132,30 +132,27 @@ You can specify `on_delete` behavior:
 
 ```{.python continuation}
 class Message(Table):
-    user_id: Integer = Integer().fk(
-        lambda: User.id,
-        on_delete="cascade"
-    )
+    user_id: Integer = integer(fk=lambda: User.id, on_delete="cascade")
 ```
 
 ## A Complete Example
 
 ```{.python continuation}
-from embar.column.common import Integer, Text
+from embar.column.common import Integer, Text, integer, text
 from embar.config import EmbarConfig
 from embar.table import Table
 
 class User(Table):
     embar_config: EmbarConfig = EmbarConfig(table_name="users")
 
-    id: Integer = Integer(primary=True)
-    email: Text = Text("user_email", not_null=True)
-    name: Text = Text(default="Anonymous")
+    id: Integer = integer(primary=True)
+    email: Text = text("user_email", not_null=True)
+    name: Text = text(default="Anonymous")
 
 class Message(Table):
-    id: Integer = Integer(primary=True)
-    user_id: Integer = Integer(not_null=True).fk(lambda: User.id)
-    content: Text = Text(not_null=True)
+    id: Integer = integer(primary=True)
+    user_id: Integer = integer(not_null=True).fk(lambda: User.id)
+    content: Text = text(not_null=True)
 ```
 
 ## Next Steps

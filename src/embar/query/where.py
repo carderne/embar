@@ -1,8 +1,8 @@
 """Where clauses for filtering queries."""
 
-from typing import Any, Protocol, override
+from typing import Any, Protocol, overload, override
 
-from embar.column.base import ColumnInfo
+from embar.column.base import ColumnBase, ColumnInfo
 from embar.column.common import Column
 from embar.custom_types import PyType
 from embar.query.clause_base import ClauseBase, GetCount
@@ -40,7 +40,7 @@ def _gen_comparison_sql(
 
 
 # Comparison operators
-class Eq[T: PyType](ClauseBase):
+class Eq(ClauseBase):
     """
     Checks if a column value is equal to another column or a passed param.
 
@@ -50,7 +50,13 @@ class Eq[T: PyType](ClauseBase):
     left: ColumnInfo | ClauseBase
     right: ColumnInfo | PyType
 
-    def __init__(self, left: Column[T] | ClauseBase, right: Column[T] | T):
+    @overload
+    def __init__[T: PyType](self, left: Column[T], right: Column[T]) -> None: ...
+    @overload
+    def __init__[T: PyType](self, left: Column[T], right: T) -> None: ...
+    @overload
+    def __init__(self, left: ClauseBase, right: ColumnBase | PyType) -> None: ...
+    def __init__(self, left: Column[Any] | ClauseBase, right: Column[Any] | PyType) -> None:
         self.left = left.info if isinstance(left, Column) else left
         self.right = right.info if isinstance(right, Column) else right
 
@@ -59,7 +65,7 @@ class Eq[T: PyType](ClauseBase):
         return _gen_comparison_sql(self.left, self.right, "=", "eq", get_count)
 
 
-class Ne[T: PyType](ClauseBase):
+class Ne(ClauseBase):
     """
     Checks if a column value is not equal to another column or a passed param.
     """
@@ -67,7 +73,13 @@ class Ne[T: PyType](ClauseBase):
     left: ColumnInfo | ClauseBase
     right: ColumnInfo | PyType
 
-    def __init__(self, left: Column[T] | ClauseBase, right: Column[T] | T):
+    @overload
+    def __init__[T: PyType](self, left: Column[T], right: Column[T]) -> None: ...
+    @overload
+    def __init__[T: PyType](self, left: Column[T], right: T) -> None: ...
+    @overload
+    def __init__(self, left: ClauseBase, right: ColumnBase | PyType) -> None: ...
+    def __init__(self, left: Column[Any] | ClauseBase, right: Column[Any] | PyType) -> None:
         self.left = left.info if isinstance(left, Column) else left
         self.right = right.info if isinstance(right, Column) else right
 
@@ -76,7 +88,7 @@ class Ne[T: PyType](ClauseBase):
         return _gen_comparison_sql(self.left, self.right, "!=", "ne", get_count)
 
 
-class Gt[T: PyType](ClauseBase):
+class Gt(ClauseBase):
     """
     Checks if a column value is greater than another column or a passed param.
     """
@@ -84,7 +96,13 @@ class Gt[T: PyType](ClauseBase):
     left: ColumnInfo | ClauseBase
     right: ColumnInfo | PyType
 
-    def __init__(self, left: Column[T] | ClauseBase, right: Column[T] | T):
+    @overload
+    def __init__[T: PyType](self, left: Column[T], right: Column[T]) -> None: ...
+    @overload
+    def __init__[T: PyType](self, left: Column[T], right: T) -> None: ...
+    @overload
+    def __init__(self, left: ClauseBase, right: ColumnBase | PyType) -> None: ...
+    def __init__(self, left: Column[Any] | ClauseBase, right: Column[Any] | PyType) -> None:
         self.left = left.info if isinstance(left, Column) else left
         self.right = right.info if isinstance(right, Column) else right
 
@@ -93,7 +111,7 @@ class Gt[T: PyType](ClauseBase):
         return _gen_comparison_sql(self.left, self.right, ">", "gt", get_count)
 
 
-class Gte[T: PyType](ClauseBase):
+class Gte(ClauseBase):
     """
     Checks if a column value is greater than or equal to another column or a passed param.
     """
@@ -101,7 +119,13 @@ class Gte[T: PyType](ClauseBase):
     left: ColumnInfo | ClauseBase
     right: ColumnInfo | PyType
 
-    def __init__(self, left: Column[T] | ClauseBase, right: Column[T] | T):
+    @overload
+    def __init__[T: PyType](self, left: Column[T], right: Column[T]) -> None: ...
+    @overload
+    def __init__[T: PyType](self, left: Column[T], right: T) -> None: ...
+    @overload
+    def __init__(self, left: ClauseBase, right: ColumnBase | PyType) -> None: ...
+    def __init__(self, left: Column[Any] | ClauseBase, right: Column[Any] | PyType) -> None:
         self.left = left.info if isinstance(left, Column) else left
         self.right = right.info if isinstance(right, Column) else right
 
@@ -110,7 +134,7 @@ class Gte[T: PyType](ClauseBase):
         return _gen_comparison_sql(self.left, self.right, ">=", "gte", get_count)
 
 
-class Lt[T: PyType](ClauseBase):
+class Lt(ClauseBase):
     """
     Checks if a column value is less than another column or a passed param.
     """
@@ -118,7 +142,13 @@ class Lt[T: PyType](ClauseBase):
     left: ColumnInfo | ClauseBase
     right: ColumnInfo | PyType
 
-    def __init__(self, left: Column[T] | ClauseBase, right: Column[T] | T):
+    @overload
+    def __init__[T: PyType](self, left: Column[T], right: Column[T]) -> None: ...
+    @overload
+    def __init__[T: PyType](self, left: Column[T], right: T) -> None: ...
+    @overload
+    def __init__(self, left: ClauseBase, right: ColumnBase | PyType) -> None: ...
+    def __init__(self, left: Column[Any] | ClauseBase, right: Column[Any] | PyType) -> None:
         self.left = left.info if isinstance(left, Column) else left
         self.right = right.info if isinstance(right, Column) else right
 
@@ -127,7 +157,7 @@ class Lt[T: PyType](ClauseBase):
         return _gen_comparison_sql(self.left, self.right, "<", "lt", get_count)
 
 
-class Lte[T: PyType](ClauseBase):
+class Lte(ClauseBase):
     """
     Checks if a column value is less than or equal to another column or a passed param.
     """
@@ -135,7 +165,13 @@ class Lte[T: PyType](ClauseBase):
     left: ColumnInfo | ClauseBase
     right: ColumnInfo | PyType
 
-    def __init__(self, left: Column[T] | ClauseBase, right: Column[T] | T):
+    @overload
+    def __init__[T: PyType](self, left: Column[T], right: Column[T]) -> None: ...
+    @overload
+    def __init__[T: PyType](self, left: Column[T], right: T) -> None: ...
+    @overload
+    def __init__(self, left: ClauseBase, right: ColumnBase | PyType) -> None: ...
+    def __init__(self, left: Column[Any] | ClauseBase, right: Column[Any] | PyType) -> None:
         self.left = left.info if isinstance(left, Column) else left
         self.right = right.info if isinstance(right, Column) else right
 
@@ -245,7 +281,7 @@ class InArray[T: PyType](ClauseBase):
     """
 
     column: ColumnInfo
-    values: list[PyType]
+    values: list[T]
 
     def __init__(self, column: Column[T], values: list[T]):
         self.column = column.info
@@ -264,7 +300,7 @@ class NotInArray[T: PyType](ClauseBase):
     """
 
     column: ColumnInfo
-    values: list[PyType]
+    values: list[T]
 
     def __init__(self, column: Column[T], values: list[T]):
         self.column = column.info

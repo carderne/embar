@@ -13,7 +13,7 @@ def postgres_container_raw(request: pytest.FixtureRequest):
             request.addfinalizer(postgres.stop)
             yield postgres
     except Exception as e:
-        pytest.exit(f"postgres_container fixture failed: {e}", 1)
+        pytest.exit(f"postgres_container fixture failed: {e}", 1)  # ty: ignore[invalid-argument-type, too-many-positional-arguments]
 
 
 @pytest.fixture(scope="function")

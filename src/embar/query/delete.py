@@ -2,7 +2,7 @@
 
 from collections.abc import Generator
 from textwrap import dedent
-from typing import Any, Self, cast, overload
+from typing import Any, Self, cast
 
 from pydantic import BaseModel, TypeAdapter
 
@@ -66,10 +66,10 @@ class DeleteQueryReady[T: Table, Db: AllDbBase]:
         ```python
         from embar.db.pg import PgDb
         from embar.table import Table
-        from embar.column.common import Integer
+        from embar.column.common import Integer, integer
 
         class User(Table):
-            id: Integer = Integer(primary=True)
+            id: Integer = integer(primary=True)
 
         db = PgDb(None)
 
@@ -127,22 +127,16 @@ class DeleteQueryReady[T: Table, Db: AllDbBase]:
 
         return awaitable().__await__()
 
-    @overload
-    def run(self: DeleteQueryReady[T, DbBase]) -> None: ...
-    @overload
-    def run(self: DeleteQueryReady[T, AsyncDbBase]) -> DeleteQueryReady[T, Db]: ...
-
-    def run(self) -> None | DeleteQueryReady[T, Db]:
+    def run(self) -> None:
         """
         Run the query against the underlying DB.
 
         Convenience method for those not using async.
-        But still works if awaited.
+        For async, use `await query` instead.
         """
         if isinstance(self._db, DbBase):
             query = self.sql()
             self._db.execute(query)
-        return self
 
     def sql(self) -> QuerySingle:
         """
@@ -240,27 +234,21 @@ class DeleteQueryReturning[T: Table, Db: AllDbBase]:
 
         return awaitable().__await__()
 
-    @overload
-    def run(self: DeleteQueryReady[T, DbBase]) -> list[T]: ...
-    @overload
-    def run(self: DeleteQueryReady[T, AsyncDbBase]) -> DeleteQueryReturning[T, Db]: ...
-
-    def run(self) -> list[T] | DeleteQueryReturning[T, Db]:
+    def run(self) -> list[T]:
         """
         Run the query against the underlying DB.
 
         Convenience method for those not using async.
-        But still works if awaited.
+        For async, use `await query` instead.
         """
-        if isinstance(self._db, DbBase):
-            query = self.sql()
-            model = self._get_model()
-            model = cast(type[T], model)
-            adapter = TypeAdapter(list[model])
-            data = self._db.fetch(query)
-            results = adapter.validate_python(data)
-            return results
-        return self
+        query = self.sql()
+        model = self._get_model()
+        model = cast(type[T], model)
+        adapter = TypeAdapter(list[model])
+        db = cast(DbBase, self._db)
+        data = db.fetch(query)
+        results = adapter.validate_python(data)
+        return results
 
     def sql(self) -> QuerySingle:
         """

@@ -85,11 +85,11 @@ class ColumnBase:
     Mostly here to avoid circular dependencies with modules that need to know about the fields below.
     """
 
-    info: ColumnInfo  # pyright:ignore[reportUninitializedInstanceVariable]
+    info: ColumnInfo
 
     # These must always be assigned by children, type-checker won't catch it
-    _sql_type: str  # pyright:ignore[reportUninitializedInstanceVariable]
-    _py_type: Type  # pyright:ignore[reportUninitializedInstanceVariable]
+    _sql_type: str
+    _py_type: Type
 
 
 class EnumBase(ABC):

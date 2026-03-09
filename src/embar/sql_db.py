@@ -2,7 +2,7 @@
 
 from collections.abc import Generator, Sequence
 from string.templatelib import Template
-from typing import Any, cast, overload
+from typing import Any, Self, cast
 
 from pydantic import BaseModel, TypeAdapter
 
@@ -54,14 +54,12 @@ class DbSql[Db: AllDbBase]:
 
         return awaitable().__await__()
 
-    @overload
-    def run(self: DbSql[DbBase]) -> None: ...
-    @overload
-    def run(self: DbSql[AsyncDbBase]) -> DbSql[Db]: ...
-
-    def run(self) -> None | DbSql[Db]:
+    def run(self) -> Self:
         """
         Run the query synchronously without returning results.
+
+        Returns self so that `await db.sql(...).run()` works for async.
+        For sync callers, the return value can be ignored.
         """
         if isinstance(self._db, DbBase):
             sql = self._sql.sql()
@@ -112,25 +110,21 @@ class DbSqlReturning[M: BaseModel, Db: AllDbBase]:
 
         return awaitable().__await__()
 
-    @overload
-    def run(self: DbSqlReturning[M, DbBase]) -> Sequence[M]: ...
-    @overload
-    def run(self: DbSqlReturning[M, AsyncDbBase]) -> DbSqlReturning[M, Db]: ...
-
-    def run(self) -> Sequence[M] | DbSqlReturning[M, Db]:
+    def run(self) -> Sequence[M]:
         """
         Run the query synchronously and return parsed results.
+
+        For async, use `await query` instead.
         """
-        if isinstance(self._db, DbBase):
-            sql = self._sql.sql()
-            query = QuerySingle(sql)
-            data = self._db.fetch(query)
-            model = self._get_model()
-            adapter = TypeAdapter(list[model])
-            self.model.__init_subclass__()
-            results = adapter.validate_python(data)
-            return results
-        return self
+        sql = self._sql.sql()
+        query = QuerySingle(sql)
+        model = self._get_model()
+        adapter = TypeAdapter(list[model])
+        db = cast(DbBase, self._db)
+        data = db.fetch(query)
+        self.model.__init_subclass__()
+        results = adapter.validate_python(data)
+        return results
 
     def _get_model(self) -> type[M]:
         """

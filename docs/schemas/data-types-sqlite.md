@@ -9,11 +9,11 @@ SQLite has a flexible type system. These column types provide the standard SQLit
 Integer values.
 
 ```{.python continuation}
-from embar.column.common import Integer
+from embar.column.common import Integer, integer
 from embar.table import Table
 
 class Product(Table):
-    quantity: Integer = Integer()
+    quantity: Integer = integer()
 ```
 
 Generates:
@@ -26,10 +26,10 @@ Generates:
 Variable-length text.
 
 ```{.python continuation}
-from embar.column.common import Text
+from embar.column.common import Text, text
 
 class User(Table):
-    email: Text = Text()
+    email: Text = text()
 ```
 
 Generates:
@@ -42,10 +42,10 @@ Generates:
 Floating point values (stored as REAL in SQLite).
 
 ```{.python continuation}
-from embar.column.common import Float
+from embar.column.common import Float, float_col
 
 class Measurement(Table):
-    temperature: Float = Float()
+    temperature: Float = float_col()
 ```
 
 Generates:
@@ -58,10 +58,10 @@ Generates:
 Binary data storage.
 
 ```{.python continuation}
-from embar.column.sqlite import Blob
+from embar.column.sqlite import Blob, blob
 
 class Document(Table):
-    file_data: Blob = Blob()
+    file_data: Blob = blob()
 
 # Usage
 doc = Document(file_data=b"binary content here")
@@ -82,26 +82,26 @@ All column types support these options:
 
 ```{.python continuation}
 class User(Table):
-    id: Integer = Integer(primary=True)
+    id: Integer = integer(primary=True)
 ```
 
 ### Not Null
 
 ```{.python continuation}
 class User(Table):
-    email: Text = Text(not_null=True)
+    email: Text = text(not_null=True)
 ```
 
 ### Default Values
 
 ```{.python continuation}
 class User(Table):
-    status: Text = Text(default="active")
+    status: Text = text(default="active")
 ```
 
 ### Custom Column Name
 
 ```{.python continuation}
 class User(Table):
-    email: Text = Text("user_email")
+    email: Text = text("user_email")
 ```

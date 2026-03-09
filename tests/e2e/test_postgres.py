@@ -5,7 +5,7 @@ import pytest
 from psycopg.errors import InvalidTextRepresentation
 from pydantic import BaseModel
 
-from embar.column.pg import EmbarEnum, EnumCol, Jsonb, PgEnum, Text, Varchar
+from embar.column.pg import EmbarEnum, EnumCol, Jsonb, PgEnum, Text, Varchar, enum_col, jsonb, text, varchar
 from embar.config import EmbarConfig
 from embar.constraint import Index
 from embar.db.pg import PgDb
@@ -17,7 +17,7 @@ async def test_postgres_jsonb(pg_db: PgDb):
     db = pg_db
 
     class TableWithJsonB(Table):
-        data: Jsonb = Jsonb()
+        data: Jsonb = jsonb()
 
     db.migrate([TableWithJsonB]).run()
 
@@ -39,7 +39,7 @@ async def test_postgres_jsonb(pg_db: PgDb):
 
 def test_postgres_varchar():
     class TableWithVarchar(Table):
-        status: Varchar = Varchar(length=10)
+        status: Varchar = varchar(length=10)
 
     ddl = TableWithVarchar.ddl()
     assert '"status" VARCHAR(10)' in ddl
@@ -53,7 +53,7 @@ def test_postgres_index(pg_db: PgDb):
             table_name=table_name, constraints=[Index("table_index").on(lambda: TableWithIndex.id)]
         )
 
-        id: Text = Text()
+        id: Text = text()
 
     db = pg_db
     db.migrate([TableWithIndex]).run()
@@ -87,7 +87,7 @@ async def test_postgres_enum(pg_db: PgDb):
         enum: type[StatusEnum] = StatusEnum
 
     class TableWithStatus(Table):
-        status: EnumCol[StatusEnum] = EnumCol(StatusPgEnum)
+        status: EnumCol[StatusEnum] = enum_col(StatusPgEnum)
 
     db.migrate([TableWithStatus], enums=[StatusPgEnum]).run()
 
