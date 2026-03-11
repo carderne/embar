@@ -5,9 +5,17 @@ to import table_base.py without triggering table.py, causing a circular loop by 
 """
 
 from textwrap import dedent, indent
-from typing import Any, Literal, Self, dataclass_transform, get_args, get_origin, overload
+from typing import TYPE_CHECKING, Any, Literal, Self, dataclass_transform, get_args, get_origin, overload
 
-from pydantic_core import core_schema
+if TYPE_CHECKING:
+    from pydantic_core import core_schema as _core_schema
+
+try:
+    from pydantic_core import core_schema
+
+    _PYDANTIC_AVAILABLE = True
+except ImportError:
+    _PYDANTIC_AVAILABLE = False
 
 from embar.column.base import ColumnBase
 from embar.column.common import Column, Null, float_col, integer, text
@@ -159,13 +167,15 @@ class Table(TableBase):
         if missing:
             raise TypeError(f"Missing required fields: {missing}")
 
-    @classmethod
-    def __get_pydantic_core_schema__(
-        cls,
-        source_type: Any,
-        handler: Any,
-    ) -> core_schema.CoreSchema:
-        return core_schema.any_schema()
+    if _PYDANTIC_AVAILABLE:
+
+        @classmethod
+        def __get_pydantic_core_schema__(
+            cls,
+            source_type: Any,
+            handler: Any,
+        ) -> "_core_schema.CoreSchema":
+            return core_schema.any_schema()
 
     @classmethod
     def many(cls) -> ManyTable[type[Self]]:

@@ -119,7 +119,8 @@ class DeleteQueryReady[T: Table, Db: AllDbBase]:
 
         The overrides provide for a few different cases:
         - A Model was passed, in which case that's the return type
-        - `SelectAllPydantic` or `SelectAllDataclass` was passed (via `returning()`), in which case the return type is the `Table`
+        - `SelectAllPydantic` or `SelectAllDataclass` was passed (via `returning()`),
+          in which case the return type is the `Table`
         - This is called with an async db, in which case an error is returned.
         """
         query = self.sql()
@@ -224,7 +225,8 @@ class DeleteQueryReturning[T: Table, Db: AllDbBase]:
 
         The overrides provide for a few different cases:
         - A Model was passed, in which case that's the return type
-        - `SelectAllPydantic` or `SelectAllDataclass` was passed (via `returning()`), in which case the return type is the `Table`
+        - `SelectAllPydantic` or `SelectAllDataclass` was passed (via `returning()`),
+          in which case the return type is the `Table`
         - This is called with an async db, in which case an error is returned.
         """
         query = self.sql()

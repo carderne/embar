@@ -8,6 +8,7 @@ from warnings import deprecated
 from embar.column.base import ColumnBase
 from embar.db.base import AllDbBase, AsyncDbBase, DbBase
 from embar.model import (
+    BaseModel,
     DataModel,
     SelectAllDataclass,
     SelectAllPydantic,
@@ -367,8 +368,6 @@ class SelectQueryReady[M: DataModel, T: Table, Db: AllDbBase]:
 
         Extra processing is done to check for nested children that are Tables themselves.
         """
-
-        from pydantic import BaseModel
 
         if self.model is SelectAllPydantic:
             model = generate_model(self.table, use_pydantic=True)

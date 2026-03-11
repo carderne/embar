@@ -130,6 +130,10 @@ source = { editable = "." }
 dependencies = [
     { name = "psycopg", extra = ["binary"] },
     { name = "psycopg-pool" },
+]
+
+[package.optional-dependencies]
+pydantic = [
     { name = "pydantic" },
 ]
 
@@ -141,6 +145,7 @@ dev = [
     { name = "mkdocs-section-index" },
     { name = "mkdocstrings", extra = ["python"] },
     { name = "poethepoet" },
+    { name = "pydantic" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "pytest-cov" },
@@ -154,8 +159,9 @@ dev = [
 requires-dist = [
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2.11" },
     { name = "psycopg-pool", specifier = ">=3.3.0" },
-    { name = "pydantic", specifier = ">=2.12.4" },
+    { name = "pydantic", marker = "extra == 'pydantic'", specifier = "~=2.10" },
 ]
+provides-extras = ["pydantic"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -165,6 +171,7 @@ dev = [
     { name = "mkdocs-section-index", specifier = ">=0.3.10" },
     { name = "mkdocstrings", extras = ["python"], specifier = ">=0.30.1" },
     { name = "poethepoet", specifier = ">=0.37.0" },
+    { name = "pydantic", specifier = ">=2,<3" },
     { name = "pytest", specifier = ">=8.4.2" },
     { name = "pytest-asyncio", specifier = ">=1.2.0" },
     { name = "pytest-cov", specifier = ">=7.0.0" },

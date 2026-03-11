@@ -1,6 +1,7 @@
 import json
 from dataclasses import field, make_dataclass
 from typing import (
+    TYPE_CHECKING,
     Annotated,
     Any,
     ClassVar,
@@ -13,14 +14,39 @@ from typing import (
     overload,
 )
 
-from pydantic import BaseModel, BeforeValidator, create_model
-from pydantic import Field as PydanticField
+try:
+    from pydantic import BaseModel
+
+    _PYDANTIC_AVAILABLE = True
+except ImportError:
+    # Minimal stub so that `class SelectAllPydantic(BaseModel)` and
+    # `isinstance(x, BaseModel)` work at runtime even without pydantic.
+    # The stub is never used for actual validation — that path is guarded
+    # by _require_pydantic().
+    class BaseModel:
+        """Stub used when pydantic is not installed."""
+
+        pass
+
+    _PYDANTIC_AVAILABLE = False
+
+if TYPE_CHECKING:
+    # Re-import the real thing for the type checker.
+    from pydantic import BaseModel
 
 from embar.column.base import ColumnBase
 from embar.db.base import DbType
 from embar.query.many import ManyColumn, ManyTable, OneTable
 from embar.sql import Sql
 from embar.table_base import TableBase
+
+
+def _require_pydantic(feature: str) -> None:
+    """Raise a clear ImportError if pydantic is not installed."""
+    try:
+        import pydantic  # noqa: F401
+    except ImportError:
+        raise ImportError(f"{feature} requires pydantic. Install it with: pip install 'embar[pydantic]'") from None
 
 
 class DataclassType(Protocol):
@@ -202,6 +228,9 @@ def generate_pydantic_model(cls: type[TableBase]) -> type[BaseModel]:
     generate_pydantic_model(MyTable)
     ```
     """
+    _require_pydantic("generate_pydantic_model")
+    from pydantic import BeforeValidator, create_model
+    from pydantic import Field as PydanticField
 
     fields_dict: dict[str, Any] = {}
     for field_name, column in cls._fields.items():  # pyright:ignore[reportPrivateUsage]
@@ -265,7 +294,9 @@ def upgrade_model_nested_fields[B: DataModel](model: type[B], use_pydantic: bool
     """
     type_hints = get_type_hints(model, include_extras=True)
 
-    if isinstance(model, type) and issubclass(model, BaseModel):
+    if isinstance(model, type) and issubclass(model, BaseModel) and _PYDANTIC_AVAILABLE:
+        from pydantic import create_model
+
         fields_dict: dict[str, Any] = {}
         for field_name, field_type in type_hints.items():
             new_type = _convert_annotation(field_type, use_pydantic=True)

@@ -5,7 +5,7 @@ from string.templatelib import Template
 from typing import Any, Self, cast
 
 from embar.db.base import AllDbBase, AsyncDbBase, DbBase
-from embar.model import DataModel, load_results, upgrade_model_nested_fields
+from embar.model import BaseModel, DataModel, load_results, upgrade_model_nested_fields
 from embar.query.query import QuerySingle
 from embar.sql import Sql
 
@@ -125,7 +125,5 @@ class DbSqlReturning[M: DataModel, Db: AllDbBase]:
         """
         Generate the dataclass that will be used to deserialize (and validate) the query results.
         """
-        from pydantic import BaseModel
-
         use_pydantic = isinstance(self.model, type) and issubclass(self.model, BaseModel)
         return upgrade_model_nested_fields(self.model, use_pydantic=use_pydantic)
