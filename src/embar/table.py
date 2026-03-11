@@ -238,10 +238,6 @@ CREATE TABLE IF NOT EXISTS {cls.fqn()} (
         """
         Generate a Select query model that returns all the table's fields.
 
-        The default (``use_pydantic=True``) preserves the pre-PR behaviour:
-        results are validated and coerced by Pydantic.  Pass
-        ``use_pydantic=False`` to opt in to the lighter plain-dataclass path.
-
         ```python
         from embar.model import SelectAllPydantic
         from embar.table import Table
