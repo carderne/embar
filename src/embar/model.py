@@ -344,13 +344,18 @@ def _coerce_field(field_type: type, value: Any) -> Any:
     if origin is Annotated:
         return _coerce_field(args[0], value)
 
-    # list[SomeDataclass]
+    # list[SomeDataclass] — parameterised list, e.g. list[Message]
     if origin is list and args:
         inner = args[0]
         if _is_plain_dataclass(inner):
             items = value if isinstance(value, list) else json.loads(value)
             return [_load_one(inner, item) for item in items]
         return value
+
+    # Bare list (no type args) — used by VECTOR columns whose py_type is plain `list`.
+    # The DB returns either a Python list (postgres array) or a JSON string (sqlite).
+    if field_type is list:
+        return value if isinstance(value, list) else json.loads(value)
 
     # SomeDataclass
     if _is_plain_dataclass(field_type):

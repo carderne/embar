@@ -317,7 +317,7 @@ class SelectQueryReady[M: DataModel, T: Table, Db: AllDbBase]:
 
         The overrides provide for a few different cases:
         - A Model was passed, in which case that's the return type
-        - `SelectAll` was passed, in which case the return type is the `Table`
+        - `SelectAllPydantic` or `SelectAllDataclass` was passed, in which case the return type is the `Table`
         - This is called with an async db, in which case an error is returned.
         """
         query = self.sql()
@@ -362,9 +362,8 @@ class SelectQueryReady[M: DataModel, T: Table, Db: AllDbBase]:
         """
         Generate the dataclass that will be used to deserialize (and validate) the query results.
 
-        If the model is `SelectAll`, we generate a dataclass based on the `Table`,
-        otherwise the model itself
-        is used.
+        If the model is `SelectAllPydantic` or `SelectAllDataclass`, we generate a model
+        based on the `Table`, otherwise the model itself is used.
 
         Extra processing is done to check for nested children that are Tables themselves.
         """
