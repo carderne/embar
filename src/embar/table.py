@@ -5,7 +5,7 @@ to import table_base.py without triggering table.py, causing a circular loop by 
 """
 
 from textwrap import dedent, indent
-from typing import Any, Self, dataclass_transform, get_args, get_origin
+from typing import Any, Literal, Self, dataclass_transform, get_args, get_origin, overload
 
 from pydantic_core import core_schema
 
@@ -229,6 +229,7 @@ CREATE TABLE IF NOT EXISTS {cls.fqn()} (
         Generate a Select query model that returns all the table's fields.
 
         ```python
+        from embar.model import SelectAllDataclass
         from embar.table import Table
         class MyTable(Table): ...
         model = MyTable.all()

@@ -4,12 +4,20 @@ from collections.abc import Generator, Sequence
 from string.templatelib import Template
 from typing import Any, Self, cast
 
-from pydantic import TypeAdapter
+from pydantic import BaseModel, TypeAdapter
 
 from embar.db.base import AllDbBase, AsyncDbBase, DbBase
-from embar.model import DataModel, upgrade_model_nested_fields
+from embar.model import DataModel, load_dataclass, upgrade_model_nested_fields
 from embar.query.query import QuerySingle
 from embar.sql import Sql
+
+
+def _load_results[T](model: type[T], data: list[dict[str, Any]]) -> list[T]:
+    """Load query result rows into model instances (Pydantic or plain dataclass)."""
+    if isinstance(model, type) and issubclass(model, BaseModel):
+        adapter = TypeAdapter(list[model])
+        return adapter.validate_python(data)
+    return load_dataclass(model, data)
 
 
 class DbSql[Db: AllDbBase]:
@@ -95,7 +103,6 @@ class DbSqlReturning[M: DataModel, Db: AllDbBase]:
         sql = self._sql.sql()
         query = QuerySingle(sql)
         model = self._get_model()
-        adapter = TypeAdapter(list[model])
 
         async def awaitable():
             db = self._db
@@ -105,7 +112,7 @@ class DbSqlReturning[M: DataModel, Db: AllDbBase]:
             else:
                 db = cast(DbBase, self._db)
                 data = db.fetch(query)
-            results = adapter.validate_python(data)
+            results = _load_results(model, data)
             return results
 
         return awaitable().__await__()
@@ -119,11 +126,9 @@ class DbSqlReturning[M: DataModel, Db: AllDbBase]:
         sql = self._sql.sql()
         query = QuerySingle(sql)
         model = self._get_model()
-        adapter = TypeAdapter(list[model])
         db = cast(DbBase, self._db)
         data = db.fetch(query)
-        self.model.__init_subclass__()
-        results = adapter.validate_python(data)
+        results = _load_results(model, data)
         return results
 
     def _get_model(self) -> type[M]:

@@ -1,4 +1,5 @@
 import json
+from dataclasses import field, make_dataclass
 from typing import (
     Annotated,
     Any,
@@ -12,7 +13,8 @@ from typing import (
     overload,
 )
 
-from pydantic import BaseModel, BeforeValidator, Field, create_model
+from pydantic import BaseModel, BeforeValidator, create_model
+from pydantic import Field as PydanticField
 
 from embar.column.base import ColumnBase
 from embar.db.base import DbType
@@ -22,15 +24,17 @@ from embar.table_base import TableBase
 
 
 class DataclassType(Protocol):
-    __dataclass_fields__: ClassVar[dict[str, type]]
+    """Protocol for plain (non-pydantic) dataclass models."""
+
+    __dataclass_fields__: ClassVar[dict[str, Any]]
 
 
-type DataModel = BaseModel | DataclassType
+type DataModel = BaseModel | DataclassType | object
 
 
 class SelectAllPydantic(BaseModel):
     """
-    `SelectAll` version that validates with Pydantic
+    `SelectAll` version that validates with Pydantic.
     """
 
     ...
@@ -38,10 +42,10 @@ class SelectAllPydantic(BaseModel):
 
 class SelectAllDataclass:
     """
-    `SelectAll` version that doesn't validate
+    `SelectAll` version that doesn't validate (plain dataclass).
     """
 
-    __dataclass_fields__: ClassVar[dict[str, type]]
+    __dataclass_fields__: ClassVar[dict[str, Any]] = {}
 
 
 def to_sql_columns(model: type[DataModel], db_type: DbType) -> str:
@@ -137,6 +141,7 @@ def _convert_annotation(
         my_col: Text = text()
     class MyModel(BaseModel):
         my_col: Annotated[str, MyTable.my_col]
+    ```
     """
     if get_origin(field_type) is Annotated:
         annotations = get_args(field_type)
@@ -162,6 +167,8 @@ def _convert_annotation(
 def generate_model(cls: type[TableBase], use_pydantic: Literal[True]) -> type[BaseModel]: ...
 @overload
 def generate_model(cls: type[TableBase], use_pydantic: Literal[False]) -> type[DataclassType]: ...
+@overload
+def generate_model(cls: type[TableBase], use_pydantic: bool) -> type[DataModel]: ...
 
 
 def generate_model(cls: type[TableBase], use_pydantic: bool) -> type[DataModel]:
@@ -172,20 +179,20 @@ def generate_model(cls: type[TableBase], use_pydantic: bool) -> type[DataModel]:
 
 def generate_pydantic_model(cls: type[TableBase]) -> type[BaseModel]:
     """
-    Create a model based on a `Table`.
+    Create a Pydantic model based on a `Table`.
 
-    Note the new table has the same exact name, maybe something to revisit.
+    Note the new model has the same exact name, maybe something to revisit.
 
     ```python
     from embar.table import Table
-    from embar.model import generate_model
+    from embar.model import generate_pydantic_model
     class MyTable(Table): ...
-    generate_model(MyTable)
+    generate_pydantic_model(MyTable)
     ```
     """
 
     fields_dict: dict[str, Any] = {}
-    for field_name, column in cls._fields.items():
+    for field_name, column in cls._fields.items():  # pyright:ignore[reportPrivateUsage]
         field_type = column.info.py_type
 
         if column.info.col_type == "VECTOR":
@@ -203,40 +210,47 @@ def generate_pydantic_model(cls: type[TableBase]) -> type[BaseModel]:
 
 def generate_dataclass_model(cls: type[TableBase]) -> type[DataclassType]:
     """
-    Create a dataclass based on a `Table`.
+    Create a plain dataclass based on a `Table` (no Pydantic validation).
 
-    Note the new table has the same exact name, maybe something to revisit.
+    Fields are typed as `Annotated[py_type, column]` so that `to_sql_columns`
+    can discover the SQL column reference.
+
+    Note the new dataclass has the same exact name, maybe something to revisit.
 
     ```python
     from embar.table import Table
-    from embar.query.selection import generate_selection_dataclass
+    from embar.model import generate_dataclass_model
     class MyTable(Table): ...
-    generate_selection_dataclass(MyTable)
+    generate_dataclass_model(MyTable)
     ```
     """
-    fields: list[tuple[str, Annotated[Any, Any], Any]] = []
+    dc_fields: list[Any] = []
     for field_name, column in cls._fields.items():  # pyright:ignore[reportPrivateUsage]
         field_type = column.info.py_type
-        fields.append(
+        # Use Annotated so to_sql_columns can find the column reference
+        annotated_type = Annotated[field_type, column]
+        dc_fields.append(
             (
                 field_name,
-                Annotated[field_type, column],
-                field(default_factory=lambda a=column: column.info.fqn()),
+                annotated_type,
+                field(default=None),
             )
         )
 
-    data_class = make_dataclass(cls.__name__, fields)
-    data_class.__init_subclass__()
+    data_class = make_dataclass(cls.__name__, dc_fields)
     return data_class
 
 
-def upgrade_model_nested_fields[B: DataModel](model: type[B]) -> type[B]:
+def upgrade_model_nested_fields[B: DataModel](model: type[B], use_pydantic: bool = True) -> type[B]:
     """
-    Get nested field models into root model.
+    Upgrade a model so that nested `ManyTable`/`OneTable` fields are resolved to concrete models.
+
+    For Pydantic models, creates a new subclass via `create_model`.
+    For plain dataclasses, creates a new dataclass with the upgraded field types.
     """
     type_hints = get_type_hints(model, include_extras=True)
 
-    if issubclass(model, BaseModel):
+    if isinstance(model, type) and issubclass(model, BaseModel):
         fields_dict: dict[str, Any] = {}
         for field_name, field_type in type_hints.items():
             new_type = _convert_annotation(field_type, use_pydantic=True)
@@ -249,28 +263,75 @@ def upgrade_model_nested_fields[B: DataModel](model: type[B]) -> type[B]:
         new_class.model_rebuild()
         return new_class
 
-    model.__init_subclass__()
+    # Plain dataclass path
+    dc_fields: list[Any] = []
+    for field_name, field_type in type_hints.items():
+        new_type = _convert_annotation(field_type, use_pydantic=False)
+        resolved_type = new_type if new_type else field_type
+        dc_fields.append((field_name, resolved_type, field(default=None)))
 
-    new_fields: list[tuple[str, type]] = []
-    for field_name, field_type in model.__dataclass_fields__.items():
-        new_type = _convert_annotation(field_type, False)
-        if new_type:
-            new_fields.append((field_name, new_type))
-        else:
-            # This means convert_annotation returned False, i.e. it's a 'simple' field.
-            # We have to recreate it with a Field tuple to match the stuff above for the legitimately new fields.
-            # (I haven't found a way for it to just be left in-place or something.)
-            # field_type = cast(type, cls_field.type)
-            new_fields.append((field_name, field_type))
+    new_class = make_dataclass(model.__name__, dc_fields)
+    return new_class  # type: ignore[return-value]
 
-    new_class = make_dataclass(model.__name__, new_fields)
 
-    # Pretty gruesome stuff going on here...
-    # __init_subclass__ won't have been called, so _fields won't have been assigned
-    # so do it manually...
-    new_class.__init_subclass__()
+def load_dataclass[T](model: type[T], data: list[dict[str, Any]]) -> list[T]:
+    """
+    Load a list of row dicts into plain dataclass instances (no Pydantic validation).
 
-    return new_class
+    Handles nested dataclasses (from ManyTable/OneTable annotations) by recursively
+    loading JSON objects/arrays from the database into the appropriate types.
+    """
+    return [_load_one(model, row) for row in data]
+
+
+def _load_one[T](model: type[T], row: dict[str, Any]) -> T:
+    """
+    Load a single row dict into a dataclass instance.
+    """
+    hints = get_type_hints(model, include_extras=True)
+    kwargs: dict[str, Any] = {}
+    for field_name, field_type in hints.items():
+        raw = row.get(field_name)
+        kwargs[field_name] = _coerce_field(field_type, raw)
+    return model(**kwargs)
+
+
+def _coerce_field(field_type: type, value: Any) -> Any:
+    """
+    Coerce a raw value into the expected Python type for a dataclass field.
+
+    Handles nested dataclasses (list[SomeDataclass] or SomeDataclass) by parsing
+    JSON strings/dicts from the database.
+    """
+    if value is None:
+        return None
+
+    origin = get_origin(field_type)
+    args = get_args(field_type)
+
+    # Unwrap Annotated[T, ...]
+    if origin is Annotated:
+        return _coerce_field(args[0], value)
+
+    # list[SomeDataclass]
+    if origin is list and args:
+        inner = args[0]
+        if _is_plain_dataclass(inner):
+            items = value if isinstance(value, list) else json.loads(value)
+            return [_load_one(inner, item) for item in items]
+        return value
+
+    # SomeDataclass
+    if _is_plain_dataclass(field_type):
+        data = value if isinstance(value, dict) else json.loads(value)
+        return _load_one(field_type, data)
+
+    return value
+
+
+def _is_plain_dataclass(t: Any) -> bool:
+    """Return True if `t` is a plain (non-Pydantic) dataclass type."""
+    return isinstance(t, type) and hasattr(t, "__dataclass_fields__") and not issubclass(t, BaseModel)
 
 
 def _parse_json_list(v: Any):

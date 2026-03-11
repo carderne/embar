@@ -20,7 +20,6 @@ from typing import (
 from psycopg import AsyncConnection, AsyncTransaction, Connection, Transaction
 from psycopg.types.json import Json
 from psycopg_pool import AsyncConnectionPool, ConnectionPool
-from pydantic import BaseModel
 
 from embar.column.base import EnumBase
 from embar.db._util import get_migration_defs, merge_ddls

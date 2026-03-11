@@ -5,7 +5,7 @@ from textwrap import dedent
 from typing import Any, Self, cast, overload
 from warnings import deprecated
 
-from pydantic import TypeAdapter
+from pydantic import BaseModel, TypeAdapter
 
 from embar.column.base import ColumnBase
 from embar.db.base import AllDbBase, AsyncDbBase, DbBase
@@ -14,6 +14,7 @@ from embar.model import (
     SelectAllDataclass,
     SelectAllPydantic,
     generate_model,
+    load_dataclass,
     to_sql_columns,
     upgrade_model_nested_fields,
 )
@@ -25,6 +26,14 @@ from embar.query.order_by import Asc, BareColumn, Desc, OrderBy, RawSqlOrder
 from embar.query.query import QuerySingle
 from embar.sql import Sql
 from embar.table import Table
+
+
+def _load_results[T](model: type[T], data: list[dict[str, Any]]) -> list[T]:
+    """Load query result rows into model instances (Pydantic or plain dataclass)."""
+    if isinstance(model, type) and issubclass(model, BaseModel):
+        adapter = TypeAdapter(list[model])
+        return adapter.validate_python(data)
+    return load_dataclass(model, data)
 
 
 class SelectQuery[M: DataModel, Db: AllDbBase]:
@@ -324,7 +333,6 @@ class SelectQueryReady[M: DataModel, T: Table, Db: AllDbBase]:
         query = self.sql()
         model = self._get_model()
         model = cast(type[T] | type[M], model)
-        adapter = TypeAdapter(list[model])
 
         async def awaitable():
             db = self._db
@@ -333,13 +341,15 @@ class SelectQueryReady[M: DataModel, T: Table, Db: AllDbBase]:
             else:
                 db = cast(DbBase, self._db)
                 data = db.fetch(query)
-            results = adapter.validate_python(data)
+            results = _load_results(model, data)
             return results
 
         return awaitable().__await__()
 
     @overload
-    def run(self: SelectQueryReady[SelectAll, T, Db]) -> Sequence[T]: ...
+    def run(self: SelectQueryReady[SelectAllPydantic, T, Db]) -> Sequence[T]: ...
+    @overload
+    def run(self: SelectQueryReady[SelectAllDataclass, T, Db]) -> Sequence[T]: ...
     @overload
     def run(self) -> Sequence[M]: ...
 
@@ -353,10 +363,9 @@ class SelectQueryReady[M: DataModel, T: Table, Db: AllDbBase]:
         query = self.sql()
         model = self._get_model()
         model = cast(type[T] | type[M], model)
-        adapter = TypeAdapter(list[model])
         db = cast(DbBase, self._db)
         data = db.fetch(query)
-        results = adapter.validate_python(data)
+        results = _load_results(model, data)
         return results
 
     def _get_model(self) -> type[DataModel] | type[M]:

@@ -3,13 +3,21 @@
 from collections.abc import Generator, Mapping, Sequence
 from typing import Any, Self, cast
 
-from pydantic import TypeAdapter
+from pydantic import BaseModel, TypeAdapter
 
 from embar.db.base import AllDbBase, AsyncDbBase, DbBase
-from embar.model import generate_model
+from embar.model import DataModel, generate_model, load_dataclass
 from embar.query.clause_base import ClauseBase
 from embar.query.query import QuerySingle
 from embar.table import Table
+
+
+def _load_results[T](model: type[T], data: list[dict[str, Any]]) -> list[T]:
+    """Load query result rows into model instances (Pydantic or plain dataclass)."""
+    if isinstance(model, type) and issubclass(model, BaseModel):
+        adapter = TypeAdapter(list[model])
+        return adapter.validate_python(data)
+    return load_dataclass(model, data)
 
 
 class UpdateQuery[T: Table, Db: AllDbBase]:
@@ -154,7 +162,14 @@ class UpdateQueryReturning[T: Table, Db: AllDbBase]:
     data: Mapping[str, Any]
     _where_clause: ClauseBase | None = None
 
-    def __init__(self, table: type[T], db: Db, data: Mapping[str, Any], where_clause: ClauseBase | None):
+    def __init__(
+        self,
+        table: type[T],
+        db: Db,
+        use_pydantic: bool,
+        data: Mapping[str, Any],
+        where_clause: ClauseBase | None,
+    ):
         """
         Create a new UpdateQueryReturning instance.
         """
@@ -173,7 +188,6 @@ class UpdateQueryReturning[T: Table, Db: AllDbBase]:
         query = self.sql()
         model = self._get_model()
         model = cast(type[T], model)
-        adapter = TypeAdapter(list[model])
 
         async def awaitable():
             db = self._db
@@ -182,7 +196,7 @@ class UpdateQueryReturning[T: Table, Db: AllDbBase]:
             else:
                 db = cast(DbBase, self._db)
                 data = db.fetch(query)
-            results = adapter.validate_python(data)
+            results = _load_results(model, data)
             return results
 
         return awaitable().__await__()
@@ -197,10 +211,9 @@ class UpdateQueryReturning[T: Table, Db: AllDbBase]:
         query = self.sql()
         model = self._get_model()
         model = cast(type[T], model)
-        adapter = TypeAdapter(list[model])
         db = cast(DbBase, self._db)
         data = db.fetch(query)
-        results = adapter.validate_python(data)
+        results = _load_results(model, data)
         return results
 
     def sql(self) -> QuerySingle:
