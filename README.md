@@ -51,8 +51,10 @@ If you want to see a fully worked Postgres example, check out the [Postgres Quic
 
 ### Install
 
+**NB:** Pydantic is optional, see the docs on [using Embar without Pydantic](https://embar.rdrn.me/no-pydantic).
+
 ```bash
-uv add embar
+uv add embar pydantic
 ```
 
 ### Set up database models
