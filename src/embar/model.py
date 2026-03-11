@@ -294,7 +294,9 @@ def upgrade_model_nested_fields[B: DataModel](model: type[B], use_pydantic: bool
     """
     type_hints = get_type_hints(model, include_extras=True)
 
-    if isinstance(model, type) and issubclass(model, BaseModel) and _PYDANTIC_AVAILABLE:
+    # Without pydantic, BaseModel is the stub class; no real subclass of it can exist,
+    # so this branch is only reachable when _PYDANTIC_AVAILABLE is True anyway.
+    if isinstance(model, type) and issubclass(model, BaseModel):
         from pydantic import create_model
 
         fields_dict: dict[str, Any] = {}
@@ -327,7 +329,7 @@ def load_results[T](model: type[T], data: list[dict[str, Any]]) -> list[T]:
     Dispatches between Pydantic validation (for ``BaseModel`` subclasses) and
     the plain dict→dataclass loader for everything else.
     """
-    if isinstance(model, type) and issubclass(model, BaseModel):
+    if _PYDANTIC_AVAILABLE and isinstance(model, type) and issubclass(model, BaseModel):
         from pydantic import TypeAdapter
 
         adapter = TypeAdapter(list[model])

@@ -29,6 +29,10 @@ NO_DEFAULT = _NoDefaultType()
 type Type = type | TypeAliasType
 
 # All the types that are allowed to ser/de to/from the DB.
+# Note: pydantic.Json[Any] was intentionally removed from this union when pydantic
+# became an optional dependency.  No column definition in the codebase annotates
+# its Python type as pydantic.Json — the only Json usage is psycopg's Json adapter
+# in db/pg.py, which is a separate type entirely.
 type PyType = (
     str | int | float | Decimal | bool | bytes | date | time | datetime | timedelta | dict[str, Any] | list[Any] | None
 )

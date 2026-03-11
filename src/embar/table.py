@@ -251,6 +251,12 @@ CREATE TABLE IF NOT EXISTS {cls.fqn()} (
         ```
         """
         if use_pydantic:
+            if not _PYDANTIC_AVAILABLE:
+                raise ImportError(
+                    "Table.all() requires pydantic when use_pydantic=True (the default). "
+                    "Either install it with: pip install 'embar[pydantic]' "
+                    "or opt in to the plain-dataclass path with: MyTable.all(use_pydantic=False)"
+                )
             return SelectAllPydantic
         return SelectAllDataclass
 
