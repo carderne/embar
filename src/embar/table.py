@@ -215,25 +215,29 @@ CREATE TABLE IF NOT EXISTS {cls.fqn()} (
 
     @overload
     @classmethod
-    def all(cls) -> type[SelectAllDataclass]: ...
-    @overload
-    @classmethod
-    def all(cls, use_pydantic: Literal[False]) -> type[SelectAllDataclass]: ...
+    def all(cls) -> type[SelectAllPydantic]: ...
     @overload
     @classmethod
     def all(cls, use_pydantic: Literal[True]) -> type[SelectAllPydantic]: ...
+    @overload
+    @classmethod
+    def all(cls, use_pydantic: Literal[False]) -> type[SelectAllDataclass]: ...
 
     @classmethod
-    def all(cls, use_pydantic: bool = False) -> type[SelectAllPydantic] | type[SelectAllDataclass]:
+    def all(cls, use_pydantic: bool = True) -> type[SelectAllPydantic] | type[SelectAllDataclass]:
         """
         Generate a Select query model that returns all the table's fields.
 
+        The default (``use_pydantic=True``) preserves the pre-PR behaviour:
+        results are validated and coerced by Pydantic.  Pass
+        ``use_pydantic=False`` to opt in to the lighter plain-dataclass path.
+
         ```python
-        from embar.model import SelectAllDataclass
+        from embar.model import SelectAllPydantic
         from embar.table import Table
         class MyTable(Table): ...
         model = MyTable.all()
-        assert model == SelectAllDataclass
+        assert model == SelectAllPydantic
         ```
         """
         if use_pydantic:

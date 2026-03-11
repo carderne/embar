@@ -4,20 +4,10 @@ from collections.abc import Generator, Sequence
 from string.templatelib import Template
 from typing import Any, Self, cast
 
-from pydantic import BaseModel, TypeAdapter
-
 from embar.db.base import AllDbBase, AsyncDbBase, DbBase
-from embar.model import DataModel, load_dataclass, upgrade_model_nested_fields
+from embar.model import DataModel, load_results, upgrade_model_nested_fields
 from embar.query.query import QuerySingle
 from embar.sql import Sql
-
-
-def _load_results[T](model: type[T], data: list[dict[str, Any]]) -> list[T]:
-    """Load query result rows into model instances (Pydantic or plain dataclass)."""
-    if isinstance(model, type) and issubclass(model, BaseModel):
-        adapter = TypeAdapter(list[model])
-        return adapter.validate_python(data)
-    return load_dataclass(model, data)
 
 
 class DbSql[Db: AllDbBase]:
@@ -112,7 +102,7 @@ class DbSqlReturning[M: DataModel, Db: AllDbBase]:
             else:
                 db = cast(DbBase, self._db)
                 data = db.fetch(query)
-            results = _load_results(model, data)
+            results = load_results(model, data)
             return results
 
         return awaitable().__await__()
@@ -128,11 +118,14 @@ class DbSqlReturning[M: DataModel, Db: AllDbBase]:
         model = self._get_model()
         db = cast(DbBase, self._db)
         data = db.fetch(query)
-        results = _load_results(model, data)
+        results = load_results(model, data)
         return results
 
     def _get_model(self) -> type[M]:
         """
         Generate the dataclass that will be used to deserialize (and validate) the query results.
         """
-        return upgrade_model_nested_fields(self.model)
+        from pydantic import BaseModel
+
+        use_pydantic = isinstance(self.model, type) and issubclass(self.model, BaseModel)
+        return upgrade_model_nested_fields(self.model, use_pydantic=use_pydantic)

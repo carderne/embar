@@ -3,22 +3,12 @@
 from collections.abc import Generator, Sequence
 from typing import Any, Self, cast
 
-from pydantic import BaseModel, TypeAdapter
-
 from embar.custom_types import PyType
 from embar.db.base import AllDbBase, AsyncDbBase, DbBase
-from embar.model import DataModel, generate_model, load_dataclass
+from embar.model import DataModel, generate_model, load_results
 from embar.query.conflict import OnConflict, OnConflictDoNothing, OnConflictDoUpdate, TupleAtLeastOne
 from embar.query.query import QueryMany
 from embar.table import Table
-
-
-def _load_results[T](model: type[T], data: list[dict[str, Any]]) -> list[T]:
-    """Load query result rows into model instances (Pydantic or plain dataclass)."""
-    if isinstance(model, type) and issubclass(model, BaseModel):
-        adapter = TypeAdapter(list[model])
-        return adapter.validate_python(data)
-    return load_dataclass(model, data)
 
 
 class InsertQuery[T: Table, Db: AllDbBase]:
@@ -73,7 +63,7 @@ class InsertQueryReady[T: Table, Db: AllDbBase]:
         self._db = db
         self.items = items
 
-    def returning(self, use_pydantic: bool = False) -> InsertQueryReturning[T, Db]:
+    def returning(self, use_pydantic: bool = True) -> InsertQueryReturning[T, Db]:
         return InsertQueryReturning(
             table=self.table,
             db=self._db,
@@ -198,7 +188,7 @@ class InsertQueryReturning[T: Table, Db: AllDbBase]:
             else:
                 db = cast(DbBase, self._db)
                 data = db.fetch(query)
-            results = _load_results(model, data)
+            results = load_results(model, data)
             return results
 
         return awaitable().__await__()
@@ -215,7 +205,7 @@ class InsertQueryReturning[T: Table, Db: AllDbBase]:
         model = cast(type[T], model)
         db = cast(DbBase, self._db)
         data = db.fetch(query)
-        results = _load_results(model, data)
+        results = load_results(model, data)
         return results
 
     def sql(self) -> QueryMany:

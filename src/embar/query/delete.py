@@ -4,28 +4,18 @@ from collections.abc import Generator
 from textwrap import dedent
 from typing import Any, Self, cast
 
-from pydantic import BaseModel, TypeAdapter
-
 from embar.column.base import ColumnBase
 from embar.db.base import AllDbBase, AsyncDbBase, DbBase
 from embar.model import (
     DataModel,
     generate_model,
-    load_dataclass,
+    load_results,
 )
 from embar.query.clause_base import ClauseBase
 from embar.query.order_by import Asc, BareColumn, Desc, OrderBy, RawSqlOrder
 from embar.query.query import QuerySingle
 from embar.sql import Sql
 from embar.table import Table
-
-
-def _load_results[T](model: type[T], data: list[dict[str, Any]]) -> list[T]:
-    """Load query result rows into model instances (Pydantic or plain dataclass)."""
-    if isinstance(model, type) and issubclass(model, BaseModel):
-        adapter = TypeAdapter(list[model])
-        return adapter.validate_python(data)
-    return load_dataclass(model, data)
 
 
 class DeleteQueryReady[T: Table, Db: AllDbBase]:
@@ -51,7 +41,7 @@ class DeleteQueryReady[T: Table, Db: AllDbBase]:
         self.table = table
         self._db = db
 
-    def returning(self, use_pydantic: bool = False) -> DeleteQueryReturning[T, Db]:
+    def returning(self, use_pydantic: bool = True) -> DeleteQueryReturning[T, Db]:
         return DeleteQueryReturning(
             table=self.table,
             db=self._db,
@@ -248,7 +238,7 @@ class DeleteQueryReturning[T: Table, Db: AllDbBase]:
             else:
                 db = cast(DbBase, self._db)
                 data = db.fetch(query)
-            results = _load_results(model, data)
+            results = load_results(model, data)
             return results
 
         return awaitable().__await__()
@@ -265,7 +255,7 @@ class DeleteQueryReturning[T: Table, Db: AllDbBase]:
         model = cast(type[T], model)
         db = cast(DbBase, self._db)
         data = db.fetch(query)
-        results = _load_results(model, data)
+        results = load_results(model, data)
         return results
 
     def sql(self) -> QuerySingle:

@@ -13,6 +13,7 @@ from embar.model import (
     generate_dataclass_model,
     generate_pydantic_model,
     load_dataclass,
+    load_results,
     upgrade_model_nested_fields,
 )
 from embar.table import Table
@@ -50,9 +51,9 @@ def db_dummy() -> PgDb:
 # ---------------------------------------------------------------------------
 
 
-def test_table_all_default_returns_dataclass():
-    """Table.all() with no args returns SelectAllDataclass by default."""
-    assert Author.all() is SelectAllDataclass
+def test_table_all_default_returns_pydantic():
+    """Table.all() with no args returns SelectAllPydantic by default (backward-compatible)."""
+    assert Author.all() is SelectAllPydantic
 
 
 def test_table_all_use_pydantic_false_returns_dataclass():
@@ -136,10 +137,10 @@ def test_select_plain_model_sql_generation(db_dummy: PgDb):
 
 
 def test_select_all_dataclass_sql_generation(db_dummy: PgDb):
-    """SelectAllDataclass (default Table.all()) drives correct SQL generation."""
+    """SelectAllDataclass (opt-in via use_pydantic=False) drives correct SQL generation."""
     db = db_dummy
 
-    query = db.select(Author.all()).from_(Author)
+    query = db.select(Author.all(use_pydantic=False)).from_(Author)
     sql_result = query.sql()
 
     assert '"authors"."id" AS "id"' in sql_result.sql
@@ -224,7 +225,7 @@ def test_select_with_nested_many_sql(db_dummy: PgDb):
 
 
 def test_e2e_plain_model_sqlite():
-    """End-to-end test: insert and select using SQLite and a plain dataclass model."""
+    """End-to-end test: insert and select using SQLite and a plain dataclass model (opt-in)."""
     import sqlite3
 
     from embar.db.sqlite import SqliteDb
@@ -236,12 +237,11 @@ def test_e2e_plain_model_sqlite():
     author = Author(id=1, name="Alice")
     db.insert(Author).values(author).run()
 
-    # Select with plain dataclass model (SelectAllDataclass)
-    results = db.select(Author.all()).from_(Author).run()
+    # Opt in to plain dataclass path with use_pydantic=False
+    results = db.select(Author.all(use_pydantic=False)).from_(Author).run()
 
     assert len(results) == 1
     row = results[0]
-    # Should have the right field values
     assert row.id == 1
     assert row.name == "Alice"
 
@@ -329,3 +329,109 @@ def test_e2e_nested_many_plain_model_sqlite():
     assert len(nested) == 1
     assert nested[0].title == "Dune"
     assert nested[0].id == 1
+
+
+# ---------------------------------------------------------------------------
+# Pydantic validation is real: coercion and error tests
+# ---------------------------------------------------------------------------
+
+
+def test_load_results_pydantic_coerces_types():
+    """load_results with a Pydantic model coerces compatible raw values (e.g. str→int)."""
+    from typing import Any, cast
+
+    m = generate_pydantic_model(Author)
+    # SQLite can return numeric columns as strings in some edge cases;
+    # Pydantic should coerce "1" → 1 for an int field.
+    rows = [{"id": "1", "name": "Alice"}]
+    results = cast(list[Any], load_results(m, rows))
+    assert results[0].id == 1
+    assert isinstance(results[0].id, int)
+
+
+def test_load_results_pydantic_rejects_invalid_data():
+    """load_results with a Pydantic model raises ValidationError for bad data."""
+    from pydantic import ValidationError
+
+    m = generate_pydantic_model(Author)
+    rows = [{"id": "not-an-int", "name": "Alice"}]
+    with pytest.raises(ValidationError):
+        load_results(m, rows)
+
+
+def test_load_results_plain_dataclass_does_not_validate():
+    """load_results with a plain dataclass passes through bad data without raising."""
+    dc = generate_dataclass_model(Author)
+    rows = [{"id": "not-an-int", "name": "Alice"}]
+    # Should not raise — no validation
+    results = load_results(dc, rows)
+    assert results[0].id == "not-an-int"
+
+
+def test_all_default_uses_pydantic_validation_sqlite():
+    """Table.all() default (Pydantic) validates; use_pydantic=False skips validation."""
+    import sqlite3
+
+    from embar.db.sqlite import SqliteDb
+
+    conn = sqlite3.connect(":memory:")
+    db = SqliteDb(conn)
+    db.migrate([Author]).run()
+
+    author = Author(id=5, name="Dave")
+    db.insert(Author).values(author).run()
+
+    # Default path — Pydantic, returns a Pydantic model instance
+    from pydantic import BaseModel
+
+    results_pydantic = db.select(Author.all()).from_(Author).run()
+    assert len(results_pydantic) == 1
+    assert isinstance(results_pydantic[0], BaseModel)
+    assert results_pydantic[0].id == 5
+
+    # Opt-in plain path — plain dataclass, NOT a BaseModel instance
+    results_plain = db.select(Author.all(use_pydantic=False)).from_(Author).run()
+    assert len(results_plain) == 1
+    assert not isinstance(results_plain[0], BaseModel)
+    assert results_plain[0].id == 5
+
+
+def test_returning_default_uses_pydantic_sqlite():
+    """returning() default (Pydantic) returns Pydantic-validated instances."""
+    import sqlite3
+
+    from pydantic import BaseModel
+
+    from embar.db.sqlite import SqliteDb
+
+    conn = sqlite3.connect(":memory:")
+    db = SqliteDb(conn)
+    db.migrate([Author]).run()
+
+    author = Author(id=10, name="Eve")
+
+    # Default returning() — Pydantic
+    results = db.insert(Author).values(author).returning().run()
+    assert len(results) == 1
+    assert isinstance(results[0], BaseModel)
+    assert results[0].id == 10
+
+
+def test_returning_plain_skips_validation_sqlite():
+    """returning(use_pydantic=False) returns plain dataclass instances."""
+    import sqlite3
+
+    from pydantic import BaseModel
+
+    from embar.db.sqlite import SqliteDb
+
+    conn = sqlite3.connect(":memory:")
+    db = SqliteDb(conn)
+    db.migrate([Author]).run()
+
+    author = Author(id=11, name="Frank")
+
+    results = db.insert(Author).values(author).returning(use_pydantic=False).run()
+    assert len(results) == 1
+    assert not isinstance(results[0], BaseModel)
+    assert results[0].id == 11

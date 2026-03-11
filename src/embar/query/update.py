@@ -3,21 +3,11 @@
 from collections.abc import Generator, Mapping, Sequence
 from typing import Any, Self, cast
 
-from pydantic import BaseModel, TypeAdapter
-
 from embar.db.base import AllDbBase, AsyncDbBase, DbBase
-from embar.model import DataModel, generate_model, load_dataclass
+from embar.model import DataModel, generate_model, load_results
 from embar.query.clause_base import ClauseBase
 from embar.query.query import QuerySingle
 from embar.table import Table
-
-
-def _load_results[T](model: type[T], data: list[dict[str, Any]]) -> list[T]:
-    """Load query result rows into model instances (Pydantic or plain dataclass)."""
-    if isinstance(model, type) and issubclass(model, BaseModel):
-        adapter = TypeAdapter(list[model])
-        return adapter.validate_python(data)
-    return load_dataclass(model, data)
 
 
 class UpdateQuery[T: Table, Db: AllDbBase]:
@@ -78,7 +68,7 @@ class UpdateQueryReady[T: Table, Db: AllDbBase]:
         self._where_clause = where_clause
         return self
 
-    def returning(self, use_pydantic: bool = False) -> UpdateQueryReturning[T, Db]:
+    def returning(self, use_pydantic: bool = True) -> UpdateQueryReturning[T, Db]:
         return UpdateQueryReturning(
             table=self.table,
             db=self._db,
@@ -196,7 +186,7 @@ class UpdateQueryReturning[T: Table, Db: AllDbBase]:
             else:
                 db = cast(DbBase, self._db)
                 data = db.fetch(query)
-            results = _load_results(model, data)
+            results = load_results(model, data)
             return results
 
         return awaitable().__await__()
@@ -213,7 +203,7 @@ class UpdateQueryReturning[T: Table, Db: AllDbBase]:
         model = cast(type[T], model)
         db = cast(DbBase, self._db)
         data = db.fetch(query)
-        results = _load_results(model, data)
+        results = load_results(model, data)
         return results
 
     def sql(self) -> QuerySingle:

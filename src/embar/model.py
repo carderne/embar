@@ -29,7 +29,19 @@ class DataclassType(Protocol):
     __dataclass_fields__: ClassVar[dict[str, Any]]
 
 
-type DataModel = BaseModel | DataclassType | object
+class HasAnnotations(Protocol):
+    """
+    Protocol satisfied by any class that carries `__annotations__` — i.e. every
+    Python class that declares at least one field-level type hint.
+
+    This is the minimal structural requirement for `to_sql_columns` and
+    `load_dataclass` to work: they only need `get_type_hints()` to succeed.
+    """
+
+    __annotations__: ClassVar[dict[str, Any]]
+
+
+type DataModel = BaseModel | DataclassType | HasAnnotations
 
 
 class SelectAllPydantic(BaseModel):
@@ -241,12 +253,15 @@ def generate_dataclass_model(cls: type[TableBase]) -> type[DataclassType]:
     return data_class
 
 
-def upgrade_model_nested_fields[B: DataModel](model: type[B], use_pydantic: bool = True) -> type[B]:
+def upgrade_model_nested_fields[B: DataModel](model: type[B], use_pydantic: bool) -> type[B]:
     """
     Upgrade a model so that nested `ManyTable`/`OneTable` fields are resolved to concrete models.
 
     For Pydantic models, creates a new subclass via `create_model`.
-    For plain dataclasses, creates a new dataclass with the upgraded field types.
+    For plain dataclasses/annotated classes, creates a new dataclass with upgraded field types.
+
+    ``use_pydantic`` controls whether nested table models are generated as Pydantic models
+    or plain dataclasses, and must be supplied explicitly by the caller.
     """
     type_hints = get_type_hints(model, include_extras=True)
 
@@ -263,10 +278,10 @@ def upgrade_model_nested_fields[B: DataModel](model: type[B], use_pydantic: bool
         new_class.model_rebuild()
         return new_class
 
-    # Plain dataclass path
+    # Plain dataclass / annotated-class path
     dc_fields: list[Any] = []
     for field_name, field_type in type_hints.items():
-        new_type = _convert_annotation(field_type, use_pydantic=False)
+        new_type = _convert_annotation(field_type, use_pydantic=use_pydantic)
         resolved_type = new_type if new_type else field_type
         dc_fields.append((field_name, resolved_type, field(default=None)))
 
@@ -274,9 +289,25 @@ def upgrade_model_nested_fields[B: DataModel](model: type[B], use_pydantic: bool
     return new_class  # type: ignore[return-value]
 
 
+def load_results[T](model: type[T], data: list[dict[str, Any]]) -> list[T]:
+    """
+    Load query result rows into model instances.
+
+    Dispatches between Pydantic validation (for ``BaseModel`` subclasses) and
+    the plain dict→dataclass loader for everything else.
+    """
+    if isinstance(model, type) and issubclass(model, BaseModel):
+        from pydantic import TypeAdapter
+
+        adapter = TypeAdapter(list[model])
+        return adapter.validate_python(data)
+    return load_dataclass(model, data)
+
+
 def load_dataclass[T](model: type[T], data: list[dict[str, Any]]) -> list[T]:
     """
-    Load a list of row dicts into plain dataclass instances (no Pydantic validation).
+    Load a list of row dicts into plain dataclass/annotated-class instances
+    (no Pydantic validation).
 
     Handles nested dataclasses (from ManyTable/OneTable annotations) by recursively
     loading JSON objects/arrays from the database into the appropriate types.
