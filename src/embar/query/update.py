@@ -238,7 +238,7 @@ class UpdateQueryReturning[T: Table, Db: AllDbBase]:
             sql += f"\nWHERE {where_data.sql}"
             params = {**params, **where_data.params}
 
-        sql += " RETURNING *"
+        sql += f" {self.table.returning_clause()}"
 
         return QuerySingle(sql, params)
 

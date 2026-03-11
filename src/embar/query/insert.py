@@ -232,7 +232,7 @@ class InsertQueryReturning[T: Table, Db: AllDbBase]:
             values = [{**row, **conflict_query.params} for row in values]
             sql += f"\n{conflict_query.sql}"
 
-        sql += " RETURNING *"
+        sql += f" {self.table.returning_clause()}"
         return QueryMany(sql, many_params=values)
 
     def _get_model(self) -> type[DataModel]:

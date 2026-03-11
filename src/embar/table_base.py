@@ -42,3 +42,30 @@ class TableBase:
         """
         cols = {name: col.info.name for name, col in cls._fields.items()}
         return cols
+
+    @classmethod
+    def returning_clause(cls) -> str:
+        """
+        Build a ``RETURNING`` clause that aliases every DB column back to its
+        Python field name.
+
+        When field name and DB column name are the same this produces::
+
+            RETURNING "id", "content"
+
+        When they differ (e.g. ``email`` → ``user_email``) this produces::
+
+            RETURNING "user_email" AS "email", "id"
+
+        Using explicit aliases instead of ``RETURNING *`` ensures that
+        ``load_results`` can always match columns to model fields by their
+        Python field names, regardless of any custom DB column name.
+        """
+        parts: list[str] = []
+        for field_name, col in cls._fields.items():
+            db_col = col.info.name
+            if db_col == field_name:
+                parts.append(f'"{db_col}"')
+            else:
+                parts.append(f'"{db_col}" AS "{field_name}"')
+        return "RETURNING " + ", ".join(parts)
