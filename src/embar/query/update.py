@@ -3,10 +3,8 @@
 from collections.abc import Generator, Mapping, Sequence
 from typing import Any, Self, cast
 
-from pydantic import BaseModel, TypeAdapter
-
 from embar.db.base import AllDbBase, AsyncDbBase, DbBase
-from embar.model import generate_model
+from embar.model import DataModel, generate_model, load_results
 from embar.query.clause_base import ClauseBase
 from embar.query.query import QuerySingle
 from embar.table import Table
@@ -70,8 +68,14 @@ class UpdateQueryReady[T: Table, Db: AllDbBase]:
         self._where_clause = where_clause
         return self
 
-    def returning(self) -> UpdateQueryReturning[T, Db]:
-        return UpdateQueryReturning(self.table, self._db, self.data, self._where_clause)
+    def returning(self, use_pydantic: bool = True) -> UpdateQueryReturning[T, Db]:
+        return UpdateQueryReturning(
+            table=self.table,
+            db=self._db,
+            use_pydantic=use_pydantic,
+            data=self.data,
+            where_clause=self._where_clause,
+        )
 
     def __await__(self):
         """
@@ -144,15 +148,24 @@ class UpdateQueryReturning[T: Table, Db: AllDbBase]:
 
     table: type[T]
     _db: Db
+    _use_pydantic: bool
     data: Mapping[str, Any]
     _where_clause: ClauseBase | None = None
 
-    def __init__(self, table: type[T], db: Db, data: Mapping[str, Any], where_clause: ClauseBase | None):
+    def __init__(
+        self,
+        table: type[T],
+        db: Db,
+        use_pydantic: bool,
+        data: Mapping[str, Any],
+        where_clause: ClauseBase | None,
+    ):
         """
         Create a new UpdateQueryReturning instance.
         """
         self.table = table
         self._db = db
+        self._use_pydantic = use_pydantic
         self.data = data
         self._where_clause = where_clause
 
@@ -165,7 +178,6 @@ class UpdateQueryReturning[T: Table, Db: AllDbBase]:
         query = self.sql()
         model = self._get_model()
         model = cast(type[T], model)
-        adapter = TypeAdapter(list[model])
 
         async def awaitable():
             db = self._db
@@ -174,7 +186,7 @@ class UpdateQueryReturning[T: Table, Db: AllDbBase]:
             else:
                 db = cast(DbBase, self._db)
                 data = db.fetch(query)
-            results = adapter.validate_python(data)
+            results = load_results(model, data)
             return results
 
         return awaitable().__await__()
@@ -189,10 +201,9 @@ class UpdateQueryReturning[T: Table, Db: AllDbBase]:
         query = self.sql()
         model = self._get_model()
         model = cast(type[T], model)
-        adapter = TypeAdapter(list[model])
         db = cast(DbBase, self._db)
         data = db.fetch(query)
-        results = adapter.validate_python(data)
+        results = load_results(model, data)
         return results
 
     def sql(self) -> QuerySingle:
@@ -231,9 +242,9 @@ class UpdateQueryReturning[T: Table, Db: AllDbBase]:
 
         return QuerySingle(sql, params)
 
-    def _get_model(self) -> type[BaseModel]:
+    def _get_model(self) -> type[DataModel]:
         """
         Generate the dataclass that will be used to deserialize (and validate) the query results.
         """
-        model = generate_model(self.table)
+        model = generate_model(self.table, self._use_pydantic)
         return model

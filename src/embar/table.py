@@ -5,9 +5,17 @@ to import table_base.py without triggering table.py, causing a circular loop by 
 """
 
 from textwrap import dedent, indent
-from typing import Any, Self, dataclass_transform, get_args, get_origin
+from typing import TYPE_CHECKING, Any, Literal, Self, dataclass_transform, get_args, get_origin, overload
 
-from pydantic_core import core_schema
+if TYPE_CHECKING:
+    from pydantic_core import core_schema as _core_schema
+
+try:
+    from pydantic_core import core_schema
+
+    _PYDANTIC_AVAILABLE = True
+except ImportError:
+    _PYDANTIC_AVAILABLE = False
 
 from embar.column.base import ColumnBase
 from embar.column.common import Column, Null, float_col, integer, text
@@ -34,7 +42,7 @@ from embar.column.pg import (
 )
 from embar.config import EmbarConfig
 from embar.custom_types import Undefined
-from embar.model import SelectAll
+from embar.model import SelectAllDataclass, SelectAllPydantic
 from embar.query.many import ManyTable, OneTable
 from embar.table_base import TableBase
 
@@ -159,13 +167,15 @@ class Table(TableBase):
         if missing:
             raise TypeError(f"Missing required fields: {missing}")
 
-    @classmethod
-    def __get_pydantic_core_schema__(
-        cls,
-        source_type: Any,
-        handler: Any,
-    ) -> core_schema.CoreSchema:
-        return core_schema.any_schema()
+    if _PYDANTIC_AVAILABLE:
+
+        @classmethod
+        def __get_pydantic_core_schema__(
+            cls,
+            source_type: Any,
+            handler: Any,
+        ) -> "_core_schema.CoreSchema":
+            return core_schema.any_schema()
 
     @classmethod
     def many(cls) -> ManyTable[type[Self]]:
@@ -213,20 +223,38 @@ CREATE TABLE IF NOT EXISTS {cls.fqn()} (
 
         return sql
 
+    @overload
     @classmethod
-    def all(cls) -> type[SelectAll]:
+    def all(cls) -> type[SelectAllPydantic]: ...
+    @overload
+    @classmethod
+    def all(cls, use_pydantic: Literal[True]) -> type[SelectAllPydantic]: ...
+    @overload
+    @classmethod
+    def all(cls, use_pydantic: Literal[False]) -> type[SelectAllDataclass]: ...
+
+    @classmethod
+    def all(cls, use_pydantic: bool = True) -> type[SelectAllPydantic] | type[SelectAllDataclass]:
         """
         Generate a Select query model that returns all the table's fields.
 
         ```python
-        from embar.model import SelectAll
+        from embar.model import SelectAllPydantic
         from embar.table import Table
         class MyTable(Table): ...
         model = MyTable.all()
-        assert model == SelectAll
+        assert model == SelectAllPydantic
         ```
         """
-        return SelectAll
+        if use_pydantic:
+            if not _PYDANTIC_AVAILABLE:
+                raise ImportError(
+                    "Table.all() requires pydantic when use_pydantic=True (the default). "
+                    "Either install it with: pip install 'embar[pydantic]' "
+                    "or opt in to the plain-dataclass path with: MyTable.all(use_pydantic=False)"
+                )
+            return SelectAllPydantic
+        return SelectAllDataclass
 
     def value_dict(self) -> dict[str, Any]:
         """

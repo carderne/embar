@@ -4,12 +4,12 @@ from collections.abc import Generator
 from textwrap import dedent
 from typing import Any, Self, cast
 
-from pydantic import BaseModel, TypeAdapter
-
 from embar.column.base import ColumnBase
 from embar.db.base import AllDbBase, AsyncDbBase, DbBase
 from embar.model import (
+    DataModel,
     generate_model,
+    load_results,
 )
 from embar.query.clause_base import ClauseBase
 from embar.query.order_by import Asc, BareColumn, Desc, OrderBy, RawSqlOrder
@@ -41,8 +41,15 @@ class DeleteQueryReady[T: Table, Db: AllDbBase]:
         self.table = table
         self._db = db
 
-    def returning(self) -> DeleteQueryReturning[T, Db]:
-        return DeleteQueryReturning(self.table, self._db, self._where_clause, self._order_clause, self._limit_value)
+    def returning(self, use_pydantic: bool = True) -> DeleteQueryReturning[T, Db]:
+        return DeleteQueryReturning(
+            table=self.table,
+            db=self._db,
+            use_pydantic=use_pydantic,
+            where_clause=self._where_clause,
+            order_clause=self._order_clause,
+            limit_value=self._limit_value,
+        )
 
     def where(self, where_clause: ClauseBase) -> Self:
         """
@@ -112,7 +119,8 @@ class DeleteQueryReady[T: Table, Db: AllDbBase]:
 
         The overrides provide for a few different cases:
         - A Model was passed, in which case that's the return type
-        - `SelectAll` was passed, in which case the return type is the `Table`
+        - `SelectAllPydantic` or `SelectAllDataclass` was passed (via `returning()`),
+          in which case the return type is the `Table`
         - This is called with an async db, in which case an error is returned.
         """
         query = self.sql()
@@ -183,6 +191,7 @@ class DeleteQueryReturning[T: Table, Db: AllDbBase]:
 
     table: type[T]
     _db: Db
+    _use_pydantic: bool
 
     _where_clause: ClauseBase | None = None
     _order_clause: OrderBy | None = None
@@ -192,15 +201,17 @@ class DeleteQueryReturning[T: Table, Db: AllDbBase]:
         self,
         table: type[T],
         db: Db,
+        use_pydantic: bool,
         where_clause: ClauseBase | None,
         order_clause: OrderBy | None,
         limit_value: int | None,
     ):
         """
-        Create a new SelectQueryReady instance.
+        Create a new DeleteQueryReturning instance.
         """
         self.table = table
         self._db = db
+        self._use_pydantic = use_pydantic
         self._where_clause = where_clause
         self._order_clause = order_clause
         self._limit_value = limit_value
@@ -214,13 +225,13 @@ class DeleteQueryReturning[T: Table, Db: AllDbBase]:
 
         The overrides provide for a few different cases:
         - A Model was passed, in which case that's the return type
-        - `SelectAll` was passed, in which case the return type is the `Table`
+        - `SelectAllPydantic` or `SelectAllDataclass` was passed (via `returning()`),
+          in which case the return type is the `Table`
         - This is called with an async db, in which case an error is returned.
         """
         query = self.sql()
         model = self._get_model()
         model = cast(type[T], model)
-        adapter = TypeAdapter(list[model])
 
         async def awaitable():
             db = self._db
@@ -229,7 +240,7 @@ class DeleteQueryReturning[T: Table, Db: AllDbBase]:
             else:
                 db = cast(DbBase, self._db)
                 data = db.fetch(query)
-            results = adapter.validate_python(data)
+            results = load_results(model, data)
             return results
 
         return awaitable().__await__()
@@ -244,10 +255,9 @@ class DeleteQueryReturning[T: Table, Db: AllDbBase]:
         query = self.sql()
         model = self._get_model()
         model = cast(type[T], model)
-        adapter = TypeAdapter(list[model])
         db = cast(DbBase, self._db)
         data = db.fetch(query)
-        results = adapter.validate_python(data)
+        results = load_results(model, data)
         return results
 
     def sql(self) -> QuerySingle:
@@ -290,9 +300,9 @@ class DeleteQueryReturning[T: Table, Db: AllDbBase]:
 
         return QuerySingle(sql, params=params)
 
-    def _get_model(self) -> type[BaseModel]:
+    def _get_model(self) -> type[DataModel]:
         """
         Generate the dataclass that will be used to deserialize (and validate) the query results.
         """
-        model = generate_model(self.table)
+        model = generate_model(self.table, self._use_pydantic)
         return model

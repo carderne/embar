@@ -4,10 +4,8 @@ from collections.abc import Generator, Sequence
 from string.templatelib import Template
 from typing import Any, Self, cast
 
-from pydantic import BaseModel, TypeAdapter
-
 from embar.db.base import AllDbBase, AsyncDbBase, DbBase
-from embar.model import upgrade_model_nested_fields
+from embar.model import BaseModel, DataModel, load_results, upgrade_model_nested_fields
 from embar.query.query import QuerySingle
 from embar.sql import Sql
 
@@ -27,7 +25,7 @@ class DbSql[Db: AllDbBase]:
         self._sql = Sql(template)
         self._db = db
 
-    def model[M: BaseModel](self, model: type[M]) -> DbSqlReturning[M, Db]:
+    def model[M: DataModel](self, model: type[M]) -> DbSqlReturning[M, Db]:
         """
         Specify a model for parsing results.
         """
@@ -68,7 +66,7 @@ class DbSql[Db: AllDbBase]:
         return self
 
 
-class DbSqlReturning[M: BaseModel, Db: AllDbBase]:
+class DbSqlReturning[M: DataModel, Db: AllDbBase]:
     """
     Used to run raw SQL queries and return a value.
     """
@@ -95,7 +93,6 @@ class DbSqlReturning[M: BaseModel, Db: AllDbBase]:
         sql = self._sql.sql()
         query = QuerySingle(sql)
         model = self._get_model()
-        adapter = TypeAdapter(list[model])
 
         async def awaitable():
             db = self._db
@@ -105,7 +102,7 @@ class DbSqlReturning[M: BaseModel, Db: AllDbBase]:
             else:
                 db = cast(DbBase, self._db)
                 data = db.fetch(query)
-            results = adapter.validate_python(data)
+            results = load_results(model, data)
             return results
 
         return awaitable().__await__()
@@ -119,15 +116,14 @@ class DbSqlReturning[M: BaseModel, Db: AllDbBase]:
         sql = self._sql.sql()
         query = QuerySingle(sql)
         model = self._get_model()
-        adapter = TypeAdapter(list[model])
         db = cast(DbBase, self._db)
         data = db.fetch(query)
-        self.model.__init_subclass__()
-        results = adapter.validate_python(data)
+        results = load_results(model, data)
         return results
 
     def _get_model(self) -> type[M]:
         """
         Generate the dataclass that will be used to deserialize (and validate) the query results.
         """
-        return upgrade_model_nested_fields(self.model)
+        use_pydantic = isinstance(self.model, type) and issubclass(self.model, BaseModel)
+        return upgrade_model_nested_fields(self.model, use_pydantic=use_pydantic)

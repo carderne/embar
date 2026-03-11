@@ -5,7 +5,6 @@ from typing import Annotated
 from pydantic import BaseModel
 
 from embar.db.pg import PgDb
-from embar.model import SelectAll
 from embar.query.order_by import Asc, Desc
 from embar.query.where import Gt
 from embar.sql import Sql
@@ -193,7 +192,7 @@ def test_limit_with_offset(db_dummy: PgDb):
 
     # fmt: off
     query = (
-        db.select(SelectAll)
+        db.select(User.all())
         .from_(User)
         .limit(5)
         .offset(10)

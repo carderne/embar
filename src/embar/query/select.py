@@ -5,13 +5,15 @@ from textwrap import dedent
 from typing import Any, Self, cast, overload
 from warnings import deprecated
 
-from pydantic import BaseModel, TypeAdapter
-
 from embar.column.base import ColumnBase
 from embar.db.base import AllDbBase, AsyncDbBase, DbBase
 from embar.model import (
-    SelectAll,
+    BaseModel,
+    DataModel,
+    SelectAllDataclass,
+    SelectAllPydantic,
     generate_model,
+    load_results,
     to_sql_columns,
     upgrade_model_nested_fields,
 )
@@ -25,7 +27,7 @@ from embar.sql import Sql
 from embar.table import Table
 
 
-class SelectQuery[M: BaseModel, Db: AllDbBase]:
+class SelectQuery[M: DataModel, Db: AllDbBase]:
     """
     `SelectQuery` is returned by Db.select and exposes one method that produced the `SelectQueryReady`.
     """
@@ -54,7 +56,7 @@ class SelectQuery[M: BaseModel, Db: AllDbBase]:
         return SelectQueryReady[M, T, Db](model=self.model, table=table, db=self._db, distinct=False)
 
 
-class SelectDistinctQuery[M: BaseModel, Db: AllDbBase]:
+class SelectDistinctQuery[M: DataModel, Db: AllDbBase]:
     """
     `SelectDistinctQuery` is returned by Db.select and exposes one method that produced the `SelectQueryReady`.
 
@@ -85,7 +87,7 @@ class SelectDistinctQuery[M: BaseModel, Db: AllDbBase]:
         return SelectQueryReady[M, T, Db](model=self.model, table=table, db=self._db, distinct=True)
 
 
-class SelectQueryReady[M: BaseModel, T: Table, Db: AllDbBase]:
+class SelectQueryReady[M: DataModel, T: Table, Db: AllDbBase]:
     """
     `SelectQueryReady` is used to insert data into a table.
 
@@ -301,7 +303,9 @@ class SelectQueryReady[M: BaseModel, T: Table, Db: AllDbBase]:
         return self
 
     @overload
-    def __await__(self: SelectQueryReady[SelectAll, T, Db]) -> Generator[Any, None, Sequence[T]]: ...
+    def __await__(self: SelectQueryReady[SelectAllPydantic, T, Db]) -> Generator[Any, None, Sequence[T]]: ...
+    @overload
+    def __await__(self: SelectQueryReady[SelectAllDataclass, T, Db]) -> Generator[Any, None, Sequence[T]]: ...
     @overload
     def __await__(self: SelectQueryReady[M, T, Db]) -> Generator[Any, None, Sequence[M]]: ...
 
@@ -314,13 +318,12 @@ class SelectQueryReady[M: BaseModel, T: Table, Db: AllDbBase]:
 
         The overrides provide for a few different cases:
         - A Model was passed, in which case that's the return type
-        - `SelectAll` was passed, in which case the return type is the `Table`
+        - `SelectAllPydantic` or `SelectAllDataclass` was passed, in which case the return type is the `Table`
         - This is called with an async db, in which case an error is returned.
         """
         query = self.sql()
         model = self._get_model()
         model = cast(type[T] | type[M], model)
-        adapter = TypeAdapter(list[model])
 
         async def awaitable():
             db = self._db
@@ -329,13 +332,15 @@ class SelectQueryReady[M: BaseModel, T: Table, Db: AllDbBase]:
             else:
                 db = cast(DbBase, self._db)
                 data = db.fetch(query)
-            results = adapter.validate_python(data)
+            results = load_results(model, data)
             return results
 
         return awaitable().__await__()
 
     @overload
-    def run(self: SelectQueryReady[SelectAll, T, Db]) -> Sequence[T]: ...
+    def run(self: SelectQueryReady[SelectAllPydantic, T, Db]) -> Sequence[T]: ...
+    @overload
+    def run(self: SelectQueryReady[SelectAllDataclass, T, Db]) -> Sequence[T]: ...
     @overload
     def run(self) -> Sequence[M]: ...
 
@@ -349,24 +354,32 @@ class SelectQueryReady[M: BaseModel, T: Table, Db: AllDbBase]:
         query = self.sql()
         model = self._get_model()
         model = cast(type[T] | type[M], model)
-        adapter = TypeAdapter(list[model])
         db = cast(DbBase, self._db)
         data = db.fetch(query)
-        results = adapter.validate_python(data)
+        results = load_results(model, data)
         return results
 
-    def _get_model(self) -> type[BaseModel] | type[M]:
+    def _get_model(self) -> type[DataModel] | type[M]:
         """
         Generate the dataclass that will be used to deserialize (and validate) the query results.
 
-        If the model is `SelectAll`, we generate a dataclass based on the `Table`,
-        otherwise the model itself
-        is used.
+        If the model is `SelectAllPydantic` or `SelectAllDataclass`, we generate a model
+        based on the `Table`, otherwise the model itself is used.
 
         Extra processing is done to check for nested children that are Tables themselves.
         """
-        model = generate_model(self.table) if self.model is SelectAll else self.model
-        upgraded = upgrade_model_nested_fields(model)
+
+        if self.model is SelectAllPydantic:
+            model = generate_model(self.table, use_pydantic=True)
+            use_pydantic = True
+        elif self.model is SelectAllDataclass:
+            model = generate_model(self.table, use_pydantic=False)
+            use_pydantic = False
+        else:
+            model = self.model
+            use_pydantic = isinstance(model, type) and issubclass(model, BaseModel)
+
+        upgraded = upgrade_model_nested_fields(model, use_pydantic=use_pydantic)
         return upgraded
 
     def sql(self) -> QuerySingle:

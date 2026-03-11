@@ -183,7 +183,7 @@ class Lte(ClauseBase):
 # String matching operators
 class Like[T: PyType](ClauseBase):
     left: ColumnInfo
-    right: PyType | ColumnInfo
+    right: T | ColumnInfo
 
     def __init__(self, left: Column[T], right: T | Column[T]):
         self.left = left.info
@@ -205,7 +205,7 @@ class Ilike[T: PyType](ClauseBase):
     """
 
     left: ColumnInfo
-    right: PyType | ColumnInfo
+    right: T | ColumnInfo
 
     def __init__(self, left: Column[T], right: T | Column[T]):
         self.left = left.info
@@ -227,7 +227,7 @@ class NotLike[T: PyType](ClauseBase):
     """
 
     left: ColumnInfo
-    right: PyType | ColumnInfo
+    right: T | ColumnInfo
 
     def __init__(self, left: Column[T], right: T | Column[T]):
         self.left = left.info

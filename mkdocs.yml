@@ -30,6 +30,7 @@ nav:
       - About: index.md
       - Quickstart: quickstart.md
       - Postgres Quickstart: postgres-quickstart.md
+      - Without Pydantic: no-pydantic.md
 
     - Schemas:
       - Basics: schemas/basics.md
